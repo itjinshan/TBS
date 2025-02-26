@@ -2,7 +2,7 @@
   "name": "node",
   "version": "1.0.0",
   "description": "This is the backend node service for the Travel Buddy Serice (TBS) app.",
-  "type": "module",
+  "type": "commonjs",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "nodemon": "^3.1.9"
   }
