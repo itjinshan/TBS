@@ -1,0 +1,81 @@
+/* X-Small Screen */
+@media screen and (max-width: 600px) {
+    #footer {
+      height: 180px;
+      background-color: #2B2C30; /* For browsers that do not support gradients */
+      background-image: linear-gradient(to right,#2B2C30, rgb(61, 61, 66), rgb(67, 67, 71));
+    }
+  
+    .footerLayout {
+      text-align: center;
+      position: relative;
+      top: 20%;
+      height: 38px;
+      font-size: 16px;
+      font-weight: 300;
+      color: #ffffff;
+    }
+  }
+  
+  /* Small Screen */
+  @media screen and (min-width: 600px) and (max-width: 960px) {
+    #footer {
+      height: 180px;
+      background-color: #2B2C30; /* For browsers that do not support gradients */
+      background-image: linear-gradient(to right,#2B2C30, rgb(61, 61, 66), rgb(67, 67, 71));
+    }
+  
+    .footerLayout {
+      text-align: center;
+      position: relative;
+      top: 20%;
+      height: 45px;
+      font-size: 17px;
+      font-weight: 300;
+      color: #ffffff;
+    }
+  }
+  
+  /* Medium Screen (Landscape Phones, Tablets) */
+  @media screen and (min-width: 960px) and (max-width: 1200px) {
+    #footer {
+      height: 180px;
+      background-color: #2B2C30; /* For browsers that do not support gradients */
+      background-image: linear-gradient(to right,#2B2C30, rgb(61, 61, 66), rgb(67, 67, 71));
+    }
+  
+    .footerLayout {
+      text-align: center;
+      position: relative;
+      top: 20%;
+      height: 45px;
+      font-size: 18px;
+      font-weight: 300;
+      color: #ffffff;
+    }
+  }
+  
+  /* Large Screen (Laptops, Desktop monitors) */
+  @media screen and (min-width: 1200px) {
+    #footer {
+      height: 180px;
+      background-color: #2B2C30; /* For browsers that do not support gradients */
+      background-image: linear-gradient(to right,#2B2C30, rgb(61, 61, 66), rgb(67, 67, 71));
+    }
+  
+    .footerLayout {
+      text-align: center;
+      position: relative;
+      top: 20%;
+      height: 45px;
+      font-size: 18px;
+      font-weight: 300;
+      color: #ffffff;
+    }
+  }
+  
+  .footerMenuLink {
+    text-decoration: none;
+    color: white;
+    border-bottom: 0px;
+  }
