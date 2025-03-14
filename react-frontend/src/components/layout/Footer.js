@@ -25,7 +25,7 @@ function Footer() {
         Copyright © 2025 Travel Buddy
       </div>
       {/* <Grid container spacing={3}>
-        <Grid className="footerLayout" item xs={12}>
+        <Grid className="footerLayout" xs={12}>
           <a
             href="https://www.facebook.com/BATacticalGroup/"
             className="footerMenuLink"
@@ -42,12 +42,12 @@ function Footer() {
 
       </Grid>
       <Grid container spacing={3}>
-        <Grid className="footerLayout" item xs>
+        <Grid className="footerLayout" xs>
         </Grid>
-        <Grid className="footerLayout" item xs={6}>
+        <Grid className="footerLayout" xs={6}>
           Copyright © 2025 Travel Buddy
         </Grid>
-        <Grid className="footerLayout" item xs>
+        <Grid className="footerLayout" xs>
         </Grid>
       </Grid> */}
     </footer>

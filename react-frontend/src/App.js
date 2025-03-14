@@ -12,7 +12,11 @@ import Footer from "./components/layout/Footer"
 // Basics
 import Home from "./components/home/Home"
 // Auth
-import Login from "./components/login/Login"
+import Login from "./components/auth/Login"
+import Register from "./components/auth/Register"
+import ForgetPassword from "./components/auth/ForgotPassword"
+import ResetPassword from "./components/auth/ResetPassword"
+import CreatePassword from "./components/auth/CreatePassword"
 
 // Redux provider
 //
@@ -31,14 +35,16 @@ export default class App extends Component {
             <NavBar />
             <div style={{minHeight:window.innerHeight-250, marginTop:"97px"}}>
               <Routes>
-                <Route exact path="/" component={Home} />
-                <Route exact path="/login" component={Login} />
-                {/* <Route exact path="/about" component={About} />
-                <Route path="*" component={NotFound}></Route> */}
+                <Route path="/" element={<Home />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/forget-password" element={<ForgetPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/create-password" element={<CreatePassword />} />
               </Routes>
             </div>
             <Footer />
-          </div>
+            </div>
         </Router>
       </Provider>
     )

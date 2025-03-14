@@ -18,9 +18,9 @@ import {
      } from "./types";
 import axios from "axios";
 import setAuthToken from "../utils/setAuthToken";
-import jwt_decode from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 
-// Restration
+// Registration
 //
 export const registerUser = (userData, history) => dispatch => {
     axios
@@ -44,7 +44,7 @@ export const loginUser = userData => dispatch => {
             localStorage.setItem("AccessToken", AccessToken);
             localStorage.setItem("RefreshToken", RefreshToken);
             setAuthToken(AccessToken);
-            const decoded = jwt_decode(AccessToken);
+            const decoded = jwtDecode(AccessToken);
             let credentialDecoded = {
                 UserID: decoded.UserID,
                 Email: Email,
@@ -96,63 +96,6 @@ export const getProfileInfo = () => dispatch => {
         });
       });
 };
-
-// Get All Instructor
-export const getAllAdmin = () => dispatch =>{
-    return axios
-      .get("auth/get-admins")
-      .then(res=>{
-        const admin = res.data;
-        dispatch(returnAllAdmin(admin));
-      })
-      .catch(err => {
-        dispatch({
-            type: AUTH_ERRORS
-        });
-        dispatch({
-            type: GET_ERRORS,
-            payload: err.response.data
-        });
-      });
-  }
-
-// Add new admin
-export const addNewAdmin = adminData => dispatch => {
-    axios
-      .post("auth/addAdmin", adminData)
-      .then(res => {
-        const updateResult = {
-            statusmsg: res.data.statusmsg,
-            adminCreated: res.data.adminCreated
-        }
-        dispatch(addAdminStatus(updateResult));
-      })
-      .catch(err => 
-        dispatch({
-          type: GET_ERRORS,
-          payload: err.response.data
-        })
-    );
-}
-
-// edit admin
-export const editAdmin = adminData => dispatch => {
-    axios
-      .put("auth/edit-admin", adminData)
-      .then(res => {
-        const updateResult = {
-            statusmsg: res.data.statusmsg,
-            adminCreated: res.data.adminCreated
-        }
-        dispatch(addAdminStatus(updateResult));
-      })
-      .catch(err => 
-        dispatch({
-          type: GET_ERRORS,
-          payload: err.response.data
-        })
-    );
-}
 
 // Forgot password
 export const forgotPassword = userEmail => dispatch => {
@@ -237,14 +180,6 @@ export const setProfileLoading = () => {
     };
 };
 
-// Return All Instructor
-export const returnAllAdmin = admins => {
-    return{
-      type: ALL_ADMINS,
-      payload: admins
-    };
-};
-
 // Reset Forget Status
 export const resetForgetStatus = () => {
     return {
@@ -259,7 +194,7 @@ export const resetResetStatus = () => {
     }
 }
 
-// Reset Add Admin Status
+// Reset Create Status
 export const resetCreateStatus = () => {
     return {
         type: RESET_CREATE_STATUS
@@ -281,21 +216,6 @@ export const logoutUser = () => dispatch => {
     localStorage.clear();
     setAuthToken(false);
     dispatch(setCurrentUser({}));
-};
-
-// Status of adding admin
-export const addAdminStatus = status => {
-    return {
-      type: ADD_ADMIN_STATUS, 
-      payload: status
-    };
-};
-
-// Reset status of adding admin
-export const resetAddAdminStatus = status => {
-    return {
-      type: RESET_ADD_ADMIN_STATUS, 
-    };
 };
 
 export const resetErrors = status => {

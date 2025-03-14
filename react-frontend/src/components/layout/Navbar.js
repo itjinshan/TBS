@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 // import { logoutUser, getProfileInfo } from "../../actions/authAction";
 // import setAuthToken from "../util/setAuthToken";
 
-import Logo from "../../images/tbs_logo.png";
+import TBSLogo from "../../images/tbs_logo.jpg";
 import NavbarMenu from "./NavbarMenu";
 import NavTabsMenu from "./NavTabMenu";
 
@@ -47,22 +47,22 @@ class Navbar extends Component {
             md={5}
             lg={5}
           >
-            <Grid className="navStyle" item>
+            <Grid className="navStyle">
               <Link className="navOpt" to="/">
                   Home
               </Link>
             </Grid>
-            <Grid className= "navStyle optionalNav" item>
+            <Grid className= "navStyle optionalNav">
               <Link className="navOpt" to="/about">
                   About
               </Link>
             </Grid>
-            <Grid className="navStyle" item>
+            <Grid className="navStyle">
               <Link className="navOpt" to="/login">
                   Login
               </Link>
             </Grid>
-            <Grid className="navBurger" item>
+            <Grid className="navBurger">
               <NavTabsMenu />
             </Grid>
           </Grid> 
@@ -83,23 +83,23 @@ class Navbar extends Component {
         //     md={6}
         //     lg={6}
         //   >
-        //     <Grid className="greetingMsg" item>Welcome {this.props.auth.user.FirstName}</Grid>
-        //     <Grid className="navStyle" item>
+        //     <Grid className="greetingMsg">Welcome {this.props.auth.user.FirstName}</Grid>
+        //     <Grid className="navStyle">
         //       <Link className="navOpt" to="/">
         //           Home
         //       </Link>
         //     </Grid>
-        //     <Grid className="navStyle" item>
+        //     <Grid className="navStyle">
         //       <Link className="navOpt" to="/class-overview">
         //           Course
         //       </Link>
         //     </Grid>
-        //     <Grid className="navStyle" item>
+        //     <Grid className="navStyle">
         //       <a className="navOpt" href="https://www.battraininggroup.com/">
         //           LEO/Security
         //       </a>
         //     </Grid>
-        //     <Grid className="adjustMenuBurger" item>
+        //     <Grid className="adjustMenuBurger">
         //       <NavbarMenu
         //         onLogoutClick={this.onLogoutClick}
         //         userEmail={this.props.auth.user.Email}
@@ -123,7 +123,7 @@ class Navbar extends Component {
           justifyContent="space-between"
           alignItems="center"
         >
-          <Grid className="navbarLogo" item>
+          <Grid className="navbarLogo">
             <Link to="/" style={{ textDecoration: 'none' }}>
               <Grid
                 container
@@ -131,14 +131,14 @@ class Navbar extends Component {
                 justifyContent="space-between"
                 alignItems="center"
               >
-                <Grid item>
+                <Grid>
                   <img
                     className="tbs-logo"
-                    src={Logo}
+                    src={TBSLogo}
                     alt="TBS Logo"
                   />
                 </Grid>
-                <Grid item className="companyName text-left">
+                <Grid className="companyName text-left">
                   <div className="navTitle">Travel Buddy</div>
                   <div className="navTitle">Your Personal AI Travel Guide</div>
                 </Grid>
