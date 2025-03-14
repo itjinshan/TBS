@@ -57,7 +57,7 @@ class Register extends Component {
     };
     this.props.registerUser(newUser, this.props.history); // second para to route to other page
   }
-  //NOTE: component dispatch -> action give new data to -> reducer update new state and pass as props to -> component
+
   render() {
     const { errors } = this.state;
     let paperSize;
@@ -167,8 +167,6 @@ Register.propTypes = {
 };
 
 const mapStateToProps = state => ({
-  // 'state.auth' is from reducers/index.js
-  // we then can do: this.props.auth
   auth: state.auth,
   errors: state.errors
 });
