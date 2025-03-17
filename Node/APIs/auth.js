@@ -8,7 +8,7 @@ var jwt = require('jsonwebtoken');
 const passport = require("passport");
 require("../Config/passport")(passport);
 
-var User = require('../model/DB_User');
+var User = require('../DB_Models/DB_User');
 
 // Welcome email
 var welcomeEmail = require('../Emails/welcomeEmail');
