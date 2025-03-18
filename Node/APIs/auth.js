@@ -67,7 +67,7 @@ router.post('/register', (req, res) => {
         });
 
         // Send Welcome Emails
-        welcomeEmail(req.body.FirstName, req.body.LastName, req.body.Email);
+        // welcomeEmail(req.body.FirstName, req.body.LastName, req.body.Email);
     }
     });
 });
@@ -103,7 +103,7 @@ router.post('/login', (req, res) => {
               FirstName: user.FirstName,
               LastName: user.LastName
             },
-            keys.refreshSecret
+            process.env.REFRESHSECRETE
           )
           res.json({
             Email: user.Email,
@@ -184,7 +184,7 @@ router.put("/forgot-password", (req, res) => {
               });
             }
         });
-        forgotPasswordEmail(Email, resetToken);
+        // forgotPasswordEmail(Email, resetToken);
       })
 })
 
