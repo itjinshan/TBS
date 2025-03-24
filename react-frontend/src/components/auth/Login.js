@@ -7,6 +7,7 @@ import TBSLogo from "../../images/tbs_logo.jpg";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import { loginUser } from "../../actions/authAction";
+import withRouter from "../../utils/withRouter";
 import "./Auth.css";
 
 class Login extends Component {
@@ -24,13 +25,17 @@ class Login extends Component {
     componentDidMount = () => {
         // during logged in , if we change url to login it will redirect to homepage
         if (this.props.auth.isAuthenticated) {
-          this.props.history.push("/");
+          this.props.navigate("/");
         }
         window.scrollTo(0, 0);
     };
 
     componentWillReceiveProps = nextProps => {
         if (nextProps.auth.isAuthenticated) {
+          this.props.navigate("/");
+        }
+        if (nextProps.errors) {
+          this.setState({ errors: nextProps.errors });
         }
     };
 
@@ -119,6 +124,7 @@ class Login extends Component {
 }
 
 Login.propTypes = {
+    loginUser: PropTypes.func.isRequired,
     auth: PropTypes.object.isRequired
   };
   
@@ -127,5 +133,6 @@ const mapStateToProps = state => ({
 });
   
 export default connect(
-    mapStateToProps
-)(Login);
+    mapStateToProps,
+    { loginUser }
+)(withRouter(Login));

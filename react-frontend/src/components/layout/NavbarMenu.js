@@ -48,16 +48,9 @@ export default (class NavbarMenu extends React.Component {
           anchorEl={anchorEl}
           open={open}
           onClose={this.handleClose}
-          TransitionComponent={Fade}
         >
-          <Link className="navBurger" to="/" style={{color:"black"}}>
-              <MenuItem onClick={this.handleClose}>Home</MenuItem>
-          </Link>
           <Link to="/profile" style={{color:"black"}}>
             <MenuItem onClick={this.handleClose}>Profile</MenuItem>
-          </Link>
-          <Link className="navBurger" to="/class-overview" style={{color:"black"}}>
-              <MenuItem onClick={this.handleClose}>Courses</MenuItem>
           </Link>
           <Link className="About" to="/about" style={{color:"black"}}>
               <MenuItem onClick={this.handleClose}>About</MenuItem>

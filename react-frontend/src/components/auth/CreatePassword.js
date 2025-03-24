@@ -7,6 +7,7 @@ import TBSLogo from "../../images/tbs_logo.jpg";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import { createPassword, resetCreateStatus } from "../../actions/authAction";
+import withRouter from "../../utils/withRouter";
 import "./Auth.css";
 
 class CreatePassword extends Component {
@@ -46,7 +47,7 @@ class CreatePassword extends Component {
     }
 
     bouncePage(){
-        this.props.history.push("/login");
+      this.props.navigate("/login");
     }
     
     onSubmit(e) {
@@ -155,4 +156,4 @@ const mapStateToProps = state => ({
 export default connect(
     mapStateToProps,
     { createPassword, resetCreateStatus }
-)(CreatePassword);
+)(withRouter(CreatePassword));

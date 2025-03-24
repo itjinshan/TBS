@@ -1,7 +1,6 @@
 import { 
     AUTH_ERRORS, 
     SET_CURRENT_USER, 
-    SET_ADMIN_STATUS,
     GET_PROFILE_INFO,
     PROFILE_LOADING,
     FORGET_STATUS,
@@ -10,9 +9,6 @@ import {
     RESET_CREATE_STATUS,
     RESET_FORGET_STATUS,
     RESET_RESET_STATUS,
-    ADD_ADMIN_STATUS,
-    RESET_ADD_ADMIN_STATUS,
-    ALL_ADMINS,
     GET_ERRORS,
     RESET_ERRORS
      } from "./types";
@@ -22,10 +18,10 @@ import { jwtDecode } from "jwt-decode";
 
 // Registration
 //
-export const registerUser = (userData, history) => dispatch => {
+export const registerUser = (userData, navigate) => dispatch => {
     axios
-        .post("/auth/register", userData, history)
-        .then(res => history.push("./login"))
+        .post("/auth/register", userData, navigate)
+        .then(res => navigate("/login"))
         .catch(err => 
             dispatch({
                 type: AUTH_ERRORS,
@@ -40,7 +36,7 @@ export const loginUser = userData => dispatch => {
     axios
         .post("/auth/login", userData)
         .then(res => {
-            const{ AccessToken, RefreshToken, Email, IsAdmin } = res.data;
+            const{ AccessToken, RefreshToken, Email } = res.data;
             localStorage.setItem("AccessToken", AccessToken);
             localStorage.setItem("RefreshToken", RefreshToken);
             setAuthToken(AccessToken);
@@ -50,7 +46,6 @@ export const loginUser = userData => dispatch => {
                 Email: Email,
                 FirstName: decoded.FirstName,
                 LastName: decoded.LastName,
-                IsAdmin: IsAdmin
             };
 
             dispatch(setCurrentUser(credentialDecoded));
@@ -72,7 +67,7 @@ export const getProfileInfo = () => dispatch => {
     axios
       .get("/auth/current")
       .then(res => {
-        const { AccessToken, RefreshToken, Email, FirstName, LastName, Phone, IsAdmin, UserID } = res.data;
+        const { AccessToken, RefreshToken, Email, FirstName, LastName, Phone, UserID } = res.data;
         localStorage.setItem("AccessToken", AccessToken);
         localStorage.setItem("RefreshToken", RefreshToken);
         setAuthToken(AccessToken);
@@ -81,7 +76,6 @@ export const getProfileInfo = () => dispatch => {
             FirstName: FirstName,
             LastName: LastName,
             Phone: Phone,
-            IsAdmin: IsAdmin,
             UserID: UserID
         }
         dispatch(setCurrentUser(decoded));

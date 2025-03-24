@@ -12,9 +12,6 @@ import NavTabsMenu from "./NavTabMenu";
 
 import "./Navbar.css";
 
-
-
-
 class Navbar extends Component {
     constructor() {
       super();
@@ -47,11 +44,6 @@ class Navbar extends Component {
             md={5}
             lg={5}
           >
-            <Grid className="navStyle">
-              <Link className="navOpt" to="/">
-                  Home
-              </Link>
-            </Grid>
             <Grid className= "navStyle optionalNav">
               <Link className="navOpt" to="/about">
                   About
@@ -84,21 +76,6 @@ class Navbar extends Component {
             lg={6}
           >
             <Grid className="greetingMsg">Welcome {this.props.auth.user.FirstName}</Grid>
-            <Grid className="navStyle">
-              <Link className="navOpt" to="/">
-                  Home
-              </Link>
-            </Grid>
-            <Grid className="navStyle">
-              <Link className="navOpt" to="/class-overview">
-                  Course
-              </Link>
-            </Grid>
-            <Grid className="navStyle">
-              <a className="navOpt" href="https://www.battraininggroup.com/">
-                  LEO/Security
-              </a>
-            </Grid>
             <Grid className="adjustMenuBurger">
               <NavbarMenu
                 onLogoutClick={this.onLogoutClick}
@@ -113,6 +90,7 @@ class Navbar extends Component {
     // Markup shown on the right hand side of Navbar when user is GUEST.
     return (
       <div className="navbarContainer">
+        {console.log(this.props.auth)}
         <Grid
           container
           className="navbarContainer headerfont"

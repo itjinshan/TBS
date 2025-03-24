@@ -7,6 +7,7 @@ import Paper from "@mui/material/Paper";
 import Grid from "@mui/material/Grid2";
 import TBSLogo from "../../images/tbs_logo.jpg";
 import { Link } from "react-router-dom";
+import withRouter from "../../utils/withRouter";
 import "./Auth.css";
 
 class Register extends Component {
@@ -29,7 +30,7 @@ class Register extends Component {
   componentDidMount = () => {
     // during logged in , if we change url to register it will redirect to homepage
     if (this.props.auth.isAuthenticated) {
-      this.props.history.push("/");
+      this.props.navigate("/");
     }
     window.scrollTo(0, 0);
   };
@@ -55,7 +56,7 @@ class Register extends Component {
       Password: this.state.Password,
       Password2: this.state.Password2
     };
-    this.props.registerUser(newUser, this.props.history); // second para to route to other page
+    this.props.registerUser(newUser, this.props.navigate); // second para to route to other page
   }
 
   render() {
@@ -174,4 +175,4 @@ const mapStateToProps = state => ({
 export default connect(
   mapStateToProps,
   { registerUser }
-)(Register); // withRouter to route to other page
+)(withRouter(Register)); // withRouter to route to other page

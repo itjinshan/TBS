@@ -7,6 +7,7 @@ import TBSLogo from "../../images/tbs_logo.jpg";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import { forgotPassword, resetForgetStatus } from "../../actions/authAction";
+import withRouter from "../../utils/withRouter";
 import "./Auth.css";
 
 class ForgotPassword extends Component {
@@ -40,7 +41,7 @@ class ForgotPassword extends Component {
     }
 
     bouncePage(){
-        this.props.history.push("/");
+        this.props.navigate("/");
     }
     
     onSubmit(e) {
@@ -139,4 +140,4 @@ const mapStateToProps = state => ({
 export default connect(
     mapStateToProps,
     { forgotPassword, resetForgetStatus }
-)(ForgotPassword);
+)(withRouter(ForgotPassword));

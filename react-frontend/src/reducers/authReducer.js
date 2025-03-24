@@ -7,10 +7,7 @@ import {
     CREATE_STATUS,
     RESET_FORGET_STATUS,
     RESET_RESET_STATUS,
-    RESET_CREATE_STATUS,
-    ALL_ADMINS,
-    ADD_ADMIN_STATUS,
-    RESET_ADD_ADMIN_STATUS
+    RESET_CREATE_STATUS
    } from "../actions/types";
   import isEmpty from "../utils/isEmpty";
     
@@ -26,10 +23,6 @@ import {
       forgetStatus: false,
       createStatus: false,
       user: {},
-  
-      // admins
-      adminCreated: false,
-      admins: []
     };
     
     // ...state = current state
@@ -41,17 +34,6 @@ import {
             ...state,
             fetchingCurrent: true,
             isAuthenticated: true
-          };
-        case ALL_ADMINS:
-          return{
-            ...state,
-            admins: action.payload
-          };
-        case ADD_ADMIN_STATUS:
-          return{
-            ...state,
-            isUpdated: true,
-            adminsCreated: action.payload.adminCreated
           };
         case SET_CURRENT_USER:
           return {
@@ -108,12 +90,6 @@ import {
             isUpdated: false,
             createStatus: initialState.createStatus,
             createStatusMSG: initialState.createStatusMSG
-          }
-        case RESET_ADD_ADMIN_STATUS:
-          return{
-            ...state,
-            isUpdated: false,
-            adminCreated: initialState.adminCreated
           }
         default:
           return state;

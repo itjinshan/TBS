@@ -27,7 +27,6 @@ export default (class NavTabsMenu extends React.Component {
     const open = Boolean(anchorEl);
     return (
       <div>
-        {/* {console.log(this.props)} */}
         <IconButton
           aria-label="More"
           aria-owns={open ? "long-menu" : undefined}
@@ -41,19 +40,9 @@ export default (class NavTabsMenu extends React.Component {
           anchorEl={anchorEl}
           open={open}
           onClose={this.handleClose}
-          TransitionComponent={Fade}
         >
-            <Link to="/" style={{color:"black"}}>
-                <MenuItem onClick={this.handleClose}>Home</MenuItem>
-            </Link>
             <Link to="/about" style={{color:"black"}}>
                 <MenuItem onClick={this.handleClose}>About</MenuItem>
-            </Link>
-            <Link to="/class-overview" style={{color:"black"}}>
-              <MenuItem onClick={this.handleClose}>Courses</MenuItem>
-            </Link>
-            <Link to="/contact" style={{color:"black"}}>
-              <MenuItem onClick={this.handleClose}>Contact</MenuItem>
             </Link>
             <Link to="/login" style={{color:"black"}}>
               <MenuItem onClick={this.handleClose}>Login</MenuItem>
