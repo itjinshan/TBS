@@ -10,6 +10,7 @@ const db_uri = process.env.MONGODB_URL;
 //
 const rootRouter = require('./APIs');
 const authRouter = require('./APIs/auth');
+const tokenRouter = require('./APIs/token');
 
 mongoose
     .connect(db_uri)
@@ -28,6 +29,7 @@ app.use(bodyParser.urlencoded({extended: true}));
 //route middleware
 app.use('/', rootRouter);
 app.use('/auth', authRouter);
+app.use('/jwt', tokenRouter);
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
