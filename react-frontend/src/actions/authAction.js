@@ -20,7 +20,7 @@ import { jwtDecode } from "jwt-decode";
 //
 export const registerUser = (userData, navigate) => dispatch => {
     axios
-        .post("/auth/register", userData, navigate)
+        .post("/auth/register", userData)
         .then(res => navigate("/login"))
         .catch(err => 
             dispatch({

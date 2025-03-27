@@ -10,6 +10,9 @@ require("../Config/passport")(passport);
 
 var User = require('../DB_Models/DB_User');
 
+// Function to generate JWT Access Token  
+var generateAccessToken = require('../Config/jwtgenerator');
+
 // Welcome email
 var welcomeEmail = require('../Emails/welcomeEmail');
 const forgotPasswordEmail = require('../Emails/forgotPasswordEmail');
@@ -96,7 +99,7 @@ router.post('/login', (req, res) => {
        bcrypt.compare(Password, user.Password).then(isMatch => {
         if (isMatch) {
           //Sign Token as a sign of success validation
-          AccessToken = generateAccessToken(user)
+          AccessToken = generateAccessToken(user, 'auth');
           RefreshToken = jwt.sign(
             {
               UserID: user.id,
@@ -119,27 +122,14 @@ router.post('/login', (req, res) => {
     });
   });
 
-// Function to generate JWT Access Token
-function generateAccessToken(user){
-  return jwt.sign(
-    {
-      UserID: user.id,
-      FirstName: user.FirstName,
-      LastName: user.LastName
-    },
-    process.env.ACCESSSECRETE,
-    {
-      expiresIn: 3600
-    }
-  );
-}
+
 
 // Get Current User
 router.get("/current", passport.authenticate("jwt", {
     session: false
 }), // not using session
     (req, res) => {
-      AccessToken = generateAccessToken(req.user);
+      AccessToken = generateAccessToken(req.user, 'auth');
       RefreshToken = jwt.sign(
         {
           UserID: req.user.id,

@@ -4,15 +4,16 @@ const bodyParser = require('body-parser');
 require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 6666;
-const db_uri = process.env.MONGODB_URL;
 
 // routes
 //
 const rootRouter = require('./APIs');
 const authRouter = require('./APIs/auth');
+const dsserviceRouter = require('./APIs/dsservice');
+const tokenRouter = require('./APIs/token');
 
 mongoose
-    .connect(db_uri)
+    .connect(process.env.MONGODB_URL)
     .then(() => {
         console.log('Database connected');
     })
@@ -28,6 +29,8 @@ app.use(bodyParser.urlencoded({extended: true}));
 //route middleware
 app.use('/', rootRouter);
 app.use('/auth', authRouter);
+app.use('/jwt', tokenRouter);
+app.use('/dsservice', dsserviceRouter);
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
