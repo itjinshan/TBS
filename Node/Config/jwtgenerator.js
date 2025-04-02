@@ -34,6 +34,16 @@ module.exports = function generateAccessToken(user, usage){
                     expiresIn: 60
                 }
             );
+        case 'gdmapservice':
+            return jwt.sign(
+                { 
+                    API_Usage: usage
+                }, 
+                process.env.GD_MAP_JWT_SECRET,
+                {
+                    expiresIn: 60
+                }
+            );
     }
 
 }

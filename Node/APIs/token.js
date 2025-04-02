@@ -10,6 +10,8 @@ router.get('/', (req, res) => {
         switch(req.body.usage){
             case 'deepseek':
                 return res.json({token: generateAccessToken('', req.body.usage)});
+            case 'gdmapservice':
+                return res.json({token: generateAccessToken('', req.body.usage)});
             case 'auth':
                 return res.json({token: generateAccessToken(req.user, req.body.usage)});
         }
