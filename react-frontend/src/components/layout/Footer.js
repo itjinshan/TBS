@@ -9,13 +9,13 @@ function Footer() {
     <footer id="footer">
       <div className="footerLayout">
         <a
-          href="https://www.facebook.com/BATacticalGroup/"
+          href="https://www.facebook.com"
           className="footerMenuLink"
           style={{ color: "white" }}
           ><FacebookIcon style={{fontSize:50}}/>
         </a>
         <a
-          href="https://www.instagram.com/BATacticalGroup/"
+          href="https://www.instagram.com"
           className="footerMenuLink"
           style={{ color: "white" }}
           ><InstagramIcon style={{fontSize:50}}/>
@@ -24,32 +24,6 @@ function Footer() {
       <div className="footerLayout" style={{paddingTop:"1%"}} >
         Copyright © 2025 Travel Buddy
       </div>
-      {/* <Grid container spacing={3}>
-        <Grid className="footerLayout" xs={12}>
-          <a
-            href="https://www.facebook.com/BATacticalGroup/"
-            className="footerMenuLink"
-            style={{ color: "white" }}
-            ><FacebookIcon style={{fontSize:50}}/>
-          </a>
-          <a
-            href="https://www.instagram.com/BATacticalGroup/"
-            className="footerMenuLink"
-            style={{ color: "white" }}
-            ><InstagramIcon style={{fontSize:50}}/>
-          </a>
-        </Grid>
-
-      </Grid>
-      <Grid container spacing={3}>
-        <Grid className="footerLayout" xs>
-        </Grid>
-        <Grid className="footerLayout" xs={6}>
-          Copyright © 2025 Travel Buddy
-        </Grid>
-        <Grid className="footerLayout" xs>
-        </Grid>
-      </Grid> */}
     </footer>
   );
 }
