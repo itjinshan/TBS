@@ -5,7 +5,7 @@ import { registerUser } from "../../actions/authAction";
 import TextFieldGroup from "../../utils/TextFieldGroup";
 import Paper from "@mui/material/Paper";
 import Grid from "@mui/material/Grid2";
-import TBSLogo from "../../images/tbs_logo.jpg";
+import TBSLogo from "../../images/tbs_logo.png";
 import { Link } from "react-router-dom";
 import withRouter from "../../utils/withRouter";
 import "./Auth.css";

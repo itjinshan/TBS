@@ -1,1009 +1,121 @@
-/* Font Boldness:
-100 Thin
-200 Extra Light
-300 Light
-400 Normal
-500 Medium
-600 Semi Bold
-700 Bold
-800 Extra Bold
-900 Ultra Bold */
-
-/* X-Small Screen */
-@media screen and (max-width: 600px) {
-    .smallMenu {
-      position: relative;
-      /* top: -5px; */
-      /* right: 45px; */
-    }
-  
-    .navbarLogo {
-      position: relative;
-      left: 5%;
-    }
-  
-    img.tbs-logo {
-      position: relative;
-      width: 45px;
-      height: 45px;
-    }
-  
-    .companyName {
-      font-size: 20px;
-      font-weight: 700;
-      text-align: center;
-      position: relative;
-      left: 20px;
-      text-decoration: none !important;
-      color: white;
-      border-bottom: 0px;
-    }
-
-    .moreBurger{
-      cursor: pointer;
-      font-size: 28px !important;
-      font-weight: 700;
-      background-color: rgb(255,255,255, 0);
-      color: #fff !important;
-      box-shadow: none;
-    }
-
-    .moreBurgerText{
-      display: none;
-    }
-
-    .navButtons {
-      border: none;
-      cursor: pointer;
-      font-size: 22px;
-      font-weight: 600;
-      border-radius: 10px;
-      box-shadow: none;
-    }
-  
-    .navButtons:hover{
-      background-color: #428bca;
-    }
-  
-    .buttonFree {
-      background-color: rgb(255,255,255, 0);
-      color: #fff;
-      width: 120px;
-      position: relative;
-      display: none;
-    }
-
-    .essentialButtons{
-      background-color: rgb(255,255,255, 0);
-      color: #fff;
-      width: 120px;
-      position: relative;
-      display: none;
-    }
-
-    .nonEssentialButton{
-      background-color: rgb(255,255,255, 0);
-      color: #fff;
-      width: 120px;
-      position: relative;
-      display: none;
-    }
-  
-    .buttonGrey {
-      background-color: #f0f0f0;
-      color: #0e5283;
-      width: 63px;
-      position: relative;
-    }
-  
-    .buttonBlue {
-      background-color: #0e5283;
-      color: #f0f0f0;
-      width: 63px;
-      position: relative;
-    }
-  
-    .headerMenu {
-      display: none;
-    }
-  
-    .headerMenuBooking {
-      display: none;
-    }
-
-    .headerfont {
-      color: #ffffff;
-    }
-    
-    .greetingMsg{
-      font-size: 28px;
-      font-weight: 700;
-      text-align: right;
-      position: relative;
-      right: 0px;
-      text-decoration: none;
-      color: white;
-      display: none;
-    }
-
-    .navTitle{
-      font-size: 20px;
-    }
-
-    .navStyle{
-      font-size: 28px;
-      font-weight: 700;
-      text-align: right;
-      position: relative;
-      display: none;
-    }
-
-    .navStyle:hover{
-      color: #428bca;
-      text-decoration: none;
-    }
-
-    .navSubTitle{
-      font-size: 13px;
-    }
-    
-    .menuBurger {
-      color: #ffffff;
-      text-align: left;
-    }
-
-    .menuBurgerLogedIn {
-      margin-left: 5px;
-      color: #ffffff;
-      text-align: left;
-    }
-    
-    .navbarContainer {
-      height: 97px;
-      overflow-x: hidden;
-      background-color: #2B2C30; /* For browsers that do not support gradients */
-      background-image: linear-gradient(to right,#2B2C30, rgb(61, 61, 66), rgb(67, 67, 71));
-      position: relative;
-      top: 0;
-      z-index: 100;
-    }
-}
-  
-/* Small Screen */
-@media screen and (min-width: 600px) and (max-width: 768px) {
-  .smallMenu {
-    display: none;
-  }
-
-  .navbarLogo {
-    position: relative;
-    left: 7%;
-  }
-
-  img.tbs-logo {
-    position: relative;
-    width: 70px;
-    height: 70px;
-  }
-
-  .companyName {
-    font-size: 24px;
-    font-weight: 700;
-    text-align: center;
-    position: relative;
-    left: 20px;
-    text-decoration: none !important;
-    color: white;
-    border-bottom: 0px;
-  }
-
-  .moreBurger{
-    cursor: pointer;
-    font-size: 28px !important;
-    font-weight: 700;
-    background-color: rgb(255,255,255, 0);
-    color: #fff !important;
-    box-shadow: none;
-  }
-
-  .navButtons {
-    border: none;
-    cursor: pointer;
-    font-size: 22px;
-    font-weight: 800;
-    border-radius: 10px;
-    box-shadow: none;
-  }
-
-  .navButtons:hover{
-    background-color: #428bca;
-  }
-
-  .buttonFree {
-    background-color: rgb(255,255,255, 0);
-    color: #fff;
-    width: 120px;
-    position: relative;
-    display: none;
-  }
-
-  .essentialButtons{
-    background-color: rgb(255,255,255, 0);
-    color: #fff;
-    width: 120px;
-    position: relative;
-    display: none;
-  }
-
-  .nonEssentialButton{
-    background-color: rgb(255,255,255, 0);
-    color: #fff;
-    width: 120px;
-    position: relative;
-    display: none;
-  }
-
-  .buttonGrey {
-    background-color: #f0f0f0;
-    color: #0e5283;
-    width: 80px;
-    position: relative;
-  }
-
-  .buttonBlue {
-    background-color: #0e5283;
-    color: #f0f0f0;
-    width: 80px;
-    position: relative;
-  }
-
-  .headerMenu {
-    display: none;
-  }
-
-  .headerMenuBooking {
-    font-size: 16px;
-    font-weight: 400;
-    text-align: center;
-    position: relative;
-  }
-  .headerfont {
-    color: #ffffff;
-  }
-  
-  .greetingMsg{
-    font-size: 28px;
-    font-weight: 700;
-    text-align: right;
-    position: relative;
-    right: 0px;
-    text-decoration: none;
-    color: white;
-    display: none;
-  }
-
-  .navTitle{
-    font-size: 25px;
-  }
-
-  .navStyle{
-    font-size: 28px;
-    font-weight: 700;
-    text-align: right;
-    position: relative;
-    display: none;
-  }
-
-  .navStyle:hover{
-    color: #428bca;
-    text-decoration: none;
-  }
-
-  .navSubTitle{
-    font-size: 18px;
-  }
-  
-  .menuBurger {
-    color: #ffffff;
-    text-align: left;
-  }
-
-  .menuBurgerLogedIn {
-    margin-left: 5px;
-    color: #ffffff;
-    text-align: left;
-  }
-  
-  .navbarContainer {
-    height: 102px;
-    overflow-x: hidden;
-    background-color: #2B2C30; /* For browsers that do not support gradients */
-    background-image: linear-gradient(to right,#2B2C30, rgb(61, 61, 66), rgb(67, 67, 71));
-    position: relative;
-    top: 0;
-    z-index: 100;
-  }
-}
-  
-@media screen and (min-width: 768px) and (max-width: 870px){
-  .smallMenu {
-    display: none;
-  }
-
-  .navbarLogo {
-    position: relative;
-    left: 7%;
-  }
-
-  img.tbs-logo {
-    position: relative;
-    width: 70px;
-    height: 70px;
-  }
-
-  .companyName {
-    font-size: 26px;
-    font-weight: 700;
-    text-align: center;
-    position: relative;
-    left: 20px;
-    text-decoration: none !important;
-    color: white;
-    border-bottom: 0px;
-  }
-
-  .moreBurger{
-    cursor: pointer;
-    font-size: 28px !important;
-    font-weight: 800;
-    background-color: rgb(255,255,255, 0);
-    color: #fff !important;
-    box-shadow: none;
-  }
-
-  .navButtons {
-    border: none;
-    cursor: pointer;
-    font-size: 22px;
-    font-weight: 800;
-    border-radius: 10px;
-    box-shadow: none;
-  }
-
-  .navButtons:hover{
-    background-color: #428bca;
-  }
-
-  .buttonFree {
-    background-color: rgb(255,255,255, 0);
-    color: #fff;
-    width: 120px;
-    position: relative;
-    display: none;
-  }
-
-  .essentialButtons{
-    background-color: rgb(255,255,255, 0);
-    color: #fff;
-    width: 120px;
-    position: relative;
-    display: none;
-  }
-
-  .nonEssentialButton{
-    background-color: rgb(255,255,255, 0);
-    color: #fff;
-    width: 120px;
-    position: relative;
-    display: none;
-  }
-
-  .buttonGrey {
-    background-color: #f0f0f0;
-    color: #0e5283;
-    width: 100px;
-    position: relative;
-  }
-
-  .buttonBlue {
-    background-color: #0e5283;
-    color: #f0f0f0;
-    width: 100px;
-    position: relative;
-  }
-
-  .headerMenu {
-    font-size: 16px;
-    font-weight: 400;
-    text-align: center;
-    position: relative;
-  }
-
-  .headerMenuBooking {
-    font-size: 16px;
-    font-weight: 400;
-    text-align: center;
-    position: relative;
-  }
-
-  .adjustMenuBurger {
-    padding-top: 10px;
-    padding-right: 40px;
-    position: relative;
-  }
-  .headerfont {
-    color: #ffffff;
-  }
-  
-  .greetingMsg{
-    font-size: 28px;
-    font-weight: 700;
-    text-align: right;
-    position: relative;
-    right: 0px;
-    text-decoration: none;
-    color: white;
-    display: none;
-  }
-
-  .navTitle{
-    font-size: 25px;
-  }
-
-  .navStyle{
-    font-size: 28px;
-    font-weight: 700;
-    text-align: right;
-    position: relative;
-    display: none;
-  }
-
-  .navStyle:hover{
-    color: #428bca;
-    text-decoration: none;
-  }
-
-  .optionalNav{
-    display: none;
-  }
-
-  .navSubTitle{
-    font-size: 18px;
-  }
-  
-  .menuBurger {
-    color: #ffffff;
-    text-align: right;
-  }
-
-  .menuBurgerLogedIn {
-    margin-left: 5px;
-    color: #ffffff;
-    text-align: left;
-  }
-  
-  .navbarContainer {
-    height: 102px;
-    overflow-x: hidden;
-    background-color: #2B2C30; /* For browsers that do not support gradients */
-    background-image: linear-gradient(to right,#2B2C30, rgb(61, 61, 66), rgb(67, 67, 71));
-    position: relative;
-    top: 0;
-    z-index: 100;
-  }
-
-  .positionOpt{
-    justify-content: right !important;
-    margin-right: 5%;
-  }
+.navbar {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  background-color: #ded8cc;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  height: 60px;
+  display: flex;
+  align-items: center;
 }
 
-/* Medium Screen (Landscape Phones, Tablets) */
-@media screen and (min-width: 870px) and (max-width: 1060px) {
-  .smallMenu {
-    display: none;
-  }
-
-  .navBurger{
-    display: none;
-  }
-
-  .navbarLogo {
-    position: relative;
-    left: 7%;
-  }
-
-  img.tbs-logo {
-    position: relative;
-    width: 70px;
-    height: 70px;
-  }
-
-  .companyName {
-    font-size: 26px;
-    font-weight: 700;
-    text-align: center;
-    position: relative;
-    left: 20px;
-    text-decoration: none !important;
-    color: white;
-    border-bottom: 0px;
-  }
-
-  .moreBurger{
-    cursor: pointer;
-    font-size: 21px !important;
-    font-weight: 700;
-    background-color: rgb(255,255,255, 0);
-    color: #fff !important;
-    box-shadow: none;
-  }
-
-  .navButtons {
-    border: none;
-    cursor: pointer;
-    font-size: 25px;
-    font-weight: 700;
-    border-radius: 10px;
-    box-shadow: none;
-  }
-
-  .navButtons:hover{
-    background-color: #428bca;
-  }
-
-  .buttonFree {
-    background-color: rgb(255,255,255, 0);
-    color: #fff;
-    width: 120px;
-    position: relative;
-  }
-
-  .essentialButtons{
-    background-color: rgb(255,255,255, 0);
-    color: #fff;
-    width: 120px;
-    position: relative;
-  }
-
-  .nonEssentialButton{
-    background-color: rgb(255,255,255, 0);
-    color: #fff;
-    width: 120px;
-    position: relative;
-    display: none;
-  }
-
-  .buttonGrey {
-    background-color: #f0f0f0;
-    color: #0e5283;
-    width: 100px;
-    position: relative;
-  }
-
-  .buttonBlue {
-    background-color: #0e5283;
-    color: #f0f0f0;
-    width: 100px;
-    position: relative;
-  }
-
-  .headerMenu {
-    font-size: 16px;
-    font-weight: 400;
-    text-align: center;
-    position: relative;
-  }
-
-  .headerMenuBooking {
-    font-size: 16px;
-    font-weight: 400;
-    text-align: center;
-    position: relative;
-  }
-
-  .adjustMenuBurger {
-    padding-top: 2px;
-    padding-right: 12px;
-    position: relative;
-  }
-  .headerfont {
-    color: #ffffff;
-  }
-  
-  .greetingMsg{
-    font-size: 21px;
-    font-weight: 700;
-    text-align: right;
-    position: relative;
-    right: 0px;
-    text-decoration: none;
-    color: white;
-    display: none;
-  }
-
-  .navTitle{
-    font-size: 25px;
-  }
-
-  .navStyle{
-    padding-top: 6px;
-    font-size: 21px;
-    font-weight: 700;
-    text-align: right;
-    position: relative;
-  }
-
-  .navStyle:hover{
-    color: #428bca;
-    text-decoration: none;
-  }
-
-  .optionalNav{
-    display: none;
-  }
-
-  .navSubTitle{
-    font-size: 18px;
-  }
-  
-  .menuBurger {
-    color: #ffffff;
-    text-align: left;
-  }
-
-  .menuBurgerLogedIn {
-    margin-left: 5px;
-    color: #ffffff;
-    text-align: left;
-  }
-  
-  .navbarContainer {
-    height: 102px;
-    overflow-x: hidden;
-    background-color: #2B2C30; /* For browsers that do not support gradients */
-    background-image: linear-gradient(to right,#2B2C30, rgb(61, 61, 66), rgb(67, 67, 71));
-    position: relative;
-    top: 0;
-    z-index: 100;
-  }
+.navbar-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-/* Medium Screen (Landscape Phones, Tablets) */
-@media screen and (min-width: 1060px) and (max-width: 1440px) {
-  .smallMenu {
-    display: none;
-  }
-
-  .navBurger{
-    display: none;
-  }
-
-  .navbarLogo {
-    position: relative;
-    left: 7%;
-  }
-
-  img.tbs-logo {
-    position: relative;
-    width: 70px;
-    height: 70px;
-  }
-
-  .companyName {
-    font-size: 26px;
-    font-weight: 700;
-    text-align: center;
-    position: relative;
-    left: 20px;
-    text-decoration: none !important;
-    color: white;
-    border-bottom: 0px;
-  }
-
-  .moreBurger{
-    cursor: pointer;
-    font-size: 23px !important;
-    font-weight: 700;
-    background-color: rgb(255,255,255, 0);
-    color: #fff !important;
-    box-shadow: none;
-  }
-
-  .navButtons {
-    border: none;
-    cursor: pointer;
-    font-size: 25px;
-    font-weight: 700;
-    border-radius: 10px;
-    box-shadow: none;
-  }
-
-  .navButtons:hover{
-    background-color: #428bca;
-  }
-
-  .buttonFree {
-    background-color: rgb(255,255,255, 0);
-    color: #fff;
-    width: 120px;
-    position: relative;
-  }
-
-  .essentialButtons{
-    background-color: rgb(255,255,255, 0);
-    color: #fff;
-    width: 120px;
-    position: relative;
-  }
-
-  .nonEssentialButton{
-    background-color: rgb(255,255,255, 0);
-    color: #fff;
-    width: 120px;
-    position: relative;
-    display: none;
-  }
-
-  .buttonGrey {
-    background-color: #f0f0f0;
-    color: #0e5283;
-    width: 100px;
-    position: relative;
-  }
-
-  .buttonBlue {
-    background-color: #0e5283;
-    color: #f0f0f0;
-    width: 100px;
-    position: relative;
-  }
-
-  .headerMenu {
-    font-size: 16px;
-    font-weight: 400;
-    text-align: center;
-    position: relative;
-  }
-
-  .headerMenuBooking {
-    font-size: 16px;
-    font-weight: 400;
-    text-align: center;
-    position: relative;
-  }
-
-  .adjustMenuBurger {
-    padding-right: 12px;
-    position: relative;
-  }
-  .headerfont {
-    color: #ffffff;
-  }
-  
-  .greetingMsg{
-    font-size: 21px;
-    font-weight: 700;
-    text-align: right;
-    position: relative;
-    right: 0px;
-    text-decoration: none;
-    color: white;
-  }
-
-  .navTitle{
-    font-size: 25px;
-  }
-
-  .navStyle{
-    font-size: 21px;
-    font-weight: 700;
-    text-align: right;
-    position: relative;
-  }
-
-  .navStyle:hover{
-    color: #428bca;
-    text-decoration: none;
-  }
-
-  .navSubTitle{
-    font-size: 18px;
-  }
-  
-  .menuBurger {
-    color: #ffffff;
-    text-align: left;
-  }
-
-  .menuBurgerLogedIn {
-    margin-left: 5px;
-    color: #ffffff;
-    text-align: left;
-  }
-  
-  .navbarContainer {
-    height: 102px;
-    overflow-x: hidden;
-    background-color: #2B2C30; /* For browsers that do not support gradients */
-    background-image: linear-gradient(to right,#2B2C30, rgb(61, 61, 66), rgb(67, 67, 71));
-    position: relative;
-    top: 0;
-    z-index: 100;
-  }
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #2d3748;
 }
 
-/* Large Screen (Laptops, Desktop monitors) */
-@media screen and (min-width: 1440px) {
-  .smallMenu {
-    display: none;
-  }
-
-  .navBurger{
-    display: none;
-  }
-
-  .navbarLogo {
-    position: relative;
-    left: 7%;
-  }
-
-  img.tbs-logo {
-    position: relative;
-    width: 80px;
-    height: 80px;
-    /* height: auto; */
-  }
-
-  .companyName {
-    font-size: 28px;
-    font-weight: 700;
-    text-align: center;
-    position: relative;
-    left: 20px;
-    text-decoration: none !important;
-    color: white;
-    border-bottom: 0px;
-  }
-
-  .moreBurger{
-    cursor: pointer;
-    font-size: 24px !important;
-    font-weight: 700;
-    background-color: rgb(255,255,255, 0);
-    color: #fff !important;
-    box-shadow: none;
-  }
-
-  .moreBurger:hover{
-    background-color: #428bca;
-  }
-
-  .navButtons {
-    border: none;
-    cursor: pointer;
-    font-size: 25px;
-    font-weight: 700;
-    border-radius: 10px;
-    box-shadow: none;
-  }
-
-  .navButtons:hover{
-    background-color: #428bca;
-  }
-
-  .buttonFree {
-    background-color: rgb(255,255,255, 0);
-    color: #fff;
-    width: 120px;
-    position: relative;
-  }
-
-  .essentialButtons{
-    background-color: rgb(255,255,255, 0);
-    color: #fff;
-    width: 140px;
-    position: relative;
-  }
-
-  .nonEssentialButton{
-    background-color: rgb(255,255,255, 0);
-    color: #fff;
-    width: 120px;
-    position: relative;
-  }
-
-  .buttonGrey {
-    background-color: #f0f0f0;
-    color: #0e5283;
-    width: 108px;
-    position: relative;
-  }
-
-  .buttonBlue {
-    background-color: #0e5283;
-    color: #f0f0f0;
-    width: 108px;
-    position: relative;
-  }
-
-  .headerMenu {
-    font-size: 18px;
-    font-weight: 400;
-    text-align: center;
-    position: relative;
-  }
-
-  .headerMenuBooking {
-    font-size: 18px;
-    font-weight: 400;
-    text-align: center;
-    position: relative;
-  }
-
-  .adjustMenuBurger {
-    padding-top: 6.5px;
-    padding-right: 12px;
-    position: relative;
-  }
-  .headerfont {
-    color: #ffffff;
-  }
-  
-  .greetingMsg{
-    font-size: 21px;
-    font-weight: 700;
-    padding: 12px;
-    text-align: right;
-    position: relative;
-    text-decoration: none;
-    color: white;
-  }
-
-  .navTitle{
-    font-size: 25px;
-  }
-
-  .navStyle{
-    font-size: 21px;
-    font-weight: 700;
-    text-align: right;
-    position: relative;
-    padding: 12px;
-  }
-
-  .navStyle:hover{
-    color: #428bca;
-    text-decoration: none;
-  }
-
-  .navSubTitle{
-    font-size: 18px;
-  }
-  
-  .menuBurger {
-    color: #ffffff;
-    text-align: left;
-  }
-
-  .menuBurgerLogedIn {
-    margin-left: 5px;
-    color: #ffffff;
-    text-align: left;
-  }
-  
-  .navbarContainer {
-    height: 98px;
-    overflow-x: hidden;
-    background-color: #2B2C30; /* For browsers that do not support gradients */
-    background-image: linear-gradient(to right,#2B2C30, rgb(61, 61, 66), rgb(67, 67, 71));
-    position: relative;
-    top: 0;
-    z-index: 100;
-  }
+.navbar-logo img {
+  height: 60px;
+  width: auto;
 }
 
-.navOpt{
+.navbar-auth {
+  display: flex;
+  align-items: center;
+}
+
+.login-btn {
+  background-color: #4299e1;
   color: white;
-  text-decoration: none !important;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.login-btn:hover {
+  background-color: #3182ce;
+}
+
+.profile-container {
+  position: relative;
+}
+
+.profile-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 20px;
+  transition: background-color 0.2s;
+}
+
+.profile-info:hover {
+  background-color: #f7fafc;
+}
+
+.profile-pic {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.profile-pic img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.username {
+  font-weight: 500;
+  color: #4a5568;
+}
+
+.dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 50px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 200px;
+  overflow: hidden;
+  z-index: 1001;
+}
+
+.dropdown-item {
+  padding: 12px 16px;
+  color: #4a5568;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background-color: #f7fafc;
+  color: #2d3748;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: #edf2f7;
+  margin: 4px 0;
 }

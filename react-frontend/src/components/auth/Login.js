@@ -3,7 +3,7 @@ import Grid from "@mui/material/Grid2";
 import { Link } from "react-router-dom";
 import TextFieldGroup from "../../utils/TextFieldGroup";
 import Paper from "@mui/material/Paper";
-import TBSLogo from "../../images/tbs_logo.jpg";
+import TBSLogo from "../../images/tbs_logo.png";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import { loginUser } from "../../actions/authAction";
