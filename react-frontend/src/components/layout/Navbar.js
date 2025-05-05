@@ -1,17 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react'
 import PropTypes from "prop-types";
-import { connect } from "react-redux";
+import { useSelector, useDispatch, connect } from "react-redux";
 import { Link } from "react-router-dom";
 import { logoutUser, getProfileInfo } from "../../actions/authAction";
 import setAuthToken from "../../utils/setAuthToken";
+import LoginModal from '../auth/LoginModal';
+// style imports
+import { FaUserCircle } from 'react-icons/fa';
 import "./Navbar.css";
 // media imports
 import TBSLogo from "../../images/tbs_logo.png";
 
 const Navbar = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [username, setUsername] = useState('John Doe');
+  const dispatch = useDispatch();
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false); // Modal state
   const dropdownRef = useRef(null);
 
   // Close dropdown when clicking outside
@@ -29,11 +33,12 @@ const Navbar = () => {
   }, []);
 
   const handleLogin = () => {
-    setIsLoggedIn(true);
+    setShowLoginModal(true);
   };
 
   const handleLogout = () => {
-    setIsLoggedIn(false);
+    dispatch(logoutUser());
+    localStorage.removeItem('AccessToken');
     setShowDropdown(false);
   };
 
@@ -42,6 +47,7 @@ const Navbar = () => {
   };
 
   return (
+    <>
     <nav className="navbar">
       <div className="navbar-container">
         <Link to="/" style={{ textDecoration: 'none' }}>
@@ -51,23 +57,23 @@ const Navbar = () => {
         </Link>
         
         <div className="navbar-auth">
-          {isLoggedIn ? (
-            <div className="profile-container" ref={dropdownRef}>
+          {isAuthenticated ? (
+              <div className="profile-container" ref={dropdownRef}>
               <div className="profile-info" onClick={toggleDropdown}>
                 <div className="profile-pic">
-                  <img 
-                    src="https://via.placeholder.com/40x40?text=JD" 
-                    alt="Profile" 
-                  />
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt="Profile" />
+                  ) : (
+                    <FaUserCircle size={24} />
+                  )}
                 </div>
-                <span className="username">{username}</span>
+                <span className="username">{user?.name || 'User'}</span>
               </div>
               
               {showDropdown && (
                 <div className="dropdown-menu">
                   <div className="dropdown-item">My Profile</div>
                   <div className="dropdown-item">Settings</div>
-                  <div className="dropdown-item">Notifications</div>
                   <div className="dropdown-divider"></div>
                   <div className="dropdown-item" onClick={handleLogout}>Logout</div>
                 </div>
@@ -79,6 +85,13 @@ const Navbar = () => {
         </div>
       </div>
     </nav>
+
+    {/* Login Modal */}
+      <LoginModal 
+      open={showLoginModal}
+      onClose={() => setShowLoginModal(false)}
+    />
+    </>
   );
 };
 

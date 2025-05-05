@@ -4,8 +4,9 @@ import "./Footer.css";
 import TBSLogo from "../../images/tbs_logo.png";
 import { FaFacebook, FaTwitter, FaInstagram } from 'react-icons/fa';
 import { SiXiaohongshu, SiTiktok, SiPinterest, SiWechat } from 'react-icons/si';
+import WeChatIcon from '../../utils/WechatIcon';
 
-function Footer() {
+const Footer = () => {
   return (
     <footer className="footer">
       <div className="footer-container">

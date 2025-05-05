@@ -38,8 +38,18 @@
 
 .footer-links {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr)); /* Crucial fix */
   gap: 20px;
+  width: 100%; /* Ensure full width */
+}
+
+.footer-links > * {
+  min-width: 0; /* Prevent content from breaking layout */
+}
+
+.link-column {
+  width: 100%; /* Take full column width */
+  overflow: hidden; /* Contain content */
 }
 
 .link-column h4 {
