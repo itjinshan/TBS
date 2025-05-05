@@ -18,6 +18,9 @@ import ForgetPassword from "./components/auth/ForgotPassword"
 import ResetPassword from "./components/auth/ResetPassword"
 import CreatePassword from "./components/auth/CreatePassword"
 
+//Itinerary
+import Itinerary from "./components/itinerary/Itinerary"
+
 // Redux provider
 //
 import { Provider } from "react-redux";
@@ -33,7 +36,8 @@ export default class App extends Component {
         <Router> 
           <div className = "App">
             <NavBar />
-            <div style={{minHeight:window.innerHeight-250, marginTop:"97px"}}>
+            {/* <div style={{minHeight:window.innerHeight-250, marginTop:"97px"}}> */}
+            <div>
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
@@ -41,6 +45,7 @@ export default class App extends Component {
                 <Route path="/forget-password" element={<ForgetPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/create-password" element={<CreatePassword />} />
+                <Route path="/itinerary" element={<Itinerary />} />
               </Routes>
             </div>
             <Footer />
