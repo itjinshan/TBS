@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import { loginUser } from "../../actions/authAction";
 import ForgotPasswordModal from './ForgotPasswordModal';
+import RegisterModal from './RegisterModal';
 import TextFieldGroup from "../../utils/TextFieldGroup";
 import { 
   Dialog,
@@ -26,11 +27,13 @@ class LoginModal extends Component {
       Email: "",
       Password: "",
       errors: {},
-      forgotPasswordOpen: false
+      forgotPasswordOpen: false,
+      registerOpen: false,
     };
     this.onChange = this.onChange.bind(this);
     this.onSubmit = this.onSubmit.bind(this);
     this.toggleForgotPassword = this.toggleForgotPassword.bind(this);
+    this.toggleRegister = this.toggleRegister.bind(this);
   }
 
   componentDidUpdate(prevProps) {
@@ -49,6 +52,12 @@ class LoginModal extends Component {
   }
 
 
+  toggleRegister() {
+    this.setState(prevState => ({
+      showRegisterOpen: !prevState.showRegisterOpen
+    }));
+  }
+
   onChange(e) {
     this.setState({ [e.target.name]: e.target.value });
   }
@@ -64,12 +73,12 @@ class LoginModal extends Component {
 
   render() {
     const { open, onClose } = this.props;
-    const { errors, showForgotPassword } = this.state;
+    const { errors, showForgotPassword, showRegisterOpen } = this.state;
 
     return (
       <>
       <Dialog
-        open={open && !showForgotPassword} 
+        open={open && !showForgotPassword && !showRegisterOpen} 
         onClose={onClose}
         maxWidth="xs"
         fullWidth
@@ -145,7 +154,16 @@ class LoginModal extends Component {
             >
               Forgot password?
             </a>
-            <a href="/register" className="link">Don't have an account? Sign up</a>
+            <a 
+              href="#" 
+              className="link" 
+              onClick={(e) => {
+                e.preventDefault();
+                this.toggleRegister();
+              }}
+            >
+              Don't have an account? Sign up
+            </a>
           </div>
         </DialogContent>
       </Dialog>
@@ -162,6 +180,20 @@ class LoginModal extends Component {
             // If you need to reopen login modal:
             if (!open) onClose(); 
           }}
+        />
+        {/* Register Modal */}
+        <RegisterModal
+          open={showRegisterOpen}
+          onClose={() => {
+            this.toggleRegister();
+            onClose();
+          }}
+          returnToLoginClick={() => {
+            this.toggleRegister();
+            // If you need to reopen login modal:
+            if (!open) onClose(); 
+          }}
+          navigate={this.props.navigate}
         />
       </>
     );

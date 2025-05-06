@@ -22,11 +22,15 @@ export const registerUser = (userData, navigate) => dispatch => {
     axios
         .post("/auth/register", userData)
         .then(res => navigate("/login"))
-        .catch(err => 
+        .catch(err => {
             dispatch({
                 type: AUTH_ERRORS,
-                payload: err.response.data
-            })
+            });
+            dispatch({
+                type: GET_ERRORS,
+                payload: err.response ? err.response.data : { message: "An error occurred" }
+            });
+        }
         );
 };
 

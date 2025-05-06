@@ -12,7 +12,6 @@ import Footer from "./components/layout/Footer"
 // Basics
 import Home from "./components/home/Home"
 // Auth
-import Register from "./components/auth/Register"
 import ResetPassword from "./components/auth/ResetPassword"
 import CreatePassword from "./components/auth/CreatePassword"
 
@@ -38,7 +37,6 @@ export default class App extends Component {
             <div>
               <Routes>
                 <Route path="/" element={<Home />} />
-                <Route path="/register" element={<Register />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/create-password" element={<CreatePassword />} />
                 <Route path="/itinerary" element={<Itinerary />} />

@@ -129,7 +129,16 @@ class ForgotPasswordModal extends Component {
               >
                 Back to Login
               </a>
-              <a href="/register" className="link">Don't have an account? Sign up</a>
+              <a 
+                href="#" 
+                className="link" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  this.props.returnToLoginClick(true);
+                }}
+              >
+                Don't have an account? Sign up
+              </a>
             </div>
           </DialogContent>
         </Dialog>
@@ -156,7 +165,8 @@ ForgotPasswordModal.propTypes = {
   errors: PropTypes.object.isRequired,
   open: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
-  returnToLoginClick: PropTypes.func.isRequired
+  returnToLoginClick: PropTypes.func.isRequired,
+  setRegister: PropTypes.func.isRequired
 };
 
 const mapStateToProps = state => ({
