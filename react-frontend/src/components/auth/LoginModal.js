@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import { loginUser } from "../../actions/authAction";
+import ForgotPasswordModal from './ForgotPasswordModal';
 import TextFieldGroup from "../../utils/TextFieldGroup";
 import { 
   Dialog,
@@ -24,10 +25,12 @@ class LoginModal extends Component {
     this.state = {
       Email: "",
       Password: "",
-      errors: {}
+      errors: {},
+      forgotPasswordOpen: false
     };
     this.onChange = this.onChange.bind(this);
     this.onSubmit = this.onSubmit.bind(this);
+    this.toggleForgotPassword = this.toggleForgotPassword.bind(this);
   }
 
   componentDidUpdate(prevProps) {
@@ -38,6 +41,13 @@ class LoginModal extends Component {
       this.setState({ errors: this.props.errors });
     }
   }
+
+  toggleForgotPassword() {
+    this.setState(prevState => ({
+      showForgotPassword: !prevState.showForgotPassword
+    }));
+  }
+
 
   onChange(e) {
     this.setState({ [e.target.name]: e.target.value });
@@ -54,11 +64,12 @@ class LoginModal extends Component {
 
   render() {
     const { open, onClose } = this.props;
-    const { errors } = this.state;
+    const { errors, showForgotPassword } = this.state;
 
     return (
+      <>
       <Dialog
-        open={open}
+        open={open && !showForgotPassword} 
         onClose={onClose}
         maxWidth="xs"
         fullWidth
@@ -124,11 +135,35 @@ class LoginModal extends Component {
           </div>
 
           <div className="other-footer-links">
-            <a href="/forget-password" className="link">Forgot password?</a>
+            <a 
+              href="#" 
+              className="link" 
+              onClick={(e) => {
+                e.preventDefault();
+                this.toggleForgotPassword();
+              }}
+            >
+              Forgot password?
+            </a>
             <a href="/register" className="link">Don't have an account? Sign up</a>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Forgot Password Modal */}
+       <ForgotPasswordModal
+          open={showForgotPassword}
+          onClose={() => {
+            this.toggleForgotPassword();
+            onClose();
+          }}
+          returnToLoginClick={() => {
+            this.toggleForgotPassword();
+            // If you need to reopen login modal:
+            if (!open) onClose(); 
+          }}
+        />
+      </>
     );
   }
 }
