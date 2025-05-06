@@ -1,0 +1,57 @@
+/* TextField Group Styles */
+.text-field-group {
+    width: 100%;
+    margin-bottom: 0; /* Remove default margin */
+  }
+  
+  .text-field-input {
+    width: 100%;
+    padding: 14px 16px; /* Match social button padding */
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    background-color: white;
+    color: #4a5568;
+    height: 48px; /* Explicit height to match buttons */
+    box-sizing: border-box; 
+  }
+  
+  .text-field-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+  }
+  
+  .text-field-input::placeholder {
+    color: #a0aec0;
+  }
+  
+  .text-field-input:disabled {
+    background-color: #f8fafc;
+    cursor: not-allowed;
+  }
+  
+  /* Error States */
+  .text-field-error {
+    border-color: #f56565 !important;
+  }
+  
+  .text-field-error:focus {
+    box-shadow: 0 0 0 2px rgba(245, 101, 101, 0.2);
+  }
+  
+  .text-field-error-message {
+    color: #f56565;
+    font-size: 1rem;
+    margin-top: 6px;
+    padding-left: 4px;
+  }
+  
+  .text-field-info {
+    display: block;
+    color: #718096;
+    font-size: 0.8rem;
+    margin-top: 6px;
+    padding-left: 4px;
+  }

@@ -15,6 +15,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import GoogleIcon from '@mui/icons-material/Google';
 import WechatIcon from '../../utils/WechatIcon';
 import TBSLogo from "../../images/tbs_logo.png";
+import "./LoginModal.css";
+
 
 class LoginModal extends Component {
   constructor(props) {
@@ -66,32 +68,11 @@ class LoginModal extends Component {
           <IconButton className="close-btn" onClick={onClose}>
             <CloseIcon />
           </IconButton>
-          <img src={TBSLogo} alt="Logo" className="logo" />
-          <Typography variant="h5" className="title">Welcome Back</Typography>
+          <img src={TBSLogo} alt="Logo" className="modal-logo" />
+          <Typography variant="h5" className="modal-title">Welcome Back</Typography>
         </div>
 
         <DialogContent className="modal-content">
-          <div className="social-logins">
-            <Button 
-              fullWidth 
-              variant="outlined" 
-              className="social-btn google"
-              startIcon={<GoogleIcon />}
-            >
-              Continue with Google
-            </Button>
-            <Button 
-              fullWidth 
-              variant="outlined" 
-              className="social-btn wechat"
-              startIcon={<WechatIcon />}
-            >
-              Continue with WeChat
-            </Button>
-          </div>
-
-          <Divider className="divider">OR</Divider>
-
           <form onSubmit={this.onSubmit} className="login-form">
             <TextFieldGroup
               placeholder="Email Address"
@@ -121,7 +102,28 @@ class LoginModal extends Component {
             </Button>
           </form>
 
-          <div className="footer-links">
+          <Divider className="login-modal-divider">OR</Divider>
+
+          <div className="social-logins">
+            <Button 
+              fullWidth 
+              variant="outlined" 
+              className="social-btn google"
+              startIcon={<GoogleIcon />}
+            >
+              Continue with Google
+            </Button>
+            <Button 
+              fullWidth 
+              variant="outlined" 
+              className="social-btn wechat"
+              startIcon={<WechatIcon />}
+            >
+              Continue with WeChat
+            </Button>
+          </div>
+
+          <div className="other-footer-links">
             <a href="/forget-password" className="link">Forgot password?</a>
             <a href="/register" className="link">Don't have an account? Sign up</a>
           </div>
