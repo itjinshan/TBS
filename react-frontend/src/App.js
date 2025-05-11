@@ -12,11 +12,11 @@ import Footer from "./components/layout/Footer"
 // Basics
 import Home from "./components/home/Home"
 // Auth
-import Login from "./components/auth/Login"
-import Register from "./components/auth/Register"
-import ForgetPassword from "./components/auth/ForgotPassword"
 import ResetPassword from "./components/auth/ResetPassword"
 import CreatePassword from "./components/auth/CreatePassword"
+
+//Itinerary
+import Itinerary from "./components/itinerary/Itinerary"
 
 // Redux provider
 //
@@ -33,14 +33,12 @@ export default class App extends Component {
         <Router> 
           <div className = "App">
             <NavBar />
-            <div style={{minHeight:window.innerHeight-250, marginTop:"97px"}}>
+            <div>
               <Routes>
                 <Route path="/" element={<Home />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/forget-password" element={<ForgetPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/create-password" element={<CreatePassword />} />
+                <Route path="/itinerary" element={<Itinerary />} />
               </Routes>
             </div>
             <Footer />

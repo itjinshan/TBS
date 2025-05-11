@@ -18,15 +18,33 @@ import { jwtDecode } from "jwt-decode";
 
 // Registration
 //
-export const registerUser = (userData, navigate) => dispatch => {
+export const registerUser = (userData) => dispatch => {
     axios
         .post("/auth/register", userData)
-        .then(res => navigate("/login"))
-        .catch(err => 
+        .then(res => {
+            const { AccessToken, RefreshToken, Email } = res.data;
+            localStorage.setItem("AccessToken", AccessToken);
+            localStorage.setItem("RefreshToken", RefreshToken);
+            setAuthToken(AccessToken);
+            const decoded = jwtDecode(AccessToken);
+            let credentialDecoded = {
+                UserID: decoded.UserID,
+                Email: Email,
+                FirstName: decoded.FirstName,
+                LastName: decoded.LastName,
+            };
+
+            dispatch(setCurrentUser(credentialDecoded));
+        })
+        .catch(err => {
             dispatch({
                 type: AUTH_ERRORS,
-                payload: err.response.data
-            })
+            });
+            dispatch({
+                type: GET_ERRORS,
+                payload: err.response ? err.response.data : { message: "An error occurred" }
+            });
+        }
         );
 };
 

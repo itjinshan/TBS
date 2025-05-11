@@ -1,6 +1,7 @@
 import React from "react";
 import classnames from "classnames";
 import PropTypes from "prop-types";
+import "./TextFieldGroup.css";
 
 // Text input for one line, f.e. street
 const TextFieldGroup = ({
@@ -14,11 +15,11 @@ const TextFieldGroup = ({
   disabled
 }) => {
   return (
-    <div className="form-group">
+    <div className="text-field-group">
       <input
         type={type}
-        className={classnames("form-control", {
-          "is-invalid": error
+        className={classnames("text-field-input", {
+          "text-field-error": error
         })}
         placeholder={placeholder}
         name={name}
@@ -26,8 +27,8 @@ const TextFieldGroup = ({
         onChange={onChange}
         disabled={disabled}
       />
-      {info && <small className="form-text text-muted">{info}</small>}
-      {error && <div className="invalid-feedback">{error}</div>}
+      {info && <small className="text-field-info">{info}</small>}
+      {error && <div className="text-field-error-message">{error}</div>}
     </div>
   );
 };

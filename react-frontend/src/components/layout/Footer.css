@@ -1,81 +1,153 @@
-/* X-Small Screen */
-@media screen and (max-width: 600px) {
-    #footer {
-      height: 180px;
-      background-color: #2B2C30; /* For browsers that do not support gradients */
-      background-image: linear-gradient(to right,#2B2C30, rgb(61, 61, 66), rgb(67, 67, 71));
-    }
-  
-    .footerLayout {
-      text-align: center;
-      position: relative;
-      top: 20%;
-      height: 38px;
-      font-size: 16px;
-      font-weight: 300;
-      color: #ffffff;
-    }
+.footer {
+  background: linear-gradient(135deg, #f4efe6 0%, #e5d1a9 100%);
+  color: #4a5568;
+  padding: 40px 0 0;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+.footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: 40px;
+}
+
+.footer-logo {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 15px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.footer-logo img {
+  height: 120px;
+  width: auto;
+}
+
+.footer-logo span {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.footer-links {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)); /* Crucial fix */
+  gap: 20px;
+  width: 100%; /* Ensure full width */
+}
+
+.footer-links > * {
+  min-width: 0; /* Prevent content from breaking layout */
+}
+
+.link-column {
+  width: 100%; /* Take full column width */
+  overflow: hidden; /* Contain content */
+}
+
+.link-column h4 {
+  color: #2d3748;
+  font-size: 1rem;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+.link-column ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.link-column li {
+  margin-bottom: 12px;
+}
+
+.link-column a {
+  color: #4a5568;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.link-column a:hover {
+  color: #4299e1;
+}
+
+.footer-social {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 20px;
+}
+
+.footer-social-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.social-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.social-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background-color: #edf2f7;
+  border-radius: 20%;
+  color: #4a5568;
+  transition: all 0.2s;
+  font-size: 18px;
+  margin: 0; /* Remove the previous left margin */
+}
+
+.social-icon:hover {
+  background-color: #4299e1;
+  color: white;
+}
+
+.footer-bottom {
+  border-top: 1px solid #edf2f7;
+  margin-top: 40px;
+  padding: 20px 0;
+  text-align: center;
+  color: #718096;
+  font-size: 0.875rem;
+}
+
+.social-icon.xiaohongshu {
+  color: #FF2442; /* Xiaohongshu brand red */
+}
+
+.social-icon:hover {
+  background-color: #4299e1;
+  color: white;
+}
+
+.social-icon.xiaohongshu:hover {
+  background-color: #FF2442;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .footer-social-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
   }
-  
-  /* Small Screen */
-  @media screen and (min-width: 600px) and (max-width: 960px) {
-    #footer {
-      height: 180px;
-      background-color: #2B2C30; /* For browsers that do not support gradients */
-      background-image: linear-gradient(to right,#2B2C30, rgb(61, 61, 66), rgb(67, 67, 71));
-    }
-  
-    .footerLayout {
-      text-align: center;
-      position: relative;
-      top: 20%;
-      height: 45px;
-      font-size: 17px;
-      font-weight: 300;
-      color: #ffffff;
-    }
+  .social-row {
+    flex-basis: 50%;
+    justify-content: space-around;
   }
-  
-  /* Medium Screen (Landscape Phones, Tablets) */
-  @media screen and (min-width: 960px) and (max-width: 1200px) {
-    #footer {
-      height: 180px;
-      background-color: #2B2C30; /* For browsers that do not support gradients */
-      background-image: linear-gradient(to right,#2B2C30, rgb(61, 61, 66), rgb(67, 67, 71));
-    }
-  
-    .footerLayout {
-      text-align: center;
-      position: relative;
-      top: 20%;
-      height: 45px;
-      font-size: 18px;
-      font-weight: 300;
-      color: #ffffff;
-    }
-  }
-  
-  /* Large Screen (Laptops, Desktop monitors) */
-  @media screen and (min-width: 1200px) {
-    #footer {
-      height: 180px;
-      background-color: #2B2C30; /* For browsers that do not support gradients */
-      background-image: linear-gradient(to right,#2B2C30, rgb(61, 61, 66), rgb(67, 67, 71));
-    }
-  
-    .footerLayout {
-      text-align: center;
-      position: relative;
-      top: 20%;
-      height: 45px;
-      font-size: 18px;
-      font-weight: 300;
-      color: #ffffff;
-    }
-  }
-  
-  .footerMenuLink {
-    text-decoration: none;
-    color: white;
-    border-bottom: 0px;
-  }
+}

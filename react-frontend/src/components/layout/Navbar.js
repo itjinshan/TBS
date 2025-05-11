@@ -1,132 +1,114 @@
-import React, { Component } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import PropTypes from "prop-types";
-import { connect } from "react-redux";
-import Grid from "@mui/material/Grid2";
+import { useSelector, useDispatch, connect } from "react-redux";
 import { Link } from "react-router-dom";
 import { logoutUser, getProfileInfo } from "../../actions/authAction";
 import setAuthToken from "../../utils/setAuthToken";
-
-import TBSLogo from "../../images/tbs_logo.jpg";
-import NavbarMenu from "./NavbarMenu";
-import NavTabsMenu from "./NavTabMenu";
-
+import LoginModal from '../auth/LoginModal';
+// style imports
+import { FaUserCircle } from 'react-icons/fa';
 import "./Navbar.css";
+// media imports
+import TBSLogo from "../../images/tbs_logo.png";
 
-class Navbar extends Component {
-    constructor() {
-      super();
-      this.onLogoutClick = this.onLogoutClick.bind(this);
+const Navbar = () => {
+  const dispatch = useDispatch();
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false); // Modal state
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Fetch user profile info when authenticated
+      dispatch(getProfileInfo());
+      setShowDropdown(false);
+      const token = localStorage.getItem("AccessToken");
+
     }
+  }, [isAuthenticated, dispatch]);
 
-    onLogoutClick(e) {
-      e.preventDefault();
-      this.props.logoutUser();
-    }
-
-    componentDidMount() {
-      if (localStorage.AccessToken) {
-        setAuthToken(localStorage.AccessToken);
-        this.props.getProfileInfo();
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
       }
-    }
+    };
 
-    render() {
-        let guestMarkUp =  (
-          <Grid
-            container
-            spacing={0}
-            justifyContent="space-evenly"
-            alignItems="center"
-            direction="row"
-            className="positionOpt"
-            xs={2}
-            sm={5}
-            md={5}
-            lg={5}
-          >
-            <Grid className= "navStyle optionalNav">
-              <Link className="navOpt" to="/about">
-                  About
-              </Link>
-            </Grid>
-            <Grid className="navStyle">
-              <Link className="navOpt" to="/login">
-                  Login
-              </Link>
-            </Grid>
-            <Grid className="navBurger">
-              <NavTabsMenu />
-            </Grid>
-          </Grid> 
-        );
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
-        // Markup shown on the right hand side of Navbar when user is LOGGED IN.
+  const handleLogin = () => {
+    setShowLoginModal(true);
+  };
 
-        let loggedInMarkup = (
-          <Grid
-            container
-            spacing={0}
-            justifyContent="space-evenly"
-            alignItems="right"
-            direction="row"
-            className="positionOpt"
-            xs={4}
-            sm={6}
-            md={6}
-            lg={6}
-          >
-            <Grid className="greetingMsg">Welcome {this.props.auth.user.FirstName}</Grid>
-            <Grid className="adjustMenuBurger">
-              <NavbarMenu
-                onLogoutClick={this.onLogoutClick}
-                userEmail={this.props.auth.user.Email}
-                firstName={this.props.auth.user.FirstName}
-              />
-            </Grid>
-          </Grid>
-        );
+  const handleLogout = () => {
+    dispatch(logoutUser());
+    setAuthToken(false);
+    setShowDropdown(false);
+    setShowLoginModal(false);
+  };
 
+  const toggleDropdown = () => {
+    setShowDropdown(!showDropdown);
+  };
 
-    // Markup shown on the right hand side of Navbar when user is GUEST.
-    return (
-      <div className="navbarContainer">
-        {console.log(this.props.auth)}
-        <Grid
-          container
-          className="navbarContainer headerfont"
-          spacing={0}
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-        >
-          <Grid className="navbarLogo">
-            <Link to="/" style={{ textDecoration: 'none' }}>
-              <Grid
-                container
-                direction="row"
-                justifyContent="space-between"
-                alignItems="center"
-              >
-                <Grid>
-                  <img
-                    className="tbs-logo"
-                    src={TBSLogo}
-                    alt="TBS Logo"
-                  />
-                </Grid>
-                <Grid className="companyName text-left">
-                  <div className="navTitle">Travel Buddy</div>
-                  <div className="navTitle">Your Personal AI Travel Guide</div>
-                </Grid>
-              </Grid>
-            </Link>
-          </Grid>
-          {this.props.auth.isAuthenticated ? loggedInMarkup : guestMarkUp}
-        </Grid>
+  return (
+    <>
+    <nav className="navbar">
+      <div className="navbar-container">
+        <Link to="/" style={{ textDecoration: 'none' }}>
+          <div className="navbar-logo">
+            <img src={TBSLogo} alt="Eazigo Logo" />
+          </div>
+        </Link>
+        
+        <div className="navbar-auth">
+          {isAuthenticated ? (
+              <div className="profile-container" ref={dropdownRef}>
+              <div className="profile-info" onClick={toggleDropdown}>
+                <div className="profile-pic">
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt="Profile" />
+                  ) : (
+                    <FaUserCircle size={24} />
+                  )}
+                </div>
+                <span className="username">{user?.FirstName || 'User'}</span>
+              </div>
+              
+              {showDropdown && (
+                <div className="dropdown-menu">
+                  <div className="dropdown-item">My Profile</div>
+                  <div className="dropdown-item">Settings</div>
+                  <div className="dropdown-divider"></div>
+                  <div className="dropdown-item" onClick={handleLogout}>Logout</div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button className="login-btn" onClick={handleLogin}>Login</button>
+          )}
+        </div>
       </div>
-    );
-  }
-}
+    </nav>
+
+    {!isAuthenticated && (
+      <>
+      {/* Login Modal */}
+        <LoginModal 
+        open={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+      />
+      </>
+    )}
+    </>
+  );
+};
 
 Navbar.propTypes = {
   auth: PropTypes.object.isRequired,
