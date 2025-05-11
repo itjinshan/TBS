@@ -4,6 +4,11 @@ import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import withRouter from "../../utils/withRouter";
 import './Itinerary.css';
+// media imports
+import HawaiiWall from "../../images/hawaii-wall.jpg";
+import KyotoWall from "../../images/Kyoto-wall.jpg";
+import NYWall from "../../images/ny-wall.jpg";
+import ShanghaiWall from "../../images/Shanghai-wall.jpg";
 
 const Itinerary = () => {
   // AMap hook
@@ -24,9 +29,10 @@ const Itinerary = () => {
 
   // Sample data
   const imagePanels = [
-    { id: 1, url: 'https://via.placeholder.com/400x300?text=Image+1' },
-    { id: 2, url: 'https://via.placeholder.com/400x300?text=Image+2' },
-    { id: 3, url: 'https://via.placeholder.com/400x300?text=Image+3' },
+    { id: 1, url: HawaiiWall },
+    { id: 2, url: NYWall },
+    { id: 3, url: KyotoWall },
+    { id: 4, url: ShanghaiWall },
   ];
 
   const [markers, setMarkers] = useState([
@@ -40,26 +46,70 @@ const Itinerary = () => {
 
     mapInstance.current = new AMap.Map('amap-container', {
       viewMode: '2D',
-      zoom: 5,
-      center: [116.397428, 39.90923],
+      zoom: 9, // Start with closer zoom for location
     });
 
-    // Add controls
-    mapInstance.current.addControl(new AMap.ControlBar({
-      showZoomBar: true,
-      showControlButton: true,
-      position: { right: '10px', top: '10px' }
-    }));
-
-    // Initialize geolocation
-    AMap.plugin('AMap.Geolocation', () => {
+    // Load required plugins
+    AMap.plugin([
+      'AMap.ControlBar',
+      'AMap.Scale',
+      'AMap.Geolocation',
+      'AMap.MapType' // For layer switching
+    ], () => {
+      // Add Geolocation
       geolocationRef.current = new AMap.Geolocation({
         enableHighAccuracy: true,
         timeout: 10000,
-        position: 'RB',
-        offset: [10, 20],
+        position: {
+          bottom: '10%',
+          right: '5%'
+        }
       });
       mapInstance.current.addControl(geolocationRef.current);
+
+      // Get current position and center map
+      geolocationRef.current.getCurrentPosition((status, result) => {
+        if (status === 'complete') {
+          const position = [result.position.lng, result.position.lat];
+          mapInstance.current.setCenter(position);
+
+          // Add a marker for current location
+          setMarkers(prev => [
+            ...prev,
+            {
+              id: Date.now(),
+              position: position,
+              title: "Your Location",
+              content: "You are here!"
+            }
+          ]);
+        } else {
+          // Fallback to default center if geolocation fails
+          console.error('Geolocation error:', result);
+          mapInstance.current.setCenter([116.397428, 39.90923]); // Beijing as fallback
+        }
+      });
+
+      // Add ControlBar
+      mapInstance.current.addControl(new AMap.ControlBar({
+        showZoomBar: true,
+        showControlButton: true,
+        position: {
+          top: '3%',
+          right: '5%'
+        }
+      }));
+
+      // Add MapType control (replaces LayerSwitcher)
+      mapInstance.current.addControl(new AMap.MapType({
+        defaultType: 0,
+        showTraffic: false,
+        showRoad: true,
+        position: {
+          top: '15%',
+          right: '5%'
+        }
+      }));
     });
 
     // Initial markers
@@ -120,7 +170,7 @@ const Itinerary = () => {
       { name: "Chengdu", position: [104.0665, 30.5728], desc: "Panda hometown" }
     ];
     const randomCity = cities[Math.floor(Math.random() * cities.length)];
-    
+
     setMarkers(prev => [
       ...prev,
       {
@@ -170,13 +220,13 @@ const Itinerary = () => {
     const containerWidth = containerRect.width;
     const deltaX = e.clientX - startX.current;
     const deltaRatio = (deltaX / containerWidth) * 100;
-    
+
     // Calculate new ratio based on starting position
     let newRatio = startRatio.current + deltaRatio;
-    
+
     // Constrain between 25% and 75%
     newRatio = Math.max(25, Math.min(75, newRatio));
-    
+
     setSplitRatio(newRatio);
   };
 
@@ -217,9 +267,9 @@ const Itinerary = () => {
       </div>
 
       {/* Resizable Divider */}
-      <div 
+      <div
         ref={dividerRef}
-        className="divider" 
+        className="divider"
         onMouseDown={handleMouseDown}
         style={{ left: `${splitRatio}%` }}
       />
@@ -233,16 +283,6 @@ const Itinerary = () => {
         ) : (
           <>
             <div id="amap-container" style={{ width: '100%', height: '100%' }} />
-            
-            {/* Map Control Buttons */}
-            <div className="map-controls">
-              <button onClick={addRandomMarker} className="map-button">
-                Add Random City
-              </button>
-              <button onClick={getCurrentLocation} className="map-button">
-                Locate Me
-              </button>
-            </div>
           </>
         )}
       </div>
@@ -251,15 +291,15 @@ const Itinerary = () => {
 };
 
 Itinerary.propTypes = {
-    auth: PropTypes.object.isRequired,
-    errors: PropTypes.object.isRequired
-  };
-  
+  auth: PropTypes.object.isRequired,
+  errors: PropTypes.object.isRequired
+};
+
 const mapStateToProps = state => ({
-    auth: state.auth,
-    errors: state.errors
+  auth: state.auth,
+  errors: state.errors
 });
-  
+
 export default connect(
-    mapStateToProps
+  mapStateToProps
 )(withRouter(Itinerary));
