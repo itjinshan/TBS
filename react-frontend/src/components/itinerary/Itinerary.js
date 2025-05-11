@@ -3,6 +3,7 @@ import useAMap from '../../hooks/useAmap';
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import withRouter from "../../utils/withRouter";
+import ItineraryChatGen from './ItineraryChatGen';
 import './Itinerary.css';
 // media imports
 import HawaiiWall from "../../images/hawaii-wall.jpg";
@@ -256,6 +257,7 @@ const Itinerary = () => {
     <div className="container" ref={containerRef}>
       {/* Left Panel - Image Stack */}
       <div className="left-panel" style={{ width: `${splitRatio}%` }}>
+        <ItineraryChatGen />
         <div className="image-stack">
           {imagePanels.map((panel) => (
             <div key={panel.id} className="image-panel">
