@@ -50,6 +50,7 @@ const Navbar = () => {
     dispatch(logoutUser());
     setAuthToken(false);
     setShowDropdown(false);
+    setShowLoginModal(false);
   };
 
   const toggleDropdown = () => {

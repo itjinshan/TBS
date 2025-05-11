@@ -34,7 +34,6 @@ class RegisterModal extends Component {
   }
 
   componentDidUpdate(prevProps) {
-    console.log(this.props);
     if (this.props.errors !== prevProps.errors) {
       this.setState({ errors: this.props.errors });
     }
