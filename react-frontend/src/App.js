@@ -33,7 +33,6 @@ export default class App extends Component {
         <Router> 
           <div className = "App">
             <NavBar />
-            {/* <div style={{minHeight:window.innerHeight-250, marginTop:"97px"}}> */}
             <div>
               <Routes>
                 <Route path="/" element={<Home />} />

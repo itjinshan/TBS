@@ -78,7 +78,7 @@ const Navbar = () => {
                     <FaUserCircle size={24} />
                   )}
                 </div>
-                <span className="username">{user?.name || 'User'}</span>
+                <span className="username">{user?.FirstName || 'User'}</span>
               </div>
               
               {showDropdown && (
