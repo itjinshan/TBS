@@ -11,12 +11,17 @@ import Footer from "./components/layout/Footer"
 
 // Basics
 import Home from "./components/home/Home"
+
+// LLMChatBot
+import LLMChatBot from "./components/llmChat/LLMChatBot"
+
 // Auth
 import ResetPassword from "./components/auth/ResetPassword"
 import CreatePassword from "./components/auth/CreatePassword"
 
 //Itinerary
 import Itinerary from "./components/itinerary/Itinerary"
+
 
 // Redux provider
 //
@@ -42,6 +47,7 @@ export default class App extends Component {
               </Routes>
             </div>
             <Footer />
+            <LLMChatBot />
             </div>
         </Router>
       </Provider>
