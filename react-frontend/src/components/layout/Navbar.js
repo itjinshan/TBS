@@ -18,6 +18,16 @@ const Navbar = () => {
   const [showLoginModal, setShowLoginModal] = useState(false); // Modal state
   const dropdownRef = useRef(null);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Fetch user profile info when authenticated
+      dispatch(getProfileInfo());
+      setShowDropdown(false);
+      const token = localStorage.getItem("AccessToken");
+
+    }
+  }, [isAuthenticated, dispatch]);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -38,7 +48,7 @@ const Navbar = () => {
 
   const handleLogout = () => {
     dispatch(logoutUser());
-    localStorage.removeItem('AccessToken');
+    setAuthToken(false);
     setShowDropdown(false);
   };
 
@@ -86,11 +96,15 @@ const Navbar = () => {
       </div>
     </nav>
 
-    {/* Login Modal */}
-      <LoginModal 
-      open={showLoginModal}
-      onClose={() => setShowLoginModal(false)}
-    />
+    {!isAuthenticated && (
+      <>
+      {/* Login Modal */}
+        <LoginModal 
+        open={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+      />
+      </>
+    )}
     </>
   );
 };

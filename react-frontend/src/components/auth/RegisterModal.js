@@ -31,10 +31,10 @@ class RegisterModal extends Component {
     };
     this.onChange = this.onChange.bind(this);
     this.onSubmit = this.onSubmit.bind(this);
-    this.handleClose = this.handleClose.bind(this);
   }
 
   componentDidUpdate(prevProps) {
+    console.log(this.props);
     if (this.props.errors !== prevProps.errors) {
       this.setState({ errors: this.props.errors });
     }
@@ -42,7 +42,6 @@ class RegisterModal extends Component {
     // Redirect on successful registration
     if (!prevProps.auth.isAuthenticated && this.props.auth.isAuthenticated) {
       this.handleClose();
-      this.props.navigate("/");
     }
   }
 
@@ -57,6 +56,7 @@ class RegisterModal extends Component {
       Password2: "",
       errors: {}
     });
+    
   };
 
   onChange(e) {
@@ -73,7 +73,7 @@ class RegisterModal extends Component {
       Password: this.state.Password,
       Password2: this.state.Password2
     };
-    this.props.registerUser(newUser, this.props.navigate);
+    this.props.registerUser(newUser);
   }
 
   render() {
@@ -215,8 +215,7 @@ RegisterModal.propTypes = {
   errors: PropTypes.object.isRequired,
   open: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
-  onLoginClick: PropTypes.func.isRequired,
-  navigate: PropTypes.func.isRequired
+  onLoginClick: PropTypes.func.isRequired
 };
 
 const mapStateToProps = state => ({

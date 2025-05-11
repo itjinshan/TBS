@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
 import TBSLogo from "../../images/tbs_logo.png";
+import RegisterModal from './RegisterModal';
 import "./LoginModal.css"; // Reusing the same CSS
 
 class ForgotPasswordModal extends Component {
@@ -22,11 +23,13 @@ class ForgotPasswordModal extends Component {
     this.state = {
       Email: "",
       errors: {},
-      open: props.open // Controlled by parent
+      open: props.open,
+      onClose: props.onClose(), // Controlled by parent
+      registerOpen: false,
     };
     this.onChange = this.onChange.bind(this);
     this.onSubmit = this.onSubmit.bind(this);
-    this.handleClose = this.handleClose.bind(this);
+    this.toggleRegister = this.toggleRegister.bind(this);
   }
 
   componentDidUpdate(prevProps) {
@@ -59,15 +62,20 @@ class ForgotPasswordModal extends Component {
     this.props.forgotPassword(userEmail);
   }
 
+  toggleRegister() {
+    this.setState(prevState => ({
+      showRegisterOpen: !prevState.showRegisterOpen
+    }));
+  }
+
   render() {
-    const { open } = this.state;
-    const { errors } = this.state;
+    const { open, onClose, errors, showRegisterOpen } = this.state;
     const { forgetStatus, forgetStatusMSG } = this.props.auth;
 
     return (
       <>
         <Dialog
-          open={open}
+          open={open && !showRegisterOpen}
           onClose={this.handleClose}
           maxWidth="xs"
           fullWidth
@@ -128,16 +136,6 @@ class ForgotPasswordModal extends Component {
                 }}
               >
                 Back to Login
-              </a>
-              <a 
-                href="#" 
-                className="link" 
-                onClick={(e) => {
-                  e.preventDefault();
-                  this.props.returnToLoginClick(true);
-                }}
-              >
-                Don't have an account? Sign up
               </a>
             </div>
           </DialogContent>

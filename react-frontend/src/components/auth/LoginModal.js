@@ -39,6 +39,11 @@ class LoginModal extends Component {
   componentDidUpdate(prevProps) {
     if (!prevProps.auth.isAuthenticated && this.props.auth.isAuthenticated) {
       this.props.onClose();
+      this.setState({
+        forgotPasswordOpen: false,
+        registerOpen: false,
+        errors: {}
+      });
     }
     if (this.props.errors !== prevProps.errors) {
       this.setState({ errors: this.props.errors });
@@ -177,8 +182,13 @@ class LoginModal extends Component {
           }}
           returnToLoginClick={() => {
             this.toggleForgotPassword();
+            this.setState({ errors: {} });
             // If you need to reopen login modal:
             if (!open) onClose(); 
+          }}
+          registrationClick={() => {
+            this.toggleRegister();
+            if(!open) onClose();
           }}
         />
         {/* Register Modal */}
