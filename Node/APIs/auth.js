@@ -22,7 +22,8 @@ const createPasswordEmail = require('../Emails/createPasswordEmail');
 router.post('/register', (req, res) => {
     // user fills out the form do a POST req here
     const { errors, isValid } = validateRegisterInput(req.body);
-    //check validation
+    // ** Validation **
+    //
     if (!isValid) {
       return res.status(400).json(errors);
     }
@@ -47,6 +48,8 @@ router.post('/register', (req, res) => {
         if(user.Phone !== "xxx" && user.Phone === req.body.Phone) errors.Phone = "Phone number already exists";
         return res.status(400).json(errors);
     } else {
+        // ** Create New User **
+        //
         var newUser = new User({
           // create new user if cannot find the email nor phone number
           FirstName: req.body.FirstName,
@@ -64,13 +67,32 @@ router.post('/register', (req, res) => {
             newUser.Password = hash; // hash the password from the user and store it back
             newUser
             .save() // use mongoose model to save to mongodb mlab
-            .then(user => res.json(user))
+            .then(user => {
+                  // ** Auto Login **
+                  //
+                  AccessToken = generateAccessToken(user, 'auth');
+                  RefreshToken = jwt.sign(
+                  {
+                    UserID: user.id,
+                    FirstName: user.FirstName,
+                    LastName: user.LastName
+                  },
+                  process.env.REFRESHSECRETE
+                  )
+                  return res.json({
+                    Email: user.Email,
+                    AccessToken: "Bearer " + AccessToken,
+                    RefreshToken: RefreshToken
+                  });
+            })
             .catch(err => console.log(err));
         });
         });
 
+        // ** Logistics **
+        //
         // Send Welcome Emails
-        // welcomeEmail(req.body.FirstName, req.body.LastName, req.body.Email);
+        // welcomeEmail(req.body.FirstName, req.body.LastName, Email);
     }
     });
 });
