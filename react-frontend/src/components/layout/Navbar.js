@@ -19,14 +19,12 @@ const Navbar = () => {
   const dropdownRef = useRef(null);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      // Fetch user profile info when authenticated
+    if (localStorage.AccessToken) {
+      setAuthToken(localStorage.AccessToken);
       dispatch(getProfileInfo());
       setShowDropdown(false);
-      const token = localStorage.getItem("AccessToken");
-
     }
-  }, [isAuthenticated, dispatch]);
+  }, [dispatch]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
