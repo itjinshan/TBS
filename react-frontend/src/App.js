@@ -1,6 +1,5 @@
 import React, { Component } from 'react'
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import './App.css';
 import PrivateRoute from "./utils/PrivateRoute";
 
 import NavBar from "./components/layout/Navbar"
@@ -36,7 +35,7 @@ export default class App extends Component {
     return(
       <Provider store = {store}>
         <Router> 
-          <div className = "App">
+          <div>
             <NavBar />
             <div>
               <Routes>
