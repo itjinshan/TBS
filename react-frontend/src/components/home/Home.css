@@ -79,37 +79,6 @@ button {
   margin-bottom: 2rem;
 }
 
-/* Search Bar */
-.search-bar {
-  display: flex;
-  max-width: 700px;
-  margin: 0 auto 2rem;
-  border-radius: 50px;
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
-
-.search-bar input {
-  flex: 1;
-  padding: 1.2rem 1.5rem;
-  border: none;
-  font-size: 1rem;
-  outline: none;
-}
-
-.search-bar button {
-  padding: 0 2rem;
-  background: var(--primary-color);
-  color: white;
-  border: none;
-  font-weight: 600;
-  font-size: 1rem;
-}
-
-.search-bar button:hover {
-  background: #3367d6;
-}
-
 .hero-tags {
   display: flex;
   align-items: center;
@@ -341,123 +310,6 @@ button {
 .inspiration-card.tips button { color: #34a853; }
 .inspiration-card.deals button { color: #ea4335; }
 
-/* Chat Assistant */
-.chat-assistant {
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  z-index: 1000;
-}
-
-.chat-toggle {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: var(--primary-color);
-  color: white;
-  border: none;
-  font-size: 1.5rem;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.chat-toggle:hover {
-  background: #3367d6;
-  transform: scale(1.1);
-}
-
-.chat-container {
-  position: absolute;
-  bottom: 70px;
-  right: 0;
-  width: 350px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
-  overflow: hidden;
-  transform: translateY(20px);
-  opacity: 0;
-  pointer-events: none;
-  transition: all 0.3s ease;
-}
-
-.chat-assistant.open .chat-container {
-  transform: translateY(0);
-  opacity: 1;
-  pointer-events: all;
-}
-
-.chat-header {
-  background: var(--primary-color);
-  color: white;
-  padding: 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.chat-header button {
-  background: none;
-  border: none;
-  color: white;
-  font-size: 1.2rem;
-}
-
-.chat-messages {
-  height: 300px;
-  padding: 1rem;
-  overflow-y: auto;
-  background: var(--light-color);
-}
-
-.message {
-  max-width: 80%;
-  padding: 0.8rem 1rem;
-  border-radius: 18px;
-  margin-bottom: 1rem;
-  line-height: 1.4;
-}
-
-.message.bot {
-  background: white;
-  border-top-left-radius: 4px;
-  margin-right: auto;
-}
-
-.message.user {
-  background: var(--primary-color);
-  color: white;
-  border-top-right-radius: 4px;
-  margin-left: auto;
-}
-
-.chat-input {
-  display: flex;
-  padding: 1rem;
-  background: white;
-  border-top: 1px solid var(--light-gray);
-}
-
-.chat-input input {
-  flex: 1;
-  padding: 0.8rem 1rem;
-  border: 1px solid var(--light-gray);
-  border-radius: 50px;
-  outline: none;
-}
-
-.chat-input button {
-  background: var(--primary-color);
-  color: white;
-  border: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  margin-left: 0.5rem;
-}
-
 /* Responsive Adjustments */
 @media (max-width: 768px) {
   .hero-content h1 {
@@ -468,27 +320,9 @@ button {
     font-size: 1rem;
   }
   
-  .search-bar {
-    flex-direction: column;
-    border-radius: 12px;
-  }
-  
-  .search-bar input {
-    border-radius: 12px 12px 0 0;
-  }
-  
-  .search-bar button {
-    border-radius: 0 0 12px 12px;
-    padding: 1rem;
-  }
-  
   .destination-card {
     flex: 0 0 250px;
     height: 350px;
-  }
-  
-  .chat-container {
-    width: 300px;
   }
 }
 
@@ -505,10 +339,5 @@ button {
   .why-choose-us h2,
   .travel-inspiration h2 {
     font-size: 1.8rem;
-  }
-  
-  .chat-container {
-    width: 280px;
-    right: -20px;
   }
 }

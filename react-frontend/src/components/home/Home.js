@@ -1,15 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
+import TripIntakePanel from '../tripPlanner/TripIntakePanel';
 import './Home.css';
 
 const Home = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState([
-    { text: "Hi! I'm your travel assistant. How can I help you today?", isBot: true }
-  ]);
-  const [userMessage, setUserMessage] = useState('');
 
   const destinations = [
     {
@@ -68,29 +63,6 @@ const Home = () => {
     setHeroBackground(randomImage);
   }, []);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    // In a real app, this would trigger a search
-    alert(`Searching for: ${searchQuery}`);
-  };
-
-  const handleSendMessage = (e) => {
-    e.preventDefault();
-    if (!userMessage.trim()) return;
-    
-    // Add user message
-    setChatMessages([...chatMessages, { text: userMessage, isBot: false }]);
-    setUserMessage('');
-    
-    // Simulate bot response after a delay
-    setTimeout(() => {
-      setChatMessages(prev => [
-        ...prev, 
-        { text: "Thanks for your message! Our travel experts will help you plan your perfect trip.", isBot: true }
-      ]);
-    }, 1000);
-  };
-
   return (
     <div className="travel-home">
       {/* Hero Section with Search */}
@@ -106,18 +78,8 @@ const Home = () => {
           <h1>Discover Your Next Adventure</h1>
           <p>Explore the world's most beautiful destinations with us</p>
           
-          <form onSubmit={handleSearch} className="search-bar">
-            <input
-              type="text"
-              placeholder="Search destinations, hotels, activities..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <button type="submit">
-              <i className="fas fa-search"></i> Search
-            </button>
-          </form>
-          
+          <TripIntakePanel />
+
           <div className="hero-tags">
             <span>Popular:</span>
             <a href="#">Beach</a>
@@ -198,41 +160,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Chat Assistant */}
-      <div className={`chat-assistant ${isChatOpen ? 'open' : ''}`}>
-        <button className="chat-toggle" onClick={() => setIsChatOpen(!isChatOpen)}>
-          <i className="fas fa-comments"></i>
-        </button>
-        
-        <div className="chat-container">
-          <div className="chat-header">
-            <h3>Travel Assistant</h3>
-            <button onClick={() => setIsChatOpen(false)}>
-              <i className="fas fa-times"></i>
-            </button>
-          </div>
-          
-          <div className="chat-messages">
-            {chatMessages.map((message, index) => (
-              <div key={index} className={`message ${message.isBot ? 'bot' : 'user'}`}>
-                {message.text}
-              </div>
-            ))}
-          </div>
-          
-          <form onSubmit={handleSendMessage} className="chat-input">
-            <input
-              type="text"
-              placeholder="Ask about destinations, hotels..."
-              value={userMessage}
-              onChange={(e) => setUserMessage(e.target.value)}
-            />
-            <button type="submit">
-              <i className="fas fa-paper-plane"></i>
-            </button>
-          </form>
-        </div>
-      </div>
     </div>
   );
 };

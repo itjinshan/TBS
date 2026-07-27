@@ -11,6 +11,7 @@ const rootRouter = require('./APIs');
 const authRouter = require('./APIs/auth');
 const dsserviceRouter = require('./APIs/dsservice');
 const tokenRouter = require('./APIs/token');
+const tripRouter = require('./APIs/trip');
 
 mongoose
     .connect(process.env.MONGODB_URL)
@@ -31,6 +32,7 @@ app.use('/', rootRouter);
 app.use('/auth', authRouter);
 app.use('/jwt', tokenRouter);
 app.use('/dsservice', dsserviceRouter);
+app.use('/trip', tripRouter);
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
