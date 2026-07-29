@@ -1,0 +1,225 @@
+.trip-intake {
+  max-width: 700px;
+  margin: 0 auto 2rem;
+}
+
+/* Collapsed: mirrors the old hero search bar styling */
+.intake-collapsed {
+  display: flex;
+  border-radius: 50px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.intake-collapsed input {
+  flex: 1;
+  padding: 1.2rem 1.5rem;
+  border: none;
+  font-size: 1rem;
+  outline: none;
+}
+
+.intake-collapsed button {
+  padding: 0 2rem;
+  background: #4285f4;
+  color: white;
+  border: none;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.intake-collapsed button:hover {
+  background: #3367d6;
+}
+
+/* Expanded panel */
+.trip-intake.open {
+  max-width: 900px;
+}
+
+.intake-panel {
+  position: relative;
+  display: flex;
+  gap: 1rem;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  padding: 1.5rem;
+  text-align: left;
+  color: #202124;
+}
+
+.intake-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #5f6368;
+}
+
+.intake-chat {
+  flex: 1.4;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.intake-messages {
+  height: 280px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.intake-messages .message {
+  display: flex;
+  margin-bottom: 0.6rem;
+}
+
+.intake-messages .message.user {
+  justify-content: flex-end;
+}
+
+.intake-messages .message-content {
+  max-width: 80%;
+  padding: 0.6rem 1rem;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.intake-messages .message.bot .message-content {
+  background: #e8eaed;
+  color: #202124;
+}
+
+.intake-messages .message.user .message-content {
+  background: #4285f4;
+  color: white;
+}
+
+.intake-input-form {
+  display: flex;
+  border: 1px solid #e8eaed;
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.intake-input-form input {
+  flex: 1;
+  border: none;
+  padding: 0.7rem 1rem;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.intake-input-form button {
+  border: none;
+  background: #4285f4;
+  color: white;
+  padding: 0 1.3rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.intake-input-form button:disabled {
+  background: #9aa0a6;
+  cursor: not-allowed;
+}
+
+.intake-error {
+  color: #ea4335;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.trip-brief {
+  flex: 1;
+  border-left: 1px solid #e8eaed;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.trip-brief h4 {
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+  color: #202124;
+}
+
+.brief-chip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  margin-bottom: 0.6rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.brief-chip.filled {
+  background: #e6f0fe;
+}
+
+.brief-chip.empty {
+  background: #f8f9fa;
+  color: #5f6368;
+}
+
+.chip-label {
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+.chip-value {
+  color: #202124;
+}
+
+.brief-chip.empty .chip-value {
+  color: #9aa0a6;
+  font-style: italic;
+}
+
+.brief-chip input,
+.brief-chip select {
+  width: 100px;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid #4285f4;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.generate-btn {
+  margin-top: auto;
+  padding: 0.8rem;
+  border: none;
+  border-radius: 10px;
+  background: #34a853;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.generate-btn:disabled {
+  background: #9aa0a6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .intake-panel {
+    flex-direction: column;
+  }
+
+  .trip-brief {
+    border-left: none;
+    border-top: 1px solid #e8eaed;
+    padding-left: 0;
+    padding-top: 1rem;
+  }
+}

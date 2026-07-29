@@ -1,16 +1,43 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import useAMap from '../../hooks/useAmap';
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import withRouter from "../../utils/withRouter";
+import { saveTrip } from "../../actions/tripAction";
 import './Itinerary.css';
-// media imports
+// placeholder photos, keyed by the `Photo` field the backend's mock generator assigns to each spot
 import HawaiiWall from "../../images/hawaii-wall.jpg";
 import KyotoWall from "../../images/Kyoto-wall.jpg";
 import NYWall from "../../images/ny-wall.jpg";
 import ShanghaiWall from "../../images/Shanghai-wall.jpg";
 
-const Itinerary = () => {
+const PLACEHOLDER_PHOTOS = {
+  hawaii: HawaiiWall,
+  kyoto: KyotoWall,
+  ny: NYWall,
+  shanghai: ShanghaiWall
+};
+
+function spotsToMarkers(itinerary) {
+  if (!itinerary) return [];
+  return itinerary.days.flatMap((day) =>
+    day.Spots.map((spot) => ({
+      id: `${day.DayNumber}-${spot.Name}`,
+      position: [spot.Longitude, spot.Latitude],
+      title: spot.Name,
+      content: spot.StreetAddress
+    }))
+  );
+}
+
+const Itinerary = ({ auth }) => {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { itinerary } = useSelector((state) => state.trip);
+  const [saveStatus, setSaveStatus] = useState('idle'); // idle | saving | saved | error
+
   // AMap hook
   const { AMap, loaded } = useAMap();
 
@@ -27,18 +54,7 @@ const Itinerary = () => {
   const markersRef = useRef([]);
   const geolocationRef = useRef(null);
 
-  // Sample data
-  const imagePanels = [
-    { id: 1, url: HawaiiWall },
-    { id: 2, url: NYWall },
-    { id: 3, url: KyotoWall },
-    { id: 4, url: ShanghaiWall },
-  ];
-
-  const [markers, setMarkers] = useState([
-    { id: 1, position: [116.397428, 39.90923], title: "Beijing", content: "Capital of China" },
-    { id: 2, position: [121.4737, 31.2304], title: "Shanghai", content: "Financial center" }
-  ]);
+  const [markers, setMarkers] = useState(() => spotsToMarkers(itinerary));
 
   // Initialize map when AMap is loaded
   useEffect(() => {
@@ -84,9 +100,10 @@ const Itinerary = () => {
             }
           ]);
         } else {
-          // Fallback to default center if geolocation fails
+          // Fallback to the destination (or Beijing) if geolocation fails
           console.error('Geolocation error:', result);
-          mapInstance.current.setCenter([116.397428, 39.90923]); // Beijing as fallback
+          const fallback = markers[0] ? markers[0].position : [116.397428, 39.90923];
+          mapInstance.current.setCenter(fallback);
         }
       });
 
@@ -252,15 +269,59 @@ const Itinerary = () => {
     };
   }, [isDragging]);
 
+  const handleSaveTrip = () => {
+    setSaveStatus('saving');
+    dispatch(saveTrip())
+      .then(() => setSaveStatus('saved'))
+      .catch(() => setSaveStatus('error'));
+  };
+
+  if (!itinerary) {
+    return (
+      <div className="itinerary-empty">
+        <h2>No trip planned yet</h2>
+        <p>Head back to the homepage and tell us about your dream trip to generate an itinerary.</p>
+        <button onClick={() => navigate('/')}>Plan a Trip</button>
+      </div>
+    );
+  }
+
   return (
     <div className="container" ref={containerRef}>
-      {/* Left Panel - Image Stack */}
+      {/* Left Panel - Day-by-day itinerary */}
       <div className="left-panel" style={{ width: `${splitRatio}%` }}>
-        <div className="image-stack">
-          {imagePanels.map((panel) => (
-            <div key={panel.id} className="image-panel">
-              <img src={panel.url} alt={`Panel ${panel.id}`} />
-              <div className="image-caption">Image {panel.id}</div>
+        <div className="day-list">
+          <div className="destination-header">
+            <h2 className="destination-heading">{itinerary.destination}</h2>
+            {auth?.isAuthenticated && (
+              <button
+                className="save-trip-btn"
+                onClick={handleSaveTrip}
+                disabled={saveStatus === 'saving' || saveStatus === 'saved'}
+              >
+                {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : saveStatus === 'error' ? 'Retry Save' : 'Save Trip'}
+              </button>
+            )}
+          </div>
+          {itinerary.days.map((day) => (
+            <div key={day.DayNumber} className="day-block">
+              <h3>Day {day.DayNumber}</h3>
+              <div className="spot-cards">
+                {day.Spots.map((spot) => (
+                  <div key={spot.Name} className="spot-card">
+                    <img src={PLACEHOLDER_PHOTOS[spot.Photo] || HawaiiWall} alt={spot.Name} />
+                    <div className="spot-info">
+                      <h4>{spot.Name}</h4>
+                      <p className="spot-address">{spot.StreetAddress}</p>
+                      <div className="spot-meta">
+                        <span>{spot.BestTimeToVisitInDay?.Description}</span>
+                        <span>{spot.AverageTimeSpent?.Description}</span>
+                        <span className="spot-rating">{spot.Rating}/100</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>
