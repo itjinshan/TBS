@@ -72,3 +72,15 @@ Goal: settle accommodation early in the trip-intake flow (right after destinatio
 6. Update `TripIntakePanel.js` to implement the chat-first/map-reveal flow described above.
 
 **Delete this plan when all items are executed and PRs are merged.**
+
+## Pending Tasks
+
+Backlog items surfaced while working on other plans, deliberately kept out of the active plan's PR scope. Pick these up as their own future PRs.
+
+- **Network-reachability-based provider routing.** Surfaced while testing lodging-flow item #2: Amap's POI data/keyword matching is unreliable outside mainland China (English-language searches for well-known hotels in Paris/Tokyo returned irrelevant results even with correct city scoping). The routing needed here is two separate axes, not one "China vs. not" switch:
+  - **User's network/region is the reachability gate, not a quality preference.** Google's services (Maps included) are blocked at the network level inside mainland China, so a China-network user planning a *non-China* trip still can't be routed to Google Maps — it simply won't load for them, regardless of match quality. Likewise ChatGPT/OpenAI's API is generally unreachable from mainland China. So:
+    - **China network** → Amap (+ DS-Service `ds: 'deepseek'`) for **every** destination, for now — not because Amap is a good fit for e.g. a Tokyo search, but because it's the only reachable option. This is an accepted limitation, not a bug, until there's a real fix for the geofencing (e.g. a server-side proxy that calls Google Places from outside China on the user's behalf, so the client never talks to Google directly — worth designing later, not part of this item).
+    - **Non-China network** → both Amap and Google Maps are reachable, so **destination-based** routing can apply within this group: Amap for China destinations (best data there), a new `Services/googlePlaces.js` (not yet built) + DS-Service `ds: 'chatgpt'` for non-China destinations (already scaffolded as a `501` stub in `POST /datasourcing/sourcespots` — see DS-Service's `CLAUDE.md` — but not yet implemented).
+  - **Query-language translation follows whichever provider is active, not the user's own language.** Translating the query to Chinese is what actually fixed Amap's match quality in testing — that holds whenever Amap is in use, whether it was chosen because the destination is in China or because the user's network left no other option. No translation is expected to be needed for Google Maps queries (handles multi-language input more gracefully).
+  - **UI language and LLM-backend selection are a separate, user-scoped concern**, independent of the above: default UI language from IP region (China IP → Chinese default, overridable via a language switcher), and LLM backend follows the same network-reachability gate as the maps provider (China network → Deepseek, regardless of destination).
+  - Scope for the eventual PR: land the network-based reachability gate and the destination-based refinement within the non-China group. The non-China Google Maps/ChatGPT build-out and the China-network geofencing workaround are both separate follow-ups, not part of this either.

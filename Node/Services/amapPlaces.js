@@ -2,6 +2,21 @@ var axios = require('axios');
 
 var PLACE_TEXT_SEARCH_URL = 'https://restapi.amap.com/v3/place/text';
 
+// Amap's `city` param needs a Chinese city name (or adcode/pinyin) to scope
+// correctly — the English destination names trip.js extracts (e.g. "Beijing")
+// silently fail to restrict the search. Amap's coverage/keyword-matching is
+// mainland-China-first anyway (see CLAUDE.md action item #7), so this only
+// covers the Chinese destinations it's actually meant to serve today.
+var CITY_NAME_ZH = {
+    beijing: '北京',
+    shanghai: '上海'
+};
+
+function toAmapCityParam(city) {
+    var key = (city || '').trim().toLowerCase();
+    return CITY_NAME_ZH[key] || city;
+}
+
 // Real place lookup for the "I have a place" lodging path (see CLAUDE.md,
 // "Planned: Lodging Flow", action item #2). Requires AMAP_WEB_SERVICE_KEY —
 // a Web service API key from https://console.amap.com, NOT the JS API key
@@ -12,12 +27,14 @@ function searchPlaces(query, city) {
         return Promise.reject(new Error('AMAP_WEB_SERVICE_KEY is not configured'));
     }
 
+    var amapCity = toAmapCityParam(city);
+
     return axios.get(PLACE_TEXT_SEARCH_URL, {
         params: {
             key: key,
             keywords: query,
-            city: city || '',
-            citylimit: !!city,
+            city: amapCity || '',
+            citylimit: !!amapCity,
             offset: 5,
             page: 1,
             extensions: 'base'
