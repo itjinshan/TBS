@@ -46,3 +46,28 @@ Tech: React 19, Redux Toolkit + Redux Thunk, React Router v6, MUI + Emotion, axi
 **Structure:** standard Create React App layout — `src/actions`, `src/reducers`, `src/components`, `src/hooks`, `src/utils`, `src/store.js` (Redux store setup), `src/App.js`.
 
 **Conventions:** the frontend never talks to DS-Service directly — it goes through the `Node/` backend (`/dsservice/*`, `/trip/*` routes), which in turn calls DS-Service. If you're adding a UI feature that needs DS-Service data, the new/changed logic belongs in `Node/APIs/dsservice.js` (or a new route module) first, following DS-Service's contract, then wired up to the frontend through the existing proxy.
+
+## Planned: Lodging Flow (branch: `lodgingFlow`)
+
+Goal: settle accommodation early in the trip-intake flow (right after destination), since it determines the starting location for each day of the generated itinerary. Two branches:
+
+1. **User already has a place** → confirm it (name + address) and use it as the anchor location.
+2. **User has no place in mind** → gather budget + living preference, continue the rest of the existing trip-preference questions, then suggest lodging options at the end, ranked by budget and best fit for the generated itinerary's spot locations.
+
+**Conversation stages** (`Node/APIs/trip.js`): replace the current flat `REQUIRED_FIELDS` missing-check with an explicit stage machine: `awaiting_destination → awaiting_accommodation_choice → (has_place: awaiting_confirmation | no_place: awaiting_budget_and_living_pref) → awaiting_other_prefs → (no_place only: suggest_accommodation) → ready`.
+
+**Frontend flow is chat-first; the map is a reveal, not always-on:**
+- Default state: intake is chat-only, no map, from the first message through the lodging question.
+- **Has-a-place path:** user describes it in chat → backend runs a place-search lookup → frontend mounts the map and drops a marker for *every* candidate match returned (not just one) alongside a "is one of these yours?" chat prompt → user confirms via chat or by tapping a marker → map can then collapse or narrow to just the confirmed pin.
+- **No-place path:** map stays hidden through budget/living-preference *and* every remaining trip-preference question. The map's first-ever appearance is the moment the recommended-lodging list is presented — that reveal and the markers for each suggested option happen together.
+- Mechanically: map visibility is a derived boolean off the conversation stage (`awaiting_confirmation` or `suggest_accommodation` → on; every other stage → off), fed by new Redux state (`accommodationCandidates` for path A, `accommodationSuggestions` for path B) rather than the itinerary's spot list. The map/marker rendering currently only lives on the post-generation `Itinerary.js` page — it needs to become a component `TripIntakePanel.js` can also mount inline.
+
+**Action items:**
+1. Add the conversation stage machine to `Node/APIs/trip.js`, replacing the flat missing-field check.
+2. Wire a real place lookup for the "I have a place" path — get a real Amap key (see `react-frontend/src/hooks/useAmap.js`, currently a placeholder `YOUR_AMAP_KEY`), call Amap's place-search/geocoding API, return `{name, address, lat, lng}` candidates for user confirmation.
+3. Extend `DB_Trip` and `tripBrief` with an `Accommodation` field (`{ Name, Address, Latitude, Longitude, Source: "user-provided" | "suggested" }`) and a `LivingPreference`/lodging-budget field.
+4. Add a "suggest accommodation" step for the no-place path — this is DS-Service's job: a new endpoint (e.g. `POST /datasourcing/sourceaccommodations`) parallel to `sourcespots`, taking destination + budget + (ideally) sourced spot coordinates, returning ranked lodging candidates. Requires a corresponding `DB_Accommodation` model in DS-Service. (See DS-Service's `CLAUDE.md` for its side of this item.)
+5. Update `mockItinerary.js`/its real successor to use `tripBrief.Accommodation` coordinates as each day's start/end point instead of the current jittered city-center placeholder.
+6. Update `TripIntakePanel.js` to implement the chat-first/map-reveal flow described above.
+
+**Delete this plan when all items are executed and PRs are merged.**
