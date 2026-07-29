@@ -249,7 +249,7 @@ router.post('/', passport.authenticate('jwt', { session: false }), function (req
         Owner: req.user.id,
         Destination: body.destination,
         Duration: body.days ? body.days.length : 0,
-        Travelers: body.travelers,
+        NumOfTravelers: body.numOfTravelers,
         Budget: body.budget,
         Preferences: body.preferences,
         Days: body.days

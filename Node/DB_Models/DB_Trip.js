@@ -58,7 +58,7 @@ const TripSchema = new Schema({
         type: Number,
         required: true
     },
-    Travelers: {
+    NumOfTravelers: {
         type: Number,
         default: 1
     },

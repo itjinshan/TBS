@@ -4,12 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { sendIntakeMessage, updateTripBriefField, generateItinerary } from '../../actions/tripAction';
 import './TripIntakePanel.css';
 
-const REQUIRED_FIELDS = ['destination', 'duration', 'travelers', 'budget'];
+const REQUIRED_FIELDS = ['destination', 'duration', 'numOfTravelers', 'budget'];
 
 const FIELD_LABELS = {
   destination: 'Destination',
   duration: 'Days',
-  travelers: 'Travelers',
+  numOfTravelers: 'Travelers',
   budget: 'Budget'
 };
 
@@ -50,7 +50,7 @@ const TripIntakePanel = () => {
 
   const commitValue = (field, rawValue) => {
     if (rawValue !== '' && rawValue !== undefined) {
-      const value = field === 'duration' || field === 'travelers' ? parseInt(rawValue, 10) : rawValue;
+      const value = field === 'duration' || field === 'numOfTravelers' ? parseInt(rawValue, 10) : rawValue;
       if (value !== undefined && !Number.isNaN(value)) {
         dispatch(updateTripBriefField(field, value));
       }
@@ -130,7 +130,7 @@ const TripIntakePanel = () => {
                   ) : (
                     <input
                       autoFocus
-                      type={field === 'duration' || field === 'travelers' ? 'number' : 'text'}
+                      type={field === 'duration' || field === 'numOfTravelers' ? 'number' : 'text'}
                       value={editingValue}
                       onChange={(e) => setEditingValue(e.target.value)}
                       onBlur={() => commitValue(field, editingValue)}
