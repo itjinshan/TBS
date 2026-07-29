@@ -24,6 +24,7 @@ Tech: Express, Mongoose, Passport (JWT strategy), bcryptjs, nodemailer, axios (f
 - `DB_Models/` — Mongoose schemas: `DB_User.js`, `DB_Trip.js`.
 - `Emails/` — nodemailer templates (welcome, confirmation, forgot/create password).
 - `Services/mockItinerary.js` — **placeholder** itinerary generator; fakes what a real DS-Service integration (`/datasourcing/sourcespots` + a not-yet-built day-by-day planner) will eventually do. See the comment at the top of that file and DS-Service's API contract before replacing it.
+- `Services/amapPlaces.js` — real place lookup against Amap's Web Service "place text search" API (`searchPlaces(query, city)`), used by `/trip/intake`'s accommodation-confirm stage. Requires `AMAP_WEB_SERVICE_KEY` — falls back to a single unverified candidate if unset or if the call fails.
 - `Validation/` — plain-function request-body validators (`login.js`, `register.js`, `resetPassword.js`, `isEmpty.js`).
 
 **Conventions:**
@@ -32,7 +33,7 @@ Tech: Express, Mongoose, Passport (JWT strategy), bcryptjs, nodemailer, axios (f
 - User-facing auth routes issue tokens via `generateAccessToken(user, 'auth' | 'refresh' | 'deepseek')` in `Config/jwtgenerator.js`. The `'deepseek'` usage is what signs the `token` field DS-Service expects (60s expiry, secret `DEEPSEEK_JWT_SECRET` — must match DS-Service's copy of the same secret).
 - Calls into DS-Service go through `axios` with the base URL `process.env.DS_SERVICE_BASEURL`; see `APIs/dsservice.js` for the current pattern (mint a `'deepseek'` token, attach it as `token` in the JSON body — not a header — then POST).
 
-**Env vars** (`Node/.env`): `PORT`, `MONGODB_URL`, `ACCESSSECRETE`, `REFRESHSECRETE`, `RESETSECRET`, `DEEPSEEK_JWT_SECRET`, `GD_MAP_JWT_SECRET`, `DS_SERVICE_BASEURL`.
+**Env vars** (`Node/.env`): `PORT`, `MONGODB_URL`, `ACCESSSECRETE`, `REFRESHSECRETE`, `RESETSECRET`, `DEEPSEEK_JWT_SECRET`, `GD_MAP_JWT_SECRET`, `AMAP_WEB_SERVICE_KEY` (Amap Web service key for `Services/amapPlaces.js` — distinct from `GD_MAP_JWT_SECRET` and from the JS API key `useAmap.js` loads client-side), `DS_SERVICE_BASEURL`.
 
 ## `react-frontend/` — React SPA
 
