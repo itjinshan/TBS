@@ -2,9 +2,11 @@ var express = require('express');
 var router = express.Router();
 var passport = require('passport');
 require('../Config/passport')(passport);
+var axios = require('axios');
 var Trip = require('../DB_Models/DB_Trip');
 var { generateMockItinerary } = require('../Services/mockItinerary');
 var amapPlaces = require('../Services/amapPlaces');
+var generateAccessToken = require('../Config/jwtgenerator');
 
 var KNOWN_DESTINATIONS = [
     'bali', 'paris', 'tokyo', 'new york', 'santorini', 'sydney', 'beijing', 'shanghai'
@@ -119,14 +121,37 @@ function pickFromList(list, message) {
     return list.find(function (item) { return lowerText.includes(item.Name.toLowerCase()); });
 }
 
-// Stub: real suggestions come from a planned DS-Service endpoint
-// (POST /datasourcing/sourceaccommodations, see CLAUDE.md action item #4).
-function suggestAccommodations(tripBrief) {
+function fallbackSuggestions(tripBrief) {
     var destination = tripBrief.destination || 'your destination';
     return [
-        { Name: 'Suggested stay #1 in ' + destination, Address: 'Address pending — see CLAUDE.md lodging plan', Latitude: null, Longitude: null },
-        { Name: 'Suggested stay #2 in ' + destination, Address: 'Address pending — see CLAUDE.md lodging plan', Latitude: null, Longitude: null }
+        { Name: 'Suggested stay #1 in ' + destination, Address: 'Address pending — DS-Service unavailable', Latitude: null, Longitude: null },
+        { Name: 'Suggested stay #2 in ' + destination, Address: 'Address pending — DS-Service unavailable', Latitude: null, Longitude: null }
     ];
+}
+
+// Real suggestions via DS-Service's POST /datasourcing/sourceaccommodations
+// (see CLAUDE.md, "Planned: Lodging Flow", action item #6). Falls back to a
+// placeholder pair — today's prior behavior — if DS-Service is unreachable
+// or returns nothing, so the stage machine keeps moving either way.
+function suggestAccommodations(tripBrief) {
+    var accessToken = generateAccessToken('', 'deepseek');
+    return axios.post(process.env.DS_SERVICE_BASEURL + '/datasourcing/sourceaccommodations', {
+        token: accessToken,
+        ds: 'deepseek',
+        city: tripBrief.destination,
+        budget: tripBrief.budget
+    }).then(function (res) {
+        var accommodations = res.data.accommodations || [];
+        if (!accommodations.length) {
+            return fallbackSuggestions(tripBrief);
+        }
+        return accommodations.map(function (a) {
+            return { Name: a.Name, Address: a.Address, Latitude: a.Latitude, Longitude: a.Longitude };
+        });
+    }).catch(function (err) {
+        console.error('Accommodation suggestion lookup failed:', err.message);
+        return fallbackSuggestions(tripBrief);
+    });
 }
 
 router.post('/intake', function (req, res) {
@@ -236,12 +261,15 @@ router.post('/intake', function (req, res) {
             if (otherQuestion) {
                 respond(otherPrefFields, otherQuestion.question, STAGES.OTHER_PREFS);
             } else if (mergedBrief.accommodationChoice === 'no_place') {
-                var suggestions = suggestAccommodations(mergedBrief);
-                otherPrefFields.accommodationSuggestions = suggestions;
-                var suggestionReply = 'Here are a few lodging options that fit your budget: ' +
-                    suggestions.map(function (s, i) { return (i + 1) + '. ' + s.Name; }).join(', ') +
-                    '. Which one would you like to go with?';
-                respond(otherPrefFields, suggestionReply, STAGES.SUGGEST_ACCOMMODATION);
+                suggestAccommodations(mergedBrief)
+                    .then(function (suggestions) {
+                        otherPrefFields.accommodationSuggestions = suggestions;
+                        var suggestionReply = 'Here are a few lodging options that fit your budget: ' +
+                            suggestions.map(function (s, i) { return (i + 1) + '. ' + s.Name; }).join(', ') +
+                            '. Which one would you like to go with?';
+                        respond(otherPrefFields, suggestionReply, STAGES.SUGGEST_ACCOMMODATION);
+                    })
+                    .catch(respondError);
             } else {
                 respond(otherPrefFields, "I've got everything I need — hit Generate Itinerary whenever you're ready!", STAGES.READY);
             }
