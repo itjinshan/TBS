@@ -69,7 +69,7 @@ Goal: settle accommodation early in the trip-intake flow (right after destinatio
 3. Extend `DB_Trip` and `tripBrief` with an `Accommodation` field (`{ Name, Address, Latitude, Longitude, Source: "user-provided" | "suggested" }`) and a `LivingPreference`/lodging-budget field.
 4. Add a "suggest accommodation" step for the no-place path — this is DS-Service's job: a new endpoint (e.g. `POST /datasourcing/sourceaccommodations`) parallel to `sourcespots`, taking destination + budget + (ideally) sourced spot coordinates, returning ranked lodging candidates. Requires a corresponding `DB_Accommodation` model in DS-Service. (See DS-Service's `CLAUDE.md` for its side of this item.)
 5. Update `mockItinerary.js`/its real successor to use `tripBrief.Accommodation` coordinates as each day's start/end point instead of the current jittered city-center placeholder.
-6. Update `TripIntakePanel.js` to implement the chat-first/map-reveal flow described above.
+6. Update `TripIntakePanel.js` to implement the chat-first/map-reveal flow described above. Also wire `trip.js`'s `suggestAccommodations()` stub to actually call DS-Service's `POST /datasourcing/sourceaccommodations` (built in item #4) — today it still returns two hardcoded placeholder options with null coordinates, so item #5's accommodation-anchored itinerary never actually kicks in on the no-place path.
 
 **Delete this plan when all items are executed and PRs are merged.**
 
