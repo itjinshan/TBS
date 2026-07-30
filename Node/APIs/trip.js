@@ -201,7 +201,7 @@ router.post('/intake', function (req, res) {
             var picked = existingCandidates.length ? pickFromList(existingCandidates, message) : undefined;
 
             if (picked) {
-                var extractedFields = { accommodation: picked };
+                var extractedFields = { accommodation: Object.assign({}, picked, { Source: 'user-provided' }) };
                 var afterConfirm = nextOtherPrefQuestion(Object.assign({}, tripBrief, extractedFields));
                 if (afterConfirm) {
                     respond(extractedFields, 'Got it — ' + picked.Name + '. ' + afterConfirm.question, STAGES.OTHER_PREFS);
@@ -254,7 +254,7 @@ router.post('/intake', function (req, res) {
 
             if (pickedSuggestion) {
                 respond(
-                    { accommodation: pickedSuggestion },
+                    { accommodation: Object.assign({}, pickedSuggestion, { Source: 'suggested' }) },
                     'Great choice — ' + pickedSuggestion.Name + ". I've got everything I need — hit Generate Itinerary whenever you're ready!",
                     STAGES.READY
                 );
@@ -296,6 +296,8 @@ router.post('/', passport.authenticate('jwt', { session: false }), function (req
         NumOfTravelers: body.numOfTravelers,
         Budget: body.budget,
         Preferences: body.preferences,
+        Accommodation: body.accommodation,
+        LivingPreference: body.livingPreference,
         Days: body.days
     });
 

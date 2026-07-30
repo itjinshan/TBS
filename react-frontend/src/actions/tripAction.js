@@ -67,6 +67,8 @@ export const saveTrip = () => (dispatch, getState) => {
             numOfTravelers: tripBrief.numOfTravelers,
             budget: tripBrief.budget,
             preferences: tripBrief.preferences,
+            accommodation: tripBrief.accommodation,
+            livingPreference: tripBrief.livingPreference,
             days: itinerary.days
         })
         .catch(err => {
