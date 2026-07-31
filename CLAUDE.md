@@ -48,6 +48,12 @@ Tech: React 19, Redux Toolkit + Redux Thunk, React Router v6, MUI + Emotion, axi
 
 **Conventions:** the frontend never talks to DS-Service directly — it goes through the `Node/` backend (`/dsservice/*`, `/trip/*` routes), which in turn calls DS-Service. If you're adding a UI feature that needs DS-Service data, the new/changed logic belongs in `Node/APIs/dsservice.js` (or a new route module) first, following DS-Service's contract, then wired up to the frontend through the existing proxy.
 
+## Test Accounts
+
+A throwaway QA account exists in the dev MongoDB for testing authenticated UI flows (nav bar's logged-in dropdown, profile-gated features, etc.) without registering a new user every time: **`tbs-qa-tester@example.com`** (FirstName: QA, LastName: Tester, Phone: `0000000001`). Created via the real `POST /auth/register` flow, not inserted directly into Mongo.
+
+**Password is intentionally not written here** — this file is git-tracked and pushed to GitHub, so credentials (even throwaway test ones) don't belong in it. It's saved in Claude's cross-session memory as a reference entry instead; ask Claude to recall it. If it's ever unavailable, just register a fresh replacement the same way (see `Node/Validation/register.js` for required fields, and note `Phone` must be unique per user — use a new synthetic value, not the schema's `"xxx"` default, to avoid a collision).
+
 ## Pending Tasks
 
 **Before picking up a new task from this list:** (1) check that `main` is up to date (`git checkout main && git pull`), (2) check out a new branch for the task. Don't build on top of a stale `main` or an unrelated branch left over from a previous task.
