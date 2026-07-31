@@ -38,5 +38,19 @@
     "generateItinerary": "Generate Itinerary",
     "generating": "Generating…",
     "errorFallback": "Something went wrong. Please try again."
+  },
+  "footer": {
+    "company": "Company",
+    "aboutUs": "About Us",
+    "contact": "Contact",
+    "resources": "Resources",
+    "blog": "Blog",
+    "documentation": "Documentation",
+    "support": "Support",
+    "legal": "Legal",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service",
+    "cookiePolicy": "Cookie Policy",
+    "copyright": "© {{year}} Eazigo. All rights reserved."
   }
 }

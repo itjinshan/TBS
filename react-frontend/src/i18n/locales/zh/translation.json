@@ -38,5 +38,19 @@
     "generateItinerary": "生成行程",
     "generating": "生成中…",
     "errorFallback": "出了点问题，请重试。"
+  },
+  "footer": {
+    "company": "公司",
+    "aboutUs": "关于我们",
+    "contact": "联系我们",
+    "resources": "资源",
+    "blog": "博客",
+    "documentation": "文档",
+    "support": "支持",
+    "legal": "法律",
+    "privacyPolicy": "隐私政策",
+    "termsOfService": "服务条款",
+    "cookiePolicy": "Cookie 政策",
+    "copyright": "© {{year}} Eazigo。保留所有权利。"
   }
 }
