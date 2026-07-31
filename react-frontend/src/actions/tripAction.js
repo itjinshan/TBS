@@ -64,9 +64,11 @@ export const saveTrip = () => (dispatch, getState) => {
     return axios
         .post("/trip", {
             destination: itinerary.destination,
-            travelers: tripBrief.travelers,
+            numOfTravelers: tripBrief.numOfTravelers,
             budget: tripBrief.budget,
             preferences: tripBrief.preferences,
+            accommodation: tripBrief.accommodation,
+            livingPreference: tripBrief.livingPreference,
             days: itinerary.days
         })
         .catch(err => {

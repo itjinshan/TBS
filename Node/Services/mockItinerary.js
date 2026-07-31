@@ -6,6 +6,13 @@
 // "source a flat rated spot list" and "arrange it into days" — behind the same
 // two-stage shape a real integration will eventually use, so swapping in a real
 // DS-Service call later only touches generateFlatSpots().
+//
+// Each day's spots (and its Start/EndLocation) are anchored to
+// tripBrief.accommodation when it has real coordinates (see CLAUDE.md,
+// "Planned: Lodging Flow", item #5) — today that's only the has-a-place path
+// (real Amap lookup). The no-place suggestion stub in trip.js still returns
+// null coordinates until it's wired to DS-Service's /datasourcing/sourceaccommodations,
+// so that path still falls back to the old city-center placeholder below.
 
 const SPOT_TEMPLATES = [
     { name: "Old Town Walking Tour", timeOfDay: "Morning" },
@@ -43,12 +50,37 @@ function resolveCityCenter(destination) {
     return CITY_COORDS[match] || CITY_COORDS.beijing;
 }
 
+// The accommodation only has real coordinates once it's gone through the
+// Amap lookup (has-a-place path) — the no-place suggestion stub still
+// returns null Latitude/Longitude, so that case falls back to the same
+// coarse city-center guess used before accommodation existed.
+function resolveAnchorLocation(tripBrief, destination) {
+    const accommodation = tripBrief.accommodation;
+    if (accommodation && typeof accommodation.Latitude === "number" && typeof accommodation.Longitude === "number") {
+        return {
+            Name: accommodation.Name,
+            Address: accommodation.Address || null,
+            Latitude: accommodation.Latitude,
+            Longitude: accommodation.Longitude
+        };
+    }
+
+    const [lng, lat] = resolveCityCenter(destination);
+    return {
+        Name: `${destination} (approximate center)`,
+        Address: null,
+        Latitude: lat,
+        Longitude: lng
+    };
+}
+
 function jitter(value, spread) {
     return value + (Math.random() - 0.5) * spread;
 }
 
-function generateFlatSpots(destination, count) {
-    const [baseLng, baseLat] = resolveCityCenter(destination);
+function generateFlatSpots(destination, count, anchor) {
+    const baseLat = anchor.Latitude;
+    const baseLng = anchor.Longitude;
 
     return Array.from({ length: count }, (_, i) => {
         const template = SPOT_TEMPLATES[i % SPOT_TEMPLATES.length];
@@ -95,7 +127,8 @@ function generateMockItinerary(tripBrief) {
     const destination = tripBrief.destination || "Your Destination";
     const duration = Math.max(1, Math.min(14, Number(tripBrief.duration) || 3));
 
-    const flatSpots = generateFlatSpots(destination, duration * SPOTS_PER_DAY);
+    const anchor = resolveAnchorLocation(tripBrief, destination);
+    const flatSpots = generateFlatSpots(destination, duration * SPOTS_PER_DAY, anchor);
 
     const startDate = tripBrief.startDate ? new Date(tripBrief.startDate) : null;
     const days = Array.from({ length: duration }, (_, i) => {
@@ -103,11 +136,13 @@ function generateMockItinerary(tripBrief) {
         return {
             DayNumber: i + 1,
             Date: dayDate,
+            StartLocation: anchor,
+            EndLocation: anchor,
             Spots: flatSpots.slice(i * SPOTS_PER_DAY, (i + 1) * SPOTS_PER_DAY)
         };
     });
 
-    return { destination, days };
+    return { destination, days, accommodation: tripBrief.accommodation || null };
 }
 
 module.exports = { generateMockItinerary };

@@ -1,15 +1,16 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { sendIntakeMessage, updateTripBriefField, generateItinerary } from '../../actions/tripAction';
+import AccommodationMap from './AccommodationMap';
 import './TripIntakePanel.css';
 
-const REQUIRED_FIELDS = ['destination', 'duration', 'travelers', 'budget'];
+const REQUIRED_FIELDS = ['destination', 'duration', 'numOfTravelers', 'budget'];
 
 const FIELD_LABELS = {
   destination: 'Destination',
   duration: 'Days',
-  travelers: 'Travelers',
+  numOfTravelers: 'Travelers',
   budget: 'Budget'
 };
 
@@ -30,10 +31,20 @@ const TripIntakePanel = () => {
     }
   }, [messages, isOpen]);
 
-  const missingRequired = REQUIRED_FIELDS.filter(
-    (field) => tripBrief[field] === undefined || tripBrief[field] === null || tripBrief[field] === ''
-  );
-  const canGenerate = missingRequired.length === 0;
+  // Gated on the full intake stage machine reaching "ready" (see CLAUDE.md,
+  // "Planned: Lodging Flow") rather than just these four chips, so the
+  // accommodation step can't be skipped by generating early.
+  const canGenerate = tripBrief.intakeStage === 'ready';
+
+  // The map is a reveal, not always-on: it only mounts once there's an actual
+  // candidate/suggestion list to show, alongside the matching chat prompt.
+  const stage = tripBrief.intakeStage;
+  const mapLocations = stage === 'accommodation_confirm'
+    ? tripBrief.accommodationCandidates
+    : stage === 'suggest_accommodation'
+      ? tripBrief.accommodationSuggestions
+      : null;
+  const showMap = Array.isArray(mapLocations) && mapLocations.length > 0;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -50,7 +61,7 @@ const TripIntakePanel = () => {
 
   const commitValue = (field, rawValue) => {
     if (rawValue !== '' && rawValue !== undefined) {
-      const value = field === 'duration' || field === 'travelers' ? parseInt(rawValue, 10) : rawValue;
+      const value = field === 'duration' || field === 'numOfTravelers' ? parseInt(rawValue, 10) : rawValue;
       if (value !== undefined && !Number.isNaN(value)) {
         dispatch(updateTripBriefField(field, value));
       }
@@ -65,8 +76,17 @@ const TripIntakePanel = () => {
       .catch(() => {});
   };
 
+  // Tapping a marker picks it the same way typing its name in chat would —
+  // it goes through the same pickFromList matching on the backend. Wrapped
+  // in useCallback so AccommodationMap's marker effect (which depends on
+  // this) doesn't rebuild markers on every keystroke-driven re-render.
+  const handleLocationSelect = useCallback((location) => {
+    if (isGenerating) return;
+    dispatch(sendIntakeMessage(location.Name));
+  }, [dispatch, isGenerating]);
+
   return (
-    <div className={`trip-intake ${isOpen ? 'open' : ''}`}>
+    <div className={`trip-intake ${isOpen ? 'open' : ''} ${showMap ? 'with-map' : ''}`}>
       {!isOpen ? (
         <form onSubmit={handleSubmit} className="intake-collapsed">
           <input
@@ -105,6 +125,12 @@ const TripIntakePanel = () => {
             {error && <p className="intake-error">{error.message || 'Something went wrong. Please try again.'}</p>}
           </div>
 
+          {showMap && (
+            <div className="intake-map">
+              <AccommodationMap locations={mapLocations} onSelect={handleLocationSelect} />
+            </div>
+          )}
+
           <div className="trip-brief">
             <h4>Trip Brief</h4>
             {REQUIRED_FIELDS.map((field) => (
@@ -130,7 +156,7 @@ const TripIntakePanel = () => {
                   ) : (
                     <input
                       autoFocus
-                      type={field === 'duration' || field === 'travelers' ? 'number' : 'text'}
+                      type={field === 'duration' || field === 'numOfTravelers' ? 'number' : 'text'}
                       value={editingValue}
                       onChange={(e) => setEditingValue(e.target.value)}
                       onBlur={() => commitValue(field, editingValue)}

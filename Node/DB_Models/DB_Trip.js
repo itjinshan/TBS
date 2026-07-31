@@ -44,6 +44,18 @@ const DaySchema = new Schema({
     Spots: [SpotSchema]
 }, { _id: false });
 
+// Anchors each day's starting location (see CLAUDE.md, "Planned: Lodging
+// Flow"). Name isn't required — the frontend chip UI (still on the old
+// REQUIRED_FIELDS gate until lodging-flow item #6 lands) can currently save
+// a trip before accommodation is ever asked about.
+const AccommodationSchema = new Schema({
+    Name: { type: String },
+    Address: { type: String },
+    Latitude: { type: Number },
+    Longitude: { type: Number },
+    Source: { type: String, enum: ['user-provided', 'suggested'] }
+}, { _id: false });
+
 const TripSchema = new Schema({
     Owner: {
         type: Schema.Types.ObjectId,
@@ -58,7 +70,7 @@ const TripSchema = new Schema({
         type: Number,
         required: true
     },
-    Travelers: {
+    NumOfTravelers: {
         type: Number,
         default: 1
     },
@@ -67,6 +79,12 @@ const TripSchema = new Schema({
         default: "mid-range"
     },
     Preferences: {
+        type: String
+    },
+    Accommodation: {
+        type: AccommodationSchema
+    },
+    LivingPreference: {
         type: String
     },
     Days: [DaySchema],

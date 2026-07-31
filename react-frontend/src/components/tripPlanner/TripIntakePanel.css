@@ -38,6 +38,18 @@
   max-width: 900px;
 }
 
+/* Widen when the accommodation map reveals itself alongside chat + brief */
+.trip-intake.open.with-map {
+  max-width: 1200px;
+}
+
+.intake-map {
+  flex: 1.2;
+  min-width: 0;
+  border-left: 1px solid #e8eaed;
+  padding-left: 1.25rem;
+}
+
 .intake-panel {
   position: relative;
   display: flex;
@@ -216,6 +228,7 @@
     flex-direction: column;
   }
 
+  .intake-map,
   .trip-brief {
     border-left: none;
     border-top: 1px solid #e8eaed;
