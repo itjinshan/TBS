@@ -105,6 +105,9 @@
   border-radius: 14px;
   font-size: 0.9rem;
   line-height: 1.4;
+  /* Bot replies (e.g. the accommodation candidate list) use \n/\n\n for
+     line breaks; render them as such instead of collapsing whitespace. */
+  white-space: pre-line;
 }
 
 .intake-messages .message.bot .message-content {

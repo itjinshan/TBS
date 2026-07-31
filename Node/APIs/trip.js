@@ -176,11 +176,13 @@ router.post('/intake', function (req, res) {
         lookupAccommodationCandidates(query, tripBrief.destination)
             .then(function (candidates) {
                 var listing = candidates.map(function (c, i) {
-                    return (i + 1) + '. ' + c.Name + ' — ' + c.Address;
-                }).join('; ');
-                var reply = (candidates.length > 1 ? 'I found a few matches' : 'I found this match') +
-                    ' for "' + query.trim() + '": ' + listing +
-                    '. Which one is yours? (reply with the name or number, or type the name again to search differently)';
+                    return (i + 1) + '. ' + c.Name + '\n' + c.Address;
+                }).join('\n\n');
+                var intro = candidates.length > 1
+                    ? 'Here are some similar hotels, could you please confirm:'
+                    : 'Here\'s what I found for "' + query.trim() + '", could you please confirm:';
+                var reply = intro + '\n\n' + listing +
+                    '\n\nWhich one is yours? (reply with the name or number, or type the name again to search differently)';
                 respond({ accommodationCandidates: candidates }, reply, STAGES.ACCOMMODATION_CONFIRM);
             })
             .catch(respondError);
