@@ -1,6 +1,12 @@
 .accommodation-map {
   width: 100%;
-  height: 280px;
+  /* Fills its column's full height instead of a fixed px value: .intake-map
+     is a flex item in .intake-panel's row, which stretches every column
+     (chat, map, trip-brief) to match the tallest one by default — so this
+     just needs to fill that already-stretched parent, rather than leaving
+     blank space below a fixed-height box while the chat/brief columns'
+     buttons sit at the bottom of the taller row. */
+  height: 100%;
   border-radius: 10px;
   overflow: hidden;
   background: #f8f9fa;

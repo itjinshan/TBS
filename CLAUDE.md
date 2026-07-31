@@ -50,6 +50,8 @@ Tech: React 19, Redux Toolkit + Redux Thunk, React Router v6, MUI + Emotion, axi
 
 ## Pending Tasks
 
+**Before picking up a new task from this list:** (1) check that `main` is up to date (`git checkout main && git pull`), (2) check out a new branch for the task. Don't build on top of a stale `main` or an unrelated branch left over from a previous task.
+
 Backlog items surfaced while working on other plans, deliberately kept out of the active plan's PR scope. Pick these up as their own future PRs.
 
 - **Network-reachability-based provider routing.** Surfaced while testing the Amap place lookup used for the has-a-place accommodation flow: Amap's POI data/keyword matching is unreliable outside mainland China (English-language searches for well-known hotels in Paris/Tokyo returned irrelevant results even with correct city scoping). The routing needed here is two separate axes, not one "China vs. not" switch:
@@ -62,4 +64,3 @@ Backlog items surfaced while working on other plans, deliberately kept out of th
 - **Language switcher wrapper for the UI.** A reusable language-switcher component/wrapper for `react-frontend`, supporting at least English/Chinese, to back the "default UI language from IP region, overridable via a language switcher" behavior described above.
 - **End-to-end test coverage.** Neither `Node/` nor `react-frontend/` has real tests today — `Node/package.json` defines no test script at all, and `react-frontend/package.json`'s `npm test` is CRA's default (`react-scripts test`) with no test files beyond the untouched boilerplate `App.test.js`. Add e2e coverage for the trip-intake flow (stage machine + accommodation confirm/suggest branches) as a starting point — this session's verification of the lodging flow relied entirely on ad hoc manual simulation scripts, which don't persist as regression protection.
 - **Caching layer for volatile external lookups (e.g. Redis).** Decided against storing a raw price field on the `Accommodation` sub-document (`DB_Trip.js`) since pricing is date/availability-dependent and goes stale almost immediately — it should be fetched live at suggestion/generation time, not persisted in Mongo. That means repeated fetches to `Services/amapPlaces.js` (and its future `googlePlaces.js` sibling) are expected by design, so a caching layer with a short TTL is needed in front of these lookups to avoid hammering the external API on every near-duplicate query. See DS-Service's `CLAUDE.md` for the matching need on its side (LLM-sourcing calls and any future live price fetches).
-- **Home page chatbox is too small.** The trip-intake panel (`TripIntakePanel.js`/`.css`) is cramped on the home page — make the UI window bigger.
