@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react'
 import PropTypes from "prop-types";
 import { useSelector, useDispatch, connect } from "react-redux";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { logoutUser, getProfileInfo } from "../../actions/authAction";
 import setAuthToken from "../../utils/setAuthToken";
 import LoginModal from '../auth/LoginModal';
+import LanguageSwitcher from './LanguageSwitcher';
 // style imports
 import { FaUserCircle } from 'react-icons/fa';
 import "./Navbar.css";
@@ -12,6 +14,7 @@ import "./Navbar.css";
 import TBSLogo from "../../images/tbs_logo.png";
 
 const Navbar = () => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -66,6 +69,7 @@ const Navbar = () => {
         </Link>
         
         <div className="navbar-auth">
+          <LanguageSwitcher />
           {isAuthenticated ? (
               <div className="profile-container" ref={dropdownRef}>
               <div className="profile-info" onClick={toggleDropdown}>
@@ -78,18 +82,18 @@ const Navbar = () => {
                 </div>
                 <span className="username">{user?.FirstName || 'User'}</span>
               </div>
-              
+
               {showDropdown && (
                 <div className="dropdown-menu">
-                  <div className="dropdown-item">My Profile</div>
-                  <div className="dropdown-item">Settings</div>
+                  <div className="dropdown-item">{t('nav.myProfile')}</div>
+                  <div className="dropdown-item">{t('nav.settings')}</div>
                   <div className="dropdown-divider"></div>
-                  <div className="dropdown-item" onClick={handleLogout}>Logout</div>
+                  <div className="dropdown-item" onClick={handleLogout}>{t('nav.logout')}</div>
                 </div>
               )}
             </div>
           ) : (
-            <button className="login-btn" onClick={handleLogin}>Login</button>
+            <button className="login-btn" onClick={handleLogin}>{t('nav.login')}</button>
           )}
         </div>
       </div>

@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "login": "Login",
+    "myProfile": "My Profile",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "hero": {
+    "title": "Discover Your Next Adventure",
+    "subtitle": "Explore the world's most beautiful destinations with us",
+    "popular": "Popular:",
+    "tags": {
+      "beach": "Beach",
+      "mountain": "Mountain",
+      "city": "City",
+      "adventure": "Adventure"
+    }
+  },
+  "intake": {
+    "collapsedPlaceholder": "Tell us about your dream trip…",
+    "planMyTrip": "Plan my trip",
+    "answerPlaceholder": "Type your answer…",
+    "send": "Send",
+    "tripBrief": "Trip Brief",
+    "fields": {
+      "destination": "Destination",
+      "days": "Days",
+      "numOfTravelers": "Travelers",
+      "budget": "Budget"
+    },
+    "notSetYet": "Not set yet",
+    "budgetOptions": {
+      "select": "Select…",
+      "budget": "Budget",
+      "midRange": "Mid-range",
+      "luxury": "Luxury"
+    },
+    "generateItinerary": "Generate Itinerary",
+    "generating": "Generating…",
+    "errorFallback": "Something went wrong. Please try again."
+  }
+}

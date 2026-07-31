@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
+import { useTranslation } from "react-i18next";
 import TripIntakePanel from '../tripPlanner/TripIntakePanel';
 import './Home.css';
 
 const Home = () => {
+  const { t } = useTranslation();
 
   const destinations = [
     {
@@ -75,17 +77,17 @@ const Home = () => {
         }}
       >
         <div className="hero-content">
-          <h1>Discover Your Next Adventure</h1>
-          <p>Explore the world's most beautiful destinations with us</p>
-          
+          <h1>{t('hero.title')}</h1>
+          <p>{t('hero.subtitle')}</p>
+
           <TripIntakePanel />
 
           <div className="hero-tags">
-            <span>Popular:</span>
-            <a href="#">Beach</a>
-            <a href="#">Mountain</a>
-            <a href="#">City</a>
-            <a href="#">Adventure</a>
+            <span>{t('hero.popular')}</span>
+            <a href="#">{t('hero.tags.beach')}</a>
+            <a href="#">{t('hero.tags.mountain')}</a>
+            <a href="#">{t('hero.tags.city')}</a>
+            <a href="#">{t('hero.tags.adventure')}</a>
           </div>
         </div>
       </section>

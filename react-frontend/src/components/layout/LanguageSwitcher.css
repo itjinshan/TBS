@@ -1,0 +1,30 @@
+.language-switcher {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background-color: #f7fafc;
+  border-radius: 20px;
+  padding: 2px;
+  margin-right: 12px;
+}
+
+.language-option {
+  background: none;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #4a5568;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.language-option:hover {
+  color: #2d3748;
+}
+
+.language-option.active {
+  background-color: #4299e1;
+  color: white;
+}
