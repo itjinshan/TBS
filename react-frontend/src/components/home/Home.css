@@ -64,7 +64,16 @@ button {
 }
 
 .hero-content {
-  max-width: 800px;
+  /* Wide enough for the trip-intake panel's largest state (1360px, with the
+     accommodation map open) plus a little breathing room — the heading/
+     tagline above it just center within whatever width this resolves to.
+     Needs width: 100% too: .hero-section is a flex row with a single
+     centered child, and this is an unstretched flex item (flex: 0 1 auto)
+     that otherwise shrink-wraps to its content's natural width (driven by
+     the heading) rather than growing to fill available space up to max-width. */
+  width: 100%;
+  max-width: 1400px;
+  padding: 0 1rem;
 }
 
 .hero-content h1 {

@@ -33,14 +33,16 @@
   background: #3367d6;
 }
 
-/* Expanded panel */
+/* Expanded panel. Home.css's .hero-content wrapper was widened to match
+   (see its max-width) so this can actually reach these sizes instead of
+   being capped by a narrower parent. */
 .trip-intake.open {
-  max-width: 900px;
+  max-width: 1040px;
 }
 
 /* Widen when the accommodation map reveals itself alongside chat + brief */
 .trip-intake.open.with-map {
-  max-width: 1200px;
+  max-width: 1360px;
 }
 
 .intake-map {
@@ -57,7 +59,7 @@
   background: white;
   border-radius: 16px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
-  padding: 1.5rem;
+  padding: 2rem;
   text-align: left;
   color: #202124;
 }
@@ -82,7 +84,7 @@
 }
 
 .intake-messages {
-  height: 280px;
+  height: 400px;
   overflow-y: auto;
   padding-right: 0.5rem;
   margin-bottom: 0.75rem;
