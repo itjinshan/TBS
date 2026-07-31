@@ -6,37 +6,37 @@
     "logout": "退出登录"
   },
   "hero": {
-    "title": "探索你的下一场冒险",
-    "subtitle": "与我们一起探索世界上最美丽的目的地",
+    "title": "探索你的下一段精彩旅程",
+    "subtitle": "与我们一起，探索世界各地的绝美目的地",
     "popular": "热门：",
     "tags": {
       "beach": "海滩",
-      "mountain": "山脉",
+      "mountain": "山地",
       "city": "城市",
       "adventure": "探险"
     }
   },
   "intake": {
-    "collapsedPlaceholder": "告诉我们你梦想中的旅行…",
+    "collapsedPlaceholder": "说说你梦想中的旅行吧…",
     "planMyTrip": "规划我的旅程",
-    "answerPlaceholder": "输入你的回答…",
+    "answerPlaceholder": "输入消息…",
     "send": "发送",
-    "tripBrief": "行程摘要",
+    "tripBrief": "旅行计划",
     "fields": {
       "destination": "目的地",
       "days": "天数",
       "numOfTravelers": "人数",
       "budget": "预算"
     },
-    "notSetYet": "尚未设置",
+    "notSetYet": "未设置",
     "budgetOptions": {
       "select": "请选择…",
       "budget": "经济型",
-      "midRange": "中档型",
+      "midRange": "舒适型",
       "luxury": "豪华型"
     },
     "generateItinerary": "生成行程",
     "generating": "生成中…",
-    "errorFallback": "出现错误，请重试。"
+    "errorFallback": "出了点问题，请重试。"
   }
 }
