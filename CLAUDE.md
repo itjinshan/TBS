@@ -50,6 +50,8 @@ Tech: React 19, Redux Toolkit + Redux Thunk, React Router v6, MUI + Emotion, axi
 
 ## Pending Tasks
 
+**Before picking up a new task from this list:** (1) check that `main` is up to date (`git checkout main && git pull`), (2) check out a new branch for the task. Don't build on top of a stale `main` or an unrelated branch left over from a previous task.
+
 Backlog items surfaced while working on other plans, deliberately kept out of the active plan's PR scope. Pick these up as their own future PRs.
 
 - **Network-reachability-based provider routing.** Surfaced while testing the Amap place lookup used for the has-a-place accommodation flow: Amap's POI data/keyword matching is unreliable outside mainland China (English-language searches for well-known hotels in Paris/Tokyo returned irrelevant results even with correct city scoping). The routing needed here is two separate axes, not one "China vs. not" switch:
