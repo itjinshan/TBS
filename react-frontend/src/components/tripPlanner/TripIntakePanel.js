@@ -1,22 +1,27 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { sendIntakeMessage, updateTripBriefField, generateItinerary } from '../../actions/tripAction';
 import AccommodationMap from './AccommodationMap';
 import './TripIntakePanel.css';
 
 const REQUIRED_FIELDS = ['destination', 'duration', 'numOfTravelers', 'budget'];
 
-const FIELD_LABELS = {
-  destination: 'Destination',
-  duration: 'Days',
-  numOfTravelers: 'Travelers',
-  budget: 'Budget'
-};
-
 const TripIntakePanel = () => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  // Built from t() (not a module-level const) so labels re-render when the
+  // language changes. Keys are the JS-side field names used to read/write
+  // tripBrief; values are the translated display labels.
+  const FIELD_LABELS = {
+    destination: t('intake.fields.destination'),
+    duration: t('intake.fields.days'),
+    numOfTravelers: t('intake.fields.numOfTravelers'),
+    budget: t('intake.fields.budget')
+  };
   const { tripBrief, messages, isGenerating, error } = useSelector((state) => state.trip);
 
   const [isOpen, setIsOpen] = useState(false);
@@ -91,12 +96,12 @@ const TripIntakePanel = () => {
         <form onSubmit={handleSubmit} className="intake-collapsed">
           <input
             type="text"
-            placeholder="Tell us about your dream trip…"
+            placeholder={t('intake.collapsedPlaceholder')}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
           />
           <button type="submit">
-            <i className="fas fa-paper-plane"></i> Plan my trip
+            <i className="fas fa-paper-plane"></i> {t('intake.planMyTrip')}
           </button>
         </form>
       ) : (
@@ -115,14 +120,14 @@ const TripIntakePanel = () => {
             <form onSubmit={handleSubmit} className="intake-input-form">
               <input
                 type="text"
-                placeholder="Type your answer…"
+                placeholder={t('intake.answerPlaceholder')}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 disabled={isGenerating}
               />
-              <button type="submit" disabled={isGenerating}>Send</button>
+              <button type="submit" disabled={isGenerating}>{t('intake.send')}</button>
             </form>
-            {error && <p className="intake-error">{error.message || 'Something went wrong. Please try again.'}</p>}
+            {error && <p className="intake-error">{error.message || t('intake.errorFallback')}</p>}
           </div>
 
           {showMap && (
@@ -132,7 +137,7 @@ const TripIntakePanel = () => {
           )}
 
           <div className="trip-brief">
-            <h4>Trip Brief</h4>
+            <h4>{t('intake.tripBrief')}</h4>
             {REQUIRED_FIELDS.map((field) => (
               <div
                 key={field}
@@ -148,10 +153,10 @@ const TripIntakePanel = () => {
                       onChange={(e) => commitValue(field, e.target.value)}
                       onBlur={() => setEditingField(null)}
                     >
-                      <option value="">Select…</option>
-                      <option value="budget">Budget</option>
-                      <option value="mid-range">Mid-range</option>
-                      <option value="luxury">Luxury</option>
+                      <option value="">{t('intake.budgetOptions.select')}</option>
+                      <option value="budget">{t('intake.budgetOptions.budget')}</option>
+                      <option value="mid-range">{t('intake.budgetOptions.midRange')}</option>
+                      <option value="luxury">{t('intake.budgetOptions.luxury')}</option>
                     </select>
                   ) : (
                     <input
@@ -164,7 +169,7 @@ const TripIntakePanel = () => {
                     />
                   )
                 ) : (
-                  <span className="chip-value">{tripBrief[field] || 'Not set yet'}</span>
+                  <span className="chip-value">{tripBrief[field] || t('intake.notSetYet')}</span>
                 )}
               </div>
             ))}
@@ -174,7 +179,7 @@ const TripIntakePanel = () => {
               disabled={!canGenerate || isGenerating}
               onClick={handleGenerate}
             >
-              {isGenerating ? 'Generating…' : 'Generate Itinerary'}
+              {isGenerating ? t('intake.generating') : t('intake.generateItinerary')}
             </button>
           </div>
         </div>

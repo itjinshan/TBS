@@ -1,0 +1,56 @@
+{
+  "nav": {
+    "login": "登录",
+    "myProfile": "我的资料",
+    "settings": "设置",
+    "logout": "退出登录"
+  },
+  "hero": {
+    "title": "探索你的下一段精彩旅程",
+    "subtitle": "与我们一起，探索世界各地的绝美目的地",
+    "popular": "热门：",
+    "tags": {
+      "beach": "海滩",
+      "mountain": "山地",
+      "city": "城市",
+      "adventure": "探险"
+    }
+  },
+  "intake": {
+    "collapsedPlaceholder": "说说你梦想中的旅行吧…",
+    "planMyTrip": "规划我的旅程",
+    "answerPlaceholder": "输入消息…",
+    "send": "发送",
+    "tripBrief": "旅行计划",
+    "fields": {
+      "destination": "目的地",
+      "days": "天数",
+      "numOfTravelers": "人数",
+      "budget": "预算"
+    },
+    "notSetYet": "未设置",
+    "budgetOptions": {
+      "select": "请选择…",
+      "budget": "经济型",
+      "midRange": "舒适型",
+      "luxury": "豪华型"
+    },
+    "generateItinerary": "生成行程",
+    "generating": "生成中…",
+    "errorFallback": "出了点问题，请重试。"
+  },
+  "footer": {
+    "company": "公司",
+    "aboutUs": "关于我们",
+    "contact": "联系我们",
+    "resources": "资源",
+    "blog": "博客",
+    "documentation": "文档",
+    "support": "支持",
+    "legal": "法律",
+    "privacyPolicy": "隐私政策",
+    "termsOfService": "服务条款",
+    "cookiePolicy": "Cookie 政策",
+    "copyright": "© {{year}} Eazigo。保留所有权利。"
+  }
+}
