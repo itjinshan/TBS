@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
+import { withTranslation } from "react-i18next";
 import { registerUser, resetRegisterPending } from "../../actions/authAction";
 import TextFieldGroup from "../../utils/TextFieldGroup";
 import { 
@@ -72,7 +73,7 @@ class RegisterModal extends Component {
   }
 
   render() {
-    const { open, auth } = this.props;
+    const { open, auth, t } = this.props;
     const { errors } = this.state;
 
     if (auth.registrationPending) {
@@ -90,7 +91,7 @@ class RegisterModal extends Component {
               <CloseIcon />
             </IconButton>
             <img src={TBSLogo} alt="Logo" className="modal-logo" />
-            <Typography className="modal-title">Check your email</Typography>
+            <Typography className="modal-title">{t('auth.register.checkEmailTitle')}</Typography>
           </div>
           <DialogContent className="modal-content">
             <Typography>{auth.registrationMessage}</Typography>
@@ -104,7 +105,7 @@ class RegisterModal extends Component {
                   this.props.returnToLoginClick();
                 }}
               >
-                Back to Login
+                {t('auth.register.backToLogin')}
               </a>
             </div>
           </DialogContent>
@@ -128,7 +129,7 @@ class RegisterModal extends Component {
           </IconButton>
 
           <img src={TBSLogo} alt="Logo" className="modal-logo" />
-          <Typography className="modal-title">Create Account</Typography>
+          <Typography className="modal-title">{t('auth.register.title')}</Typography>
         </div>
 
         <DialogContent className="modal-content">
@@ -136,23 +137,23 @@ class RegisterModal extends Component {
             <div className="form-columns">
               <div className="form-column">
                 <TextFieldGroup
-                  placeholder="First Name"
+                  placeholder={t('auth.register.firstName')}
                   name="FirstName"
                   value={this.state.FirstName}
                   onChange={this.onChange}
                   error={errors.FirstName}
                 />
-                
+
                 <TextFieldGroup
-                  placeholder="Last Name"
+                  placeholder={t('auth.register.lastName')}
                   name="LastName"
                   value={this.state.LastName}
                   onChange={this.onChange}
                   error={errors.LastName}
                 />
-                
+
                 <TextFieldGroup
-                  placeholder="Phone Number"
+                  placeholder={t('auth.register.phone')}
                   name="Phone"
                   type="tel"
                   value={this.state.Phone}
@@ -160,28 +161,28 @@ class RegisterModal extends Component {
                   error={errors.Phone}
                 />
               </div>
-              
+
               <div className="form-column">
                 <TextFieldGroup
-                  placeholder="Email Address"
+                  placeholder={t('auth.register.email')}
                   name="Email"
                   type="email"
                   value={this.state.Email}
                   onChange={this.onChange}
                   error={errors.Email}
                 />
-                
+
                 <TextFieldGroup
-                  placeholder="Password"
+                  placeholder={t('auth.register.password')}
                   name="Password"
                   type="password"
                   value={this.state.Password}
                   onChange={this.onChange}
                   error={errors.Password}
                 />
-                
+
                 <TextFieldGroup
-                  placeholder="Confirm Password"
+                  placeholder={t('auth.register.confirmPassword')}
                   name="Password2"
                   type="password"
                   value={this.state.Password2}
@@ -190,7 +191,7 @@ class RegisterModal extends Component {
                 />
               </div>
             </div>
-            
+
             <Button
               fullWidth
               variant="contained"
@@ -198,41 +199,41 @@ class RegisterModal extends Component {
               className="submit-btn"
               size="large"
             >
-              Register
+              {t('auth.register.submit')}
             </Button>
           </form>
 
-          <Divider className="login-modal-divider">OR</Divider>
+          <Divider className="login-modal-divider">{t('auth.login.or')}</Divider>
 
           <div className="social-logins">
-            <Button 
-              fullWidth 
-              variant="outlined" 
+            <Button
+              fullWidth
+              variant="outlined"
               className="social-btn google"
               startIcon={<GoogleIcon />}
             >
-              Continue with Google
+              {t('auth.login.continueGoogle')}
             </Button>
-            <Button 
-              fullWidth 
-              variant="outlined" 
+            <Button
+              fullWidth
+              variant="outlined"
               className="social-btn wechat"
               startIcon={<WechatIcon />}
             >
-              Continue with WeChat
+              {t('auth.login.continueWechat')}
             </Button>
           </div>
 
           <div className="other-footer-links">
-            <a 
-                href="#" 
-                className="link" 
+            <a
+                href="#"
+                className="link"
                 onClick={(e) => {
                   e.preventDefault();
                   this.props.returnToLoginClick();
                 }}
               >
-                Back to Login
+                {t('auth.register.backToLogin')}
               </a>
           </div>
         </DialogContent>
@@ -248,7 +249,8 @@ RegisterModal.propTypes = {
   errors: PropTypes.object.isRequired,
   open: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
-  onLoginClick: PropTypes.func.isRequired
+  onLoginClick: PropTypes.func.isRequired,
+  t: PropTypes.func.isRequired
 };
 
 const mapStateToProps = state => ({
@@ -259,4 +261,4 @@ const mapStateToProps = state => ({
 export default connect(
   mapStateToProps,
   { registerUser, resetRegisterPending }
-)(RegisterModal);
+)(withTranslation()(RegisterModal));

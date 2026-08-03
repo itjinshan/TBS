@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
+import { withTranslation } from "react-i18next";
 import { loginUser, resendVerification } from "../../actions/authAction";
 import ForgotPasswordModal from './ForgotPasswordModal';
 import RegisterModal from './RegisterModal';
@@ -81,7 +82,7 @@ class LoginModal extends Component {
   }
 
   render() {
-    const { open, onClose } = this.props;
+    const { open, onClose, t } = this.props;
     const { errors, showForgotPassword, showRegisterOpen } = this.state;
     const { resendStatus, resendStatusMSG } = this.props.auth;
     const needsVerification = errors.Email && errors.Email.toLowerCase().includes("verify your email");
@@ -89,7 +90,7 @@ class LoginModal extends Component {
     return (
       <>
       <Dialog
-        open={open && !showForgotPassword && !showRegisterOpen} 
+        open={open && !showForgotPassword && !showRegisterOpen}
         onClose={onClose}
         maxWidth="xs"
         fullWidth
@@ -100,13 +101,13 @@ class LoginModal extends Component {
             <CloseIcon />
           </IconButton>
           <img src={TBSLogo} alt="Logo" className="modal-logo" />
-          <Typography variant="h5" className="modal-title">Welcome Back</Typography>
+          <Typography variant="h5" className="modal-title">{t('auth.login.title')}</Typography>
         </div>
 
         <DialogContent className="modal-content">
           <form onSubmit={this.onSubmit} className="login-form">
             <TextFieldGroup
-              placeholder="Email Address"
+              placeholder={t('auth.login.email')}
               name="Email"
               type="email"
               value={this.state.Email}
@@ -115,7 +116,7 @@ class LoginModal extends Component {
               className="form-input"
             />
             <TextFieldGroup
-              placeholder="Password"
+              placeholder={t('auth.login.password')}
               name="Password"
               type="password"
               value={this.state.Password}
@@ -129,7 +130,7 @@ class LoginModal extends Component {
               type="submit"
               className="submit-btn"
             >
-              Log In
+              {t('auth.login.submit')}
             </Button>
           </form>
 
@@ -144,51 +145,51 @@ class LoginModal extends Component {
                     this.handleResendVerification();
                   }}
                 >
-                  Resend verification email
+                  {t('auth.login.resendVerification')}
                 </a>
           )}
 
-          <Divider className="login-modal-divider">OR</Divider>
+          <Divider className="login-modal-divider">{t('auth.login.or')}</Divider>
 
           <div className="social-logins">
-            <Button 
-              fullWidth 
-              variant="outlined" 
+            <Button
+              fullWidth
+              variant="outlined"
               className="social-btn google"
               startIcon={<GoogleIcon />}
             >
-              Continue with Google
+              {t('auth.login.continueGoogle')}
             </Button>
-            <Button 
-              fullWidth 
-              variant="outlined" 
+            <Button
+              fullWidth
+              variant="outlined"
               className="social-btn wechat"
               startIcon={<WechatIcon />}
             >
-              Continue with WeChat
+              {t('auth.login.continueWechat')}
             </Button>
           </div>
 
           <div className="other-footer-links">
-            <a 
-              href="#" 
-              className="link" 
+            <a
+              href="#"
+              className="link"
               onClick={(e) => {
                 e.preventDefault();
                 this.toggleForgotPassword();
               }}
             >
-              Forgot password?
+              {t('auth.login.forgotPassword')}
             </a>
-            <a 
-              href="#" 
-              className="link" 
+            <a
+              href="#"
+              className="link"
               onClick={(e) => {
                 e.preventDefault();
                 this.toggleRegister();
               }}
             >
-              Don't have an account? Sign up
+              {t('auth.login.noAccount')}
             </a>
           </div>
         </DialogContent>
@@ -237,7 +238,8 @@ LoginModal.propTypes = {
   auth: PropTypes.object.isRequired,
   errors: PropTypes.object.isRequired,
   open: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired
+  onClose: PropTypes.func.isRequired,
+  t: PropTypes.func.isRequired
 };
 
 const mapStateToProps = state => ({
@@ -248,4 +250,4 @@ const mapStateToProps = state => ({
 export default connect(
   mapStateToProps,
   { loginUser, resendVerification }
-)(LoginModal);
+)(withTranslation()(LoginModal));
