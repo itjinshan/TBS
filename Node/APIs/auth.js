@@ -71,14 +71,7 @@ router.post('/register', (req, res) => {
                   // ** Auto Login **
                   //
                   AccessToken = generateAccessToken(user, 'auth');
-                  RefreshToken = jwt.sign(
-                  {
-                    UserID: user.id,
-                    FirstName: user.FirstName,
-                    LastName: user.LastName
-                  },
-                  process.env.REFRESHSECRETE
-                  )
+                  RefreshToken = generateAccessToken(user, 'refresh');
                   return res.json({
                     Email: user.Email,
                     AccessToken: "Bearer " + AccessToken,
@@ -122,14 +115,7 @@ router.post('/login', (req, res) => {
         if (isMatch) {
           //Sign Token as a sign of success validation
           AccessToken = generateAccessToken(user, 'auth');
-          RefreshToken = jwt.sign(
-            {
-              UserID: user.id,
-              FirstName: user.FirstName,
-              LastName: user.LastName
-            },
-            process.env.REFRESHSECRETE
-          )
+          RefreshToken = generateAccessToken(user, 'refresh');
           res.json({
             Email: user.Email,
             AccessToken: "Bearer " + AccessToken,
@@ -152,14 +138,7 @@ router.get("/current", passport.authenticate("jwt", {
 }), // not using session
     (req, res) => {
       AccessToken = generateAccessToken(req.user, 'auth');
-      RefreshToken = jwt.sign(
-        {
-          UserID: req.user.id,
-          FirstName: req.user.FirstName,
-          LastName: req.user.LastName
-        },
-        process.env.REFRESHSECRETE
-      )
+      RefreshToken = generateAccessToken(req.user, 'refresh');
       res.json({
         UserID: req.user._id,
         Email: req.user.Email,
