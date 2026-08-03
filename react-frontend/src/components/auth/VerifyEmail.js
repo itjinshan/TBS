@@ -1,69 +1,80 @@
 import React, { Component } from 'react';
-import Grid from "@mui/material/Grid2";
-import { Link } from "react-router-dom";
-import Paper from "@mui/material/Paper";
-import TBSLogo from "../../images/tbs_logo.png";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
+import { withTranslation } from "react-i18next";
+import {
+  Dialog,
+  DialogContent,
+  IconButton,
+  Typography,
+  Alert
+} from "@mui/material";
+import CloseIcon from '@mui/icons-material/Close';
+import TBSLogo from "../../images/tbs_logo.png";
 import { verifyEmailToken } from "../../actions/authAction";
-import "./Auth.css";
+import withRouter from "../../utils/withRouter";
+import "./LoginModal.css"; // Reusing the same CSS as the other auth modals
 
 class VerifyEmail extends Component {
     componentDidMount() {
-        window.scrollTo(0, 0);
         const VerificationToken = window.location.search.split("=")[1];
         this.props.verifyEmailToken(VerificationToken);
     }
 
+    handleClose = () => {
+        this.props.navigate("/");
+    };
+
     render() {
         const { verifyStatus, verifyStatusMSG } = this.props.auth;
+        const { t } = this.props;
 
         return (
-            <div className="MarginTop MarginBottom">
-            <Grid
-              container
-              className="AuthContainerLogin"
-              spacing={0}
-              direction="column"
-              justifyContent="center"
-              alignItems="center"
-              style={{minHeight:window.innerHeight-180}}
+            <Dialog
+                open
+                onClose={this.handleClose}
+                maxWidth="xs"
+                fullWidth
+                className="login-modal"
+                PaperProps={{ style: { borderRadius: 16 } }}
             >
-              <Paper className="AuthPaperLogin">
-                <Grid className="AuthTitle">
-                    Email Verification
-                </Grid>
-                <br />
-                <Grid
-                  container
-                  spacing={0}
-                  direction="column"
-                  justifyContent="center"
-                  alignItems="center"
-                >
-                  <img className="loginLogo" src={TBSLogo} alt="" />
-                  <br />
-                  { verifyStatus === null
-                      ? <p>Verifying your email...</p>
-                      : <div className={`notification notification--visible notification--${verifyStatus ? "success" : "warning"}`}>
-                          {verifyStatusMSG}
-                        </div>
-                  }
-                  <br />
-                  <Link to="/" className="linkToOhter">
-                    Back to home
-                  </Link>
-                </Grid>
-              </Paper>
-            </Grid>
-            </div>
-          )
+                <div className="modal-header">
+                    <IconButton className="close-btn" onClick={this.handleClose} aria-label="close">
+                        <CloseIcon />
+                    </IconButton>
+                    <img src={TBSLogo} alt="Logo" className="modal-logo" />
+                    <Typography className="modal-title">{t('auth.verifyEmail.title')}</Typography>
+                </div>
+
+                <DialogContent className="modal-content">
+                    {verifyStatus === null
+                        ? <Typography>{t('auth.verifyEmail.verifying')}</Typography>
+                        : <Alert severity={verifyStatus ? "success" : "warning"}>{verifyStatusMSG}</Alert>
+                    }
+
+                    <div className="other-footer-links">
+                        <a
+                            href="#"
+                            className="link"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                this.handleClose();
+                            }}
+                        >
+                            {t('auth.verifyEmail.backToHome')}
+                        </a>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        );
     }
 }
 
 VerifyEmail.propTypes = {
     auth: PropTypes.object.isRequired,
-    verifyEmailToken: PropTypes.func.isRequired
+    verifyEmailToken: PropTypes.func.isRequired,
+    navigate: PropTypes.func.isRequired,
+    t: PropTypes.func.isRequired
 };
 
 const mapStateToProps = state => ({
@@ -73,4 +84,4 @@ const mapStateToProps = state => ({
 export default connect(
     mapStateToProps,
     { verifyEmailToken }
-)(VerifyEmail);
+)(withTranslation()(withRouter(VerifyEmail)));
