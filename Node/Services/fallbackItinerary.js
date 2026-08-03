@@ -1,18 +1,15 @@
-// Placeholder itinerary generation. DS-Service does not yet expose a
-// date/duration-aware trip planner (see /Users/alexjiang/DS-Service/APIs/deepseek.ts —
-// /plantrip only accepts a freeform `query` and ignores everything else) and its
-// spot-sourcing endpoint (/datasourcing/sourcespots) returns an unordered flat list
-// for a single city, not a day-by-day plan. So this module fakes both steps —
-// "source a flat rated spot list" and "arrange it into days" — behind the same
-// two-stage shape a real integration will eventually use, so swapping in a real
-// DS-Service call later only touches generateFlatSpots().
+// Fallback itinerary generation, used by APIs/trip.js's /generate route only
+// when the real path (Services/spotSourcing.js + Services/itineraryPlanner.js,
+// backed by DS-Service) fails outright — a DS-Service network/HTTP error, or
+// zero spots returned. Not the default path anymore; see CLAUDE.md, "Planned:
+// Real Trip-Generation Data".
 //
-// Each day's spots (and its Start/EndLocation) are anchored to
-// tripBrief.accommodation when it has real coordinates (see CLAUDE.md,
-// "Planned: Lodging Flow", item #5) — today that's only the has-a-place path
-// (real Amap lookup). The no-place suggestion stub in trip.js still returns
-// null coordinates until it's wired to DS-Service's /datasourcing/sourceaccommodations,
-// so that path still falls back to the old city-center placeholder below.
+// Each day's spots are anchored to tripBrief.accommodation when it has real
+// coordinates (see CLAUDE.md, "Planned: Lodging Flow", item #5) — today
+// that's only the has-a-place path (real Amap lookup). The no-place
+// suggestion stub in trip.js still returns null coordinates until it's wired
+// to DS-Service's /datasourcing/sourceaccommodations, so that path still
+// falls back to the city-center placeholder below.
 
 const SPOT_TEMPLATES = [
     { name: "Old Town Walking Tour", timeOfDay: "Morning" },
@@ -121,9 +118,9 @@ function generateFlatSpots(destination, count, anchor) {
     });
 }
 
-const SPOTS_PER_DAY = 3;
+const { SPOTS_PER_DAY } = require('./itineraryPlanner');
 
-function generateMockItinerary(tripBrief) {
+function generateFallbackItinerary(tripBrief) {
     const destination = tripBrief.destination || "Your Destination";
     const duration = Math.max(1, Math.min(14, Number(tripBrief.duration) || 3));
 
@@ -136,8 +133,6 @@ function generateMockItinerary(tripBrief) {
         return {
             DayNumber: i + 1,
             Date: dayDate,
-            StartLocation: anchor,
-            EndLocation: anchor,
             Spots: flatSpots.slice(i * SPOTS_PER_DAY, (i + 1) * SPOTS_PER_DAY)
         };
     });
@@ -145,4 +140,4 @@ function generateMockItinerary(tripBrief) {
     return { destination, days, accommodation: tripBrief.accommodation || null };
 }
 
-module.exports = { generateMockItinerary };
+module.exports = { generateFallbackItinerary };

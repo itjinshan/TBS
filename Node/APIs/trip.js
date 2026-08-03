@@ -4,13 +4,12 @@ var passport = require('passport');
 require('../Config/passport')(passport);
 var axios = require('axios');
 var Trip = require('../DB_Models/DB_Trip');
-var { generateMockItinerary } = require('../Services/mockItinerary');
+var { generateFallbackItinerary } = require('../Services/fallbackItinerary');
+var { arrangeIntoDays, SPOTS_PER_DAY } = require('../Services/itineraryPlanner');
+var spotSourcing = require('../Services/spotSourcing');
+var nluExtraction = require('../Services/nluExtraction');
 var amapPlaces = require('../Services/amapPlaces');
 var generateAccessToken = require('../Config/jwtgenerator');
-
-var KNOWN_DESTINATIONS = [
-    'bali', 'paris', 'tokyo', 'new york', 'santorini', 'sydney', 'beijing', 'shanghai'
-];
 
 var OTHER_PREF_FIELDS = ['duration', 'numOfTravelers', 'budget'];
 
@@ -33,57 +32,6 @@ var OTHER_PREF_QUESTIONS = {
     numOfTravelers: "How many people will be traveling?",
     budget: "What's your budget style — budget, mid-range, or luxury?"
 };
-
-// Rule-based slot extraction. DS-Service has no trip-intake/extraction endpoint
-// today (see /Users/alexjiang/DS-Service/APIs/deepseek.ts), so this is a
-// placeholder that can be swapped for a real LLM extraction call later behind
-// the same { reply, extractedFields, stage } response shape.
-function extractDestination(message) {
-    var text = (message || '').toLowerCase();
-    var known = KNOWN_DESTINATIONS.find(function (city) { return text.includes(city); });
-    if (known) return known.replace(/\b\w/g, function (c) { return c.toUpperCase(); });
-
-    var destMatch = message.match(/\b(?:to|in|visit(?:ing)?)\s+([A-Z][a-zA-Z]+(?:\s[A-Z][a-zA-Z]+)*)/);
-    return destMatch ? destMatch[1] : undefined;
-}
-
-function extractOtherPrefs(message) {
-    var text = (message || '').toLowerCase();
-    var extracted = {};
-
-    var durationMatch = text.match(/(\d+)\s*-?\s*(day|days|night|nights)/);
-    if (durationMatch) extracted.duration = parseInt(durationMatch[1], 10);
-
-    var travelersMatch = text.match(/(\d+)\s*(people|person|travelers|traveler|adults|pax)/);
-    if (travelersMatch) {
-        extracted.numOfTravelers = parseInt(travelersMatch[1], 10);
-    } else if (/\b(solo|myself|just me)\b/.test(text)) {
-        extracted.numOfTravelers = 1;
-    } else if (/\bcouple\b/.test(text)) {
-        extracted.numOfTravelers = 2;
-    }
-
-    // Check the more specific tiers first — "budget" as a bare word is a common
-    // false positive inside phrases like "mid-range budget" or "what's my budget".
-    if (/\b(mid.range|moderate)/.test(text)) {
-        extracted.budget = 'mid-range';
-    } else if (/\b(luxury|lavish|five.star|5.star)/.test(text)) {
-        extracted.budget = 'luxury';
-    } else if (/\b(budget|cheap|backpack)/.test(text)) {
-        extracted.budget = 'budget';
-    }
-
-    return extracted;
-}
-
-function extractYesNo(message) {
-    var text = (message || '').toLowerCase();
-    // Check negative cues first — a message like "no, haven't booked anything"
-    // still contains "booked", which would otherwise false-match the yes cues.
-    if (/\b(no|nope|not yet|haven't|have not|don't have|no idea|not sure|not booked)\b/.test(text)) return 'no';
-    if (/\b(yes|yeah|yep|already booked|already have|have one|have a place|booked)\b/.test(text)) return 'yes';
-    return undefined;
-}
 
 function nextOtherPrefQuestion(mergedBrief) {
     var missing = OTHER_PREF_FIELDS.filter(function (field) {
@@ -190,36 +138,42 @@ router.post('/intake', function (req, res) {
 
     switch (stage) {
         case STAGES.DESTINATION: {
-            var destination = extractDestination(message);
-            if (destination) {
-                respond(
-                    { destination: destination },
-                    'Got it — ' + destination + '. Do you already have a place to stay booked or in mind?',
-                    STAGES.ACCOMMODATION_CHOICE
-                );
-            } else {
-                respond({}, 'Where are you headed?', STAGES.DESTINATION);
-            }
+            nluExtraction.extractDestination(message)
+                .then(function (destination) {
+                    if (destination) {
+                        respond(
+                            { destination: destination },
+                            'Got it — ' + destination + '. Do you already have a place to stay booked or in mind?',
+                            STAGES.ACCOMMODATION_CHOICE
+                        );
+                    } else {
+                        respond({}, 'Where are you headed?', STAGES.DESTINATION);
+                    }
+                })
+                .catch(respondError);
             break;
         }
 
         case STAGES.ACCOMMODATION_CHOICE: {
-            var choice = extractYesNo(message);
-            if (choice === 'yes') {
-                respond(
-                    { accommodationChoice: 'has_place' },
-                    "Great — what's the name (and city, if it helps) of the place? I'll look it up.",
-                    STAGES.ACCOMMODATION_CONFIRM
-                );
-            } else if (choice === 'no') {
-                respond(
-                    { accommodationChoice: 'no_place' },
-                    "No problem — what's your lodging budget (budget, mid-range, or luxury), and any living preferences (e.g. central location, quiet neighborhood, hotel vs. apartment)?",
-                    STAGES.BUDGET_LIVING_PREF
-                );
-            } else {
-                respond({}, 'Just to confirm — do you already have a place booked or in mind? (yes/no)', STAGES.ACCOMMODATION_CHOICE);
-            }
+            nluExtraction.extractYesNo(message, 'whether the traveler already has a place to stay booked or in mind')
+                .then(function (choice) {
+                    if (choice === 'yes') {
+                        respond(
+                            { accommodationChoice: 'has_place' },
+                            "Great — what's the name (and city, if it helps) of the place? I'll look it up.",
+                            STAGES.ACCOMMODATION_CONFIRM
+                        );
+                    } else if (choice === 'no') {
+                        respond(
+                            { accommodationChoice: 'no_place' },
+                            "No problem — what's your lodging budget (budget, mid-range, or luxury), and any living preferences (e.g. central location, quiet neighborhood, hotel vs. apartment)?",
+                            STAGES.BUDGET_LIVING_PREF
+                        );
+                    } else {
+                        respond({}, 'Just to confirm — do you already have a place booked or in mind? (yes/no)', STAGES.ACCOMMODATION_CHOICE);
+                    }
+                })
+                .catch(respondError);
             break;
         }
 
@@ -242,39 +196,44 @@ router.post('/intake', function (req, res) {
         }
 
         case STAGES.BUDGET_LIVING_PREF: {
-            var budgetPrefs = extractOtherPrefs(message);
-            var livingPrefFields = { livingPreference: message.trim() };
-            if (budgetPrefs.budget) livingPrefFields.budget = budgetPrefs.budget;
+            nluExtraction.extractOtherPrefs(message)
+                .then(function (budgetPrefs) {
+                    var livingPrefFields = { livingPreference: message.trim() };
+                    if (budgetPrefs.budget) livingPrefFields.budget = budgetPrefs.budget;
 
-            var firstOtherQuestion = nextOtherPrefQuestion(Object.assign({}, tripBrief, livingPrefFields));
-            if (firstOtherQuestion) {
-                respond(livingPrefFields, 'Got it. ' + firstOtherQuestion.question, STAGES.OTHER_PREFS);
-            } else {
-                respond(livingPrefFields, "Got it — I've got everything I need. Let me pull together some lodging suggestions.", STAGES.SUGGEST_ACCOMMODATION);
-            }
+                    var firstOtherQuestion = nextOtherPrefQuestion(Object.assign({}, tripBrief, livingPrefFields));
+                    if (firstOtherQuestion) {
+                        respond(livingPrefFields, 'Got it. ' + firstOtherQuestion.question, STAGES.OTHER_PREFS);
+                    } else {
+                        respond(livingPrefFields, "Got it — I've got everything I need. Let me pull together some lodging suggestions.", STAGES.SUGGEST_ACCOMMODATION);
+                    }
+                })
+                .catch(respondError);
             break;
         }
 
         case STAGES.OTHER_PREFS: {
-            var otherPrefFields = extractOtherPrefs(message);
-            var mergedBrief = Object.assign({}, tripBrief, otherPrefFields);
-            var otherQuestion = nextOtherPrefQuestion(mergedBrief);
+            nluExtraction.extractOtherPrefs(message)
+                .then(function (otherPrefFields) {
+                    var mergedBrief = Object.assign({}, tripBrief, otherPrefFields);
+                    var otherQuestion = nextOtherPrefQuestion(mergedBrief);
 
-            if (otherQuestion) {
-                respond(otherPrefFields, otherQuestion.question, STAGES.OTHER_PREFS);
-            } else if (mergedBrief.accommodationChoice === 'no_place') {
-                suggestAccommodations(mergedBrief)
-                    .then(function (suggestions) {
-                        otherPrefFields.accommodationSuggestions = suggestions;
-                        var suggestionReply = 'Here are a few lodging options that fit your budget: ' +
-                            suggestions.map(function (s, i) { return (i + 1) + '. ' + s.Name; }).join(', ') +
-                            '. Which one would you like to go with?';
-                        respond(otherPrefFields, suggestionReply, STAGES.SUGGEST_ACCOMMODATION);
-                    })
-                    .catch(respondError);
-            } else {
-                respond(otherPrefFields, "I've got everything I need — hit Generate Itinerary whenever you're ready!", STAGES.READY);
-            }
+                    if (otherQuestion) {
+                        respond(otherPrefFields, otherQuestion.question, STAGES.OTHER_PREFS);
+                    } else if (mergedBrief.accommodationChoice === 'no_place') {
+                        return suggestAccommodations(mergedBrief)
+                            .then(function (suggestions) {
+                                otherPrefFields.accommodationSuggestions = suggestions;
+                                var suggestionReply = 'Here are a few lodging options that fit your budget: ' +
+                                    suggestions.map(function (s, i) { return (i + 1) + '. ' + s.Name; }).join(', ') +
+                                    '. Which one would you like to go with?';
+                                respond(otherPrefFields, suggestionReply, STAGES.SUGGEST_ACCOMMODATION);
+                            });
+                    } else {
+                        respond(otherPrefFields, "I've got everything I need — hit Generate Itinerary whenever you're ready!", STAGES.READY);
+                    }
+                })
+                .catch(respondError);
             break;
         }
 
@@ -296,25 +255,44 @@ router.post('/intake', function (req, res) {
 
         case STAGES.READY:
         default: {
-            respond(extractOtherPrefs(message), "I've got everything I need — hit Generate Itinerary whenever you're ready!", STAGES.READY);
+            nluExtraction.extractOtherPrefs(message)
+                .then(function (otherPrefFields) {
+                    respond(otherPrefFields, "I've got everything I need — hit Generate Itinerary whenever you're ready!", STAGES.READY);
+                })
+                .catch(respondError);
             break;
         }
     }
 });
 
+// Real itinerary generation via Services/spotSourcing.js (DS-Service) +
+// Services/itineraryPlanner.js (geographic day clustering) — see CLAUDE.md,
+// "Planned: Real Trip-Generation Data". Falls back to
+// Services/fallbackItinerary.js only on a DS-Service network/HTTP error or
+// zero spots returned — a partial real result (fewer spots than requested
+// for an obscure city) still proceeds, since the planner already degrades
+// gracefully rather than crashing.
 router.post('/generate', function (req, res) {
     var tripBrief = req.body.tripBrief;
     if (!tripBrief || !tripBrief.destination) {
         return res.status(400).json({ message: 'Missing required field: destination' });
     }
 
-    try {
-        var itinerary = generateMockItinerary(tripBrief);
-        res.json(itinerary);
-    } catch (err) {
-        console.log(err);
-        res.status(500).json({ message: 'Failed to generate itinerary' });
-    }
+    var duration = Math.max(1, Math.min(14, Number(tripBrief.duration) || 3));
+    var minSpots = Math.max(6, duration * SPOTS_PER_DAY);
+
+    spotSourcing.sourceSpots(tripBrief.destination, minSpots)
+        .then(function (spots) {
+            if (!spots.length) {
+                return res.json(generateFallbackItinerary(tripBrief));
+            }
+            var days = arrangeIntoDays(spots, duration, tripBrief.accommodation);
+            res.json({ destination: tripBrief.destination, days: days, accommodation: tripBrief.accommodation || null });
+        })
+        .catch(function (err) {
+            console.error('Real itinerary generation failed, falling back:', err.message);
+            res.json(generateFallbackItinerary(tripBrief));
+        });
 });
 
 router.post('/', passport.authenticate('jwt', { session: false }), function (req, res) {
