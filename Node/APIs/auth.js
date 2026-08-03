@@ -1,5 +1,6 @@
 var express = require('express');
 var router = express.Router();
+var rateLimit = require('express-rate-limit');
 var validateLoginInput = require("../Validation/login");
 var validateRegisterInput = require("../Validation/register");
 var validateResetInput = require("../Validation/resetPassword");
@@ -17,6 +18,18 @@ var generateAccessToken = require('../Config/jwtgenerator');
 var welcomeEmail = require('../Emails/welcomeEmail');
 const forgotPasswordEmail = require('../Emails/forgotPasswordEmail');
 const createPasswordEmail = require('../Emails/createPasswordEmail');
+
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_LOCK_MS = 15 * 60 * 1000; // 15 minutes
+
+// IP-based rate limiting on login, on top of the per-account lockout below.
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { Email: "Too many login attempts from this network. Please try again later." }
+});
 
 // Register
 router.post('/register', (req, res) => {
@@ -91,14 +104,14 @@ router.post('/register', (req, res) => {
 });
 
 // Login
-router.post('/login', (req, res) => {
+router.post('/login', loginLimiter, (req, res) => {
     const { errors, isValid } = validateLoginInput(req.body);
-  
+
     //check validation
     if (!isValid) {
       return res.status(400).json(errors);
     }
-  
+
     const Email = req.body.Email;
     const Password = req.body.Password;
 
@@ -110,21 +123,43 @@ router.post('/login', (req, res) => {
         errors.Email = "User not found";
         return res.status(404).json(errors);
       }
+
+      // Per-account lockout after repeated failed attempts
+      if (user.LockUntil && user.LockUntil > Date.now()) {
+        const minutesLeft = Math.ceil((user.LockUntil - Date.now()) / 60000);
+        errors.Email = `Too many failed attempts. Please try again in ${minutesLeft} minute(s).`;
+        return res.status(423).json(errors);
+      }
+
        // if user found in the data base then check the password
        bcrypt.compare(Password, user.Password).then(isMatch => {
         if (isMatch) {
-          //Sign Token as a sign of success validation
-          AccessToken = generateAccessToken(user, 'auth');
-          RefreshToken = generateAccessToken(user, 'refresh');
-          res.json({
-            Email: user.Email,
-            AccessToken: "Bearer " + AccessToken,
-            RefreshToken: RefreshToken
+          // Reset lockout tracking on a successful login
+          user.FailedLoginAttempts = 0;
+          user.LockUntil = undefined;
+          user.save().then(() => {
+            //Sign Token as a sign of success validation
+            AccessToken = generateAccessToken(user, 'auth');
+            RefreshToken = generateAccessToken(user, 'refresh');
+            res.json({
+              Email: user.Email,
+              AccessToken: "Bearer " + AccessToken,
+              RefreshToken: RefreshToken
+            });
           });
-          
+
         } else {
-          errors.Password = "Password incorrect";
-          return res.status(400).json(errors);
+          user.FailedLoginAttempts = (user.FailedLoginAttempts || 0) + 1;
+          if (user.FailedLoginAttempts >= LOGIN_MAX_ATTEMPTS) {
+            user.LockUntil = Date.now() + LOGIN_LOCK_MS;
+            user.FailedLoginAttempts = 0;
+          }
+          // Awaited so the lock is committed before the response goes out —
+          // otherwise rapid consecutive attempts could race past the lockout.
+          user.save().then(() => {
+            errors.Password = "Password incorrect";
+            return res.status(400).json(errors);
+          });
         }
       });
     });

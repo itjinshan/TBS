@@ -37,6 +37,13 @@ const UserSchema = new Schema({
         type: Date,
         default: Date.now
     },
+    FailedLoginAttempts:{
+        type: Number,
+        default: 0
+    },
+    LockUntil:{
+        type: Date
+    },
     Language:{
         type: String,
         default: "English"
