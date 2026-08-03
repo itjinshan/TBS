@@ -5,8 +5,8 @@ TBS is a MERN-stack travel-planning application. Users chat through a trip-intak
 ## What it does
 
 - **User accounts** — registration, login, password reset, and JWT-based session auth.
-- **Trip intake** — a conversational flow that extracts trip details (destination, duration, travelers, budget) from user input.
-- **Itinerary generation** — builds a day-by-day itinerary for the trip.
+- **Trip intake** — a conversational flow that extracts trip details (destination, duration, travelers, budget) from user input using real LLM-based language understanding (via DS-Service).
+- **Itinerary generation** — sources real points of interest for the destination (via DS-Service) and arranges them into a geographically-clustered day-by-day itinerary. See ["How Itinerary Generation Works"](#how-itinerary-generation-works) below.
 - **Trip storage** — saved trips are persisted per user and retrievable by ID.
 
 ## Architecture
@@ -74,13 +74,18 @@ Other available scripts: `npm run build` (production build), `npm test` (test ru
 
 ```
 Node/
-  index.js           App entry point
-  APIs/               Route handlers (auth, trip, DS-Service proxy)
-  Config/             JWT generation, Passport setup
-  DB_Models/          Mongoose schemas (User, Trip)
-  Emails/             Transactional email templates
-  Services/           Itinerary generation logic
-  Validation/         Request validation helpers
+  index.js               App entry point
+  APIs/                   Route handlers (auth, trip, DS-Service proxy)
+  Config/                 JWT generation, Passport setup
+  DB_Models/              Mongoose schemas (User, Trip)
+  Emails/                 Transactional email templates
+  Services/
+    spotSourcing.js       Real spot sourcing via DS-Service
+    itineraryPlanner.js   Geographic day-clustering
+    nluExtraction.js      Real LLM-based intake field extraction
+    ruleBasedExtraction.js  Regex/keyword fallback for the above
+    fallbackItinerary.js   Synthetic itinerary, used only if the real path fails
+  Validation/             Request validation helpers
 
 react-frontend/
   src/
@@ -89,3 +94,29 @@ react-frontend/
     components/        UI components
     hooks/              Custom React hooks
 ```
+
+## How Itinerary Generation Works
+
+Trip generation is a two-part pipeline: the conversational intake flow that collects the trip's parameters, and the itinerary-generation step that turns those parameters into a real day-by-day plan.
+
+### 1. Trip intake — real NLU extraction
+
+The chat-based intake flow (`Node/APIs/trip.js`'s `/trip/intake` route) walks the user through a fixed sequence of stages (destination → accommodation → budget/preferences → duration/travelers → ready to generate). At each stage, the user's free-text reply needs specific fields pulled out of it — e.g. "5 days, just the two of us" → `{ duration: 5, numOfTravelers: 2 }`.
+
+This extraction is done for real: `Node/Services/nluExtraction.js` sends the message to DS-Service's `POST /nlu/extract` endpoint, which asks an LLM to pull out only the requested fields (destination, duration, traveler count, budget tier, or a yes/no answer) as structured JSON — not regex or keyword matching. A `context` hint is included for yes/no questions (e.g. "whether the traveler already has a place to stay") since a bare "yes"/"no" has no other way of being disambiguated.
+
+If DS-Service is unreachable or the call otherwise fails, `nluExtraction.js` falls back internally to `Node/Services/ruleBasedExtraction.js` — the original regex/keyword matchers — so the conversation degrades gracefully instead of erroring out. This fallback is intentionally narrower than the LLM path (a small hardcoded destination list, simple pattern matching for duration/budget/traveler count), so real extraction is noticeably smarter, especially for destinations or phrasing the regex list was never written to expect.
+
+### 2. Itinerary generation — real spot sourcing + geographic clustering
+
+Once the user hits "Generate Itinerary," `Node/APIs/trip.js`'s `/trip/generate` route does two things in sequence:
+
+1. **Source real spots for the destination** (`Node/Services/spotSourcing.js`) — calls DS-Service's `POST /datasourcing/sourcespots`, requesting at least `max(6, duration × 3)` spots. DS-Service checks its own MongoDB for spots already sourced for that city before ever asking the LLM, and only tops up the shortfall — repeat requests for a popular city are cheap and don't create duplicate data. See DS-Service's README for the sourcing details.
+2. **Arrange the spots into days** (`Node/Services/itineraryPlanner.js`) — real spots come back with real latitude/longitude, so instead of just slicing the list evenly, the spots are ordered into a **greedy nearest-neighbor tour** starting from an anchor point (the traveler's accommodation if it has real coordinates, otherwise the geographic centroid of all the spots), then sliced into balanced day-sized chunks. This keeps each day's plan geographically coherent — a day's spots cluster in the same part of the city rather than zigzagging across it.
+
+If spot sourcing fails outright (DS-Service unreachable, or it returns zero spots), `/trip/generate` falls back to `Node/Services/fallbackItinerary.js` — a synthetic itinerary built from a small set of generic placeholder spots ("Old Town Walking Tour," etc.) jittered around the destination's approximate coordinates, so the user still gets *an* itinerary rather than an error page. A partial real result (fewer spots than requested, for an obscure destination) still proceeds with what came back, since the day-arrangement step degrades gracefully on its own rather than needing a full fallback.
+
+### Known limitations
+
+- **"3 spots per day" is a fixed heuristic, not a time budget.** The system currently allocates a constant number of spots per day (`SPOTS_PER_DAY` in `itineraryPlanner.js`) rather than modeling how much a real day actually holds. It doesn't account for each spot's typical visit duration (already collected as `AverageTimeSpent` on every sourced spot, but currently unused for day-sizing), doesn't measure or budget actual travel time between spots (nearest-neighbor ordering *reduces* zigzagging but doesn't calculate travel time against a clock), and doesn't reserve time for meals or rest. It also doesn't yet ask the traveler's mode of transportation (public transit, taxi/rideshare, or driving), which meaningfully changes real travel time between the same two points — a good candidate to add to the intake flow alongside a real time-budget model.
+- **Spots can occasionally get filed under a neighboring city.** DS-Service resolves each spot's city from the LLM's own response, which is sometimes more geographically precise than the requested destination (e.g. Lisbon's Cristo Rei landmark is technically across the river in Almada) — this doesn't affect what the traveler sees, but can make DS-Service's duplicate-avoidance slightly less effective than it looks. See DS-Service's `CLAUDE.md` for detail.
