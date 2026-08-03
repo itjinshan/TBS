@@ -4,7 +4,7 @@ TBS is a MERN-stack travel-planning application. Users chat through a trip-intak
 
 ## What it does
 
-- **User accounts** — registration, login, password reset, and JWT-based session auth.
+- **User accounts** — registration (gated on email verification), login, password reset, and JWT-based session auth with silent access-token refresh. Login is protected against brute-forcing by both IP-based rate limiting and a per-account lockout after repeated failed attempts. See ["How Auth Works"](#how-auth-works) below.
 - **Trip intake** — a conversational flow that extracts trip details (destination, duration, travelers, budget) from user input using real LLM-based language understanding (via DS-Service).
 - **Itinerary generation** — sources real points of interest for the destination (via DS-Service) and arranges them into a geographically-clustered day-by-day itinerary. See ["How Itinerary Generation Works"](#how-itinerary-generation-works) below.
 - **Trip storage** — saved trips are persisted per user and retrievable by ID.
@@ -44,9 +44,12 @@ MONGODB_URL=<your MongoDB connection string>
 ACCESSSECRETE=<JWT access token secret>
 REFRESHSECRETE=<JWT refresh token secret>
 RESETSECRET=<password reset token secret>
+EMAIL_VERIFY_SECRET=<JWT email-verification token secret>
 DEEPSEEK_JWT_SECRET=<shared secret with DS-Service>
 GD_MAP_JWT_SECRET=<maps API secret>
 DS_SERVICE_BASEURL=<base URL of the DS-Service instance to call>
+EMAIL=<nodemailer SendinBlue account email, for verification/welcome/password-reset emails>
+EMAILPASS=<nodemailer SendinBlue account password>
 ```
 
 Run the server:
@@ -94,6 +97,24 @@ react-frontend/
     components/        UI components
     hooks/              Custom React hooks
 ```
+
+## How Auth Works
+
+### Registration and email verification
+
+`POST /auth/register` creates the account with `IsVerified: false` and emails a verification link (`Node/Emails/verifyEmail.js`) containing a signed, 24-hour-expiry JWT — it does **not** auto-log the user in. The frontend shows a "check your email" notice instead of closing the modal (`components/auth/RegisterModal.js`).
+
+Clicking the emailed link lands on `/verify-email`, which reads the token from the URL and calls `PUT /auth/verify-email` (`components/auth/VerifyEmail.js`). On success, the account is marked verified and a welcome email fires (`Node/Emails/welcomeEmail.js`). `POST /auth/login` rejects unverified accounts with `403`; the login form surfaces a "Resend verification email" link (`POST /auth/resend-verification`) whenever that specific error comes back.
+
+Accounts that existed before this feature shipped default to `IsVerified: true` (`DB_Models/DB_User.js`), so nothing already registered is locked out retroactively — only new signups go through the gate.
+
+### Brute-force protection
+
+`POST /auth/login` is rate-limited per IP (`express-rate-limit`, 20 requests/15 min) and separately locks out per-account after 5 failed password attempts within that window, returning `423` with a minutes-remaining message until the lock expires. Both counters reset on a successful login.
+
+### Access/refresh tokens
+
+`AccessToken`s expire after 1 hour; `RefreshToken`s expire after 7 days (`Config/jwtgenerator.js`). The frontend's axios response interceptor (`react-frontend/src/utils/axiosInterceptors.js`) catches a `401`, redeems the stored `RefreshToken` via `POST /jwt/refresh` for a fresh token pair, and retries the original request — so a user's session survives past the 1-hour access-token expiry without forcing a re-login. If the refresh token itself is invalid or expired, the user is logged out client-side.
 
 ## How Itinerary Generation Works
 
