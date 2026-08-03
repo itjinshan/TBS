@@ -225,7 +225,8 @@ export const setCurrentUser = decoded => {
 // Log user out
 //
 export const logoutUser = () => dispatch => {
-    localStorage.clear();
+    localStorage.removeItem("AccessToken");
+    localStorage.removeItem("RefreshToken");
     setAuthToken(false);
     dispatch(setCurrentUser({}));
 };
