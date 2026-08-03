@@ -43,29 +43,16 @@ router.post('/register', (req, res) => {
     }
 
     // Verfication of existing users
-    User.findOne({
-    "$or":[
-        {
-        // find out if the email already exists
-        Email: req.body.Email
-        },
-        {
-        // find out if the phone already exists
-        Phone: req.body.Phone
-        }
-    ]
-
-    }).then(user => {
+    User.findOne({ Email: req.body.Email }).then(user => {
     // user is the object returned by findOne()
     if (user) {
-        if(user.Email === req.body.Email ) errors.Email = "Email already exists";
-        if(user.Phone !== "xxx" && user.Phone === req.body.Phone) errors.Phone = "Phone number already exists";
+        errors.Email = "Email already exists";
         return res.status(400).json(errors);
     } else {
         // ** Create New User **
         //
         var newUser = new User({
-          // create new user if cannot find the email nor phone number
+          // create new user if cannot find the email
           FirstName: req.body.FirstName,
           LastName: req.body.LastName,
           Phone: req.body.Phone,

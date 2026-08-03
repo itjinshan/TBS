@@ -20,10 +20,7 @@ const UserSchema = new Schema({
         trim: true
     },
     Phone:{
-        type: String,
-        required: true,
-        unique: true,
-        default: "xxx"
+        type: String
     },
     Password:{
         type: String,
@@ -49,10 +46,6 @@ const UserSchema = new Schema({
     },
     LockUntil:{
         type: Date
-    },
-    Language:{
-        type: String,
-        default: "English"
     },
     TripHistory:[{
         TripID:{
