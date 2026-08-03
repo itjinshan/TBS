@@ -16,6 +16,7 @@ var generateAccessToken = require('../Config/jwtgenerator');
 
 // Welcome email
 var welcomeEmail = require('../Emails/welcomeEmail');
+var verifyEmail = require('../Emails/verifyEmail');
 const forgotPasswordEmail = require('../Emails/forgotPasswordEmail');
 const createPasswordEmail = require('../Emails/createPasswordEmail');
 
@@ -69,36 +70,32 @@ router.post('/register', (req, res) => {
           LastName: req.body.LastName,
           Phone: req.body.Phone,
           Email: req.body.Email,
-          Password: req.body.Password
+          Password: req.body.Password,
+          IsVerified: false
         });
         bcrypt.genSalt(10, (err, salt) => {
         bcrypt.hash(newUser.Password, salt, (err, hash) => {
             if (err) {
               console.log("Auth API/Register: error occurred while hashing password. " + err);
               throw err;
-            } 
+            }
             newUser.Password = hash; // hash the password from the user and store it back
             newUser
             .save() // use mongoose model to save to mongodb mlab
             .then(user => {
-                  // ** Auto Login **
-                  //
-                  AccessToken = generateAccessToken(user, 'auth');
-                  RefreshToken = generateAccessToken(user, 'refresh');
+                  // ** Require email verification before login **
+                  // (welcomeEmail is sent once the user verifies, see PUT /verify-email)
+                  const verificationToken = generateAccessToken(user, 'emailVerify');
+                  verifyEmail(user.FirstName, user.Email, verificationToken);
                   return res.json({
                     Email: user.Email,
-                    AccessToken: "Bearer " + AccessToken,
-                    RefreshToken: RefreshToken
+                    pendingVerification: true,
+                    message: "Registration successful! Please check your email to verify your account before logging in."
                   });
             })
             .catch(err => console.log(err));
         });
         });
-
-        // ** Logistics **
-        //
-        // Send Welcome Emails
-        // welcomeEmail(req.body.FirstName, req.body.LastName, Email);
     }
     });
 });
@@ -134,6 +131,11 @@ router.post('/login', loginLimiter, (req, res) => {
        // if user found in the data base then check the password
        bcrypt.compare(Password, user.Password).then(isMatch => {
         if (isMatch) {
+          if (!user.IsVerified) {
+            errors.Email = "Please verify your email before logging in. Check your inbox for the verification link.";
+            return res.status(403).json(errors);
+          }
+
           // Reset lockout tracking on a successful login
           user.FailedLoginAttempts = 0;
           user.LockUntil = undefined;
@@ -185,6 +187,55 @@ router.get("/current", passport.authenticate("jwt", {
       })
     }
 );
+
+// Verify Email
+router.put("/verify-email", (req, res) => {
+  const VerificationToken = req.body.VerificationToken;
+  if (!VerificationToken) {
+    return res.status(400).json({ verifyStatus: false, statusmsg: "Missing verification token." });
+  }
+  jwt.verify(VerificationToken, process.env.EMAIL_VERIFY_SECRET, (err, decoded) => {
+    if (err) {
+      return res.json({ verifyStatus: false, statusmsg: "Verification link has expired. Please request a new one." });
+    }
+    User.findById(decoded.UserID)
+      .then(user => {
+        if (!user) {
+          return res.json({ verifyStatus: false, statusmsg: "Account not found." });
+        }
+        if (user.IsVerified) {
+          return res.json({ verifyStatus: true, statusmsg: "Your email is already verified. You can log in." });
+        }
+        user.IsVerified = true;
+        user.save().then(() => {
+          welcomeEmail(user.FirstName, user.LastName, user.Email);
+          res.json({ verifyStatus: true, statusmsg: "Your email has been verified. You can now log in." });
+        });
+      })
+      .catch(err => {
+        res.json({ verifyStatus: false, statusmsg: "Error verifying email. Please try again." });
+      });
+  });
+});
+
+// Resend Verification Email
+router.post("/resend-verification", (req, res) => {
+  const Email = req.body.Email;
+  const errors = {};
+  User.findOne({ Email })
+    .then(user => {
+      if (!user) {
+        errors.Email = "Email not found.";
+        return res.status(404).json(errors);
+      }
+      if (user.IsVerified) {
+        return res.json({ resendStatus: false, statusmsg: "This account is already verified. Please log in." });
+      }
+      const verificationToken = generateAccessToken(user, 'emailVerify');
+      verifyEmail(user.FirstName, user.Email, verificationToken);
+      res.json({ resendStatus: true, statusmsg: "A new verification link has been sent to your email." });
+    });
+});
 
 // Forgot Password
 router.put("/forgot-password", (req, res) => {

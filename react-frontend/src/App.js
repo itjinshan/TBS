@@ -17,6 +17,7 @@ import LLMChatBot from "./components/llmChat/LLMChatBot"
 // Auth
 import ResetPassword from "./components/auth/ResetPassword"
 import CreatePassword from "./components/auth/CreatePassword"
+import VerifyEmail from "./components/auth/VerifyEmail"
 
 //Itinerary
 import Itinerary from "./components/itinerary/Itinerary"
@@ -42,6 +43,7 @@ export default class App extends Component {
                 <Route path="/" element={<Home />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/create-password" element={<CreatePassword />} />
+                <Route path="/verify-email" element={<VerifyEmail />} />
                 <Route path="/itinerary" element={<Itinerary />} />
               </Routes>
             </div>

@@ -37,6 +37,12 @@ const UserSchema = new Schema({
         type: Date,
         default: Date.now
     },
+    IsVerified:{
+        type: Boolean,
+        // Defaults true so existing users (created before email verification existed)
+        // aren't locked out; the register handler explicitly sets this false for new signups.
+        default: true
+    },
     FailedLoginAttempts:{
         type: Number,
         default: 0

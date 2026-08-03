@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
-import { registerUser } from "../../actions/authAction";
+import { registerUser, resetRegisterPending } from "../../actions/authAction";
 import TextFieldGroup from "../../utils/TextFieldGroup";
 import { 
   Dialog,
@@ -37,15 +37,11 @@ class RegisterModal extends Component {
     if (this.props.errors !== prevProps.errors) {
       this.setState({ errors: this.props.errors });
     }
-    
-    // Redirect on successful registration
-    if (!prevProps.auth.isAuthenticated && this.props.auth.isAuthenticated) {
-      this.handleClose();
-    }
   }
 
   handleClose = () => {
     this.props.onClose();
+    this.props.resetRegisterPending();
     this.setState({
       FirstName: "",
       LastName: "",
@@ -55,7 +51,7 @@ class RegisterModal extends Component {
       Password2: "",
       errors: {}
     });
-    
+
   };
 
   onChange(e) {
@@ -76,8 +72,45 @@ class RegisterModal extends Component {
   }
 
   render() {
-    const { open } = this.props;
+    const { open, auth } = this.props;
     const { errors } = this.state;
+
+    if (auth.registrationPending) {
+      return (
+        <Dialog
+          open={open}
+          onClose={this.handleClose}
+          maxWidth="sm"
+          fullWidth
+          className="login-modal"
+          PaperProps={{ style: { borderRadius: 16 } }}
+        >
+          <div className="modal-header">
+            <IconButton className="close-btn" onClick={this.handleClose}>
+              <CloseIcon />
+            </IconButton>
+            <img src={TBSLogo} alt="Logo" className="modal-logo" />
+            <Typography className="modal-title">Check your email</Typography>
+          </div>
+          <DialogContent className="modal-content">
+            <Typography>{auth.registrationMessage}</Typography>
+            <div className="other-footer-links">
+              <a
+                href="#"
+                className="link"
+                onClick={(e) => {
+                  e.preventDefault();
+                  this.props.resetRegisterPending();
+                  this.props.returnToLoginClick();
+                }}
+              >
+                Back to Login
+              </a>
+            </div>
+          </DialogContent>
+        </Dialog>
+      );
+    }
 
     return (
       <Dialog
@@ -93,7 +126,7 @@ class RegisterModal extends Component {
           <IconButton className="close-btn" onClick={this.handleClose}>
             <CloseIcon />
           </IconButton>
-          
+
           <img src={TBSLogo} alt="Logo" className="modal-logo" />
           <Typography className="modal-title">Create Account</Typography>
         </div>
@@ -210,6 +243,7 @@ class RegisterModal extends Component {
 
 RegisterModal.propTypes = {
   registerUser: PropTypes.func.isRequired,
+  resetRegisterPending: PropTypes.func.isRequired,
   auth: PropTypes.object.isRequired,
   errors: PropTypes.object.isRequired,
   open: PropTypes.bool.isRequired,
@@ -224,5 +258,5 @@ const mapStateToProps = state => ({
 
 export default connect(
   mapStateToProps,
-  { registerUser }
+  { registerUser, resetRegisterPending }
 )(RegisterModal);

@@ -1,16 +1,22 @@
-import { 
-    SET_CURRENT_USER, 
-    PROFILE_LOADING, 
+import {
+    SET_CURRENT_USER,
+    PROFILE_LOADING,
     AUTH_ERRORS,
     FORGET_STATUS,
     RESET_STATUS,
     CREATE_STATUS,
     RESET_FORGET_STATUS,
     RESET_RESET_STATUS,
-    RESET_CREATE_STATUS
+    RESET_CREATE_STATUS,
+    REGISTER_PENDING_VERIFICATION,
+    RESET_REGISTER_PENDING,
+    VERIFY_STATUS,
+    RESET_VERIFY_STATUS,
+    RESEND_VERIFICATION_STATUS,
+    RESET_RESEND_VERIFICATION_STATUS
    } from "../actions/types";
   import isEmpty from "../utils/isEmpty";
-    
+
     const initialState = {
       accessExpired: false,
       isAuthenticated: false,
@@ -23,6 +29,12 @@ import {
       forgetStatus: false,
       createStatus: false,
       user: {},
+      registrationPending: false,
+      registrationMessage: "",
+      verifyStatus: null,
+      verifyStatusMSG: "",
+      resendStatus: null,
+      resendStatusMSG: "",
     };
     
     // ...state = current state
@@ -90,6 +102,42 @@ import {
             isUpdated: false,
             createStatus: initialState.createStatus,
             createStatusMSG: initialState.createStatusMSG
+          }
+        case REGISTER_PENDING_VERIFICATION:
+          return {
+            ...state,
+            registrationPending: true,
+            registrationMessage: action.payload
+          }
+        case RESET_REGISTER_PENDING:
+          return {
+            ...state,
+            registrationPending: false,
+            registrationMessage: ""
+          }
+        case VERIFY_STATUS:
+          return {
+            ...state,
+            verifyStatus: action.payload.verifyStatus,
+            verifyStatusMSG: action.payload.statusmsg
+          }
+        case RESET_VERIFY_STATUS:
+          return {
+            ...state,
+            verifyStatus: initialState.verifyStatus,
+            verifyStatusMSG: initialState.verifyStatusMSG
+          }
+        case RESEND_VERIFICATION_STATUS:
+          return {
+            ...state,
+            resendStatus: action.payload.resendStatus,
+            resendStatusMSG: action.payload.statusmsg
+          }
+        case RESET_RESEND_VERIFICATION_STATUS:
+          return {
+            ...state,
+            resendStatus: initialState.resendStatus,
+            resendStatusMSG: initialState.resendStatusMSG
           }
         default:
           return state;

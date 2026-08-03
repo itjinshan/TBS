@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
-import { loginUser } from "../../actions/authAction";
+import { loginUser, resendVerification } from "../../actions/authAction";
 import ForgotPasswordModal from './ForgotPasswordModal';
 import RegisterModal from './RegisterModal';
 import TextFieldGroup from "../../utils/TextFieldGroup";
@@ -76,9 +76,15 @@ class LoginModal extends Component {
     this.props.loginUser(userData);
   }
 
+  handleResendVerification() {
+    this.props.resendVerification({ Email: this.state.Email });
+  }
+
   render() {
     const { open, onClose } = this.props;
     const { errors, showForgotPassword, showRegisterOpen } = this.state;
+    const { resendStatus, resendStatusMSG } = this.props.auth;
+    const needsVerification = errors.Email && errors.Email.toLowerCase().includes("verify your email");
 
     return (
       <>
@@ -117,15 +123,30 @@ class LoginModal extends Component {
               error={errors.Password}
               className="form-input"
             />
-            <Button 
-              fullWidth 
-              variant="contained" 
+            <Button
+              fullWidth
+              variant="contained"
               type="submit"
               className="submit-btn"
             >
               Log In
             </Button>
           </form>
+
+          {needsVerification && (
+            resendStatus
+              ? <Typography variant="body2" className="link">{resendStatusMSG}</Typography>
+              : <a
+                  href="#"
+                  className="link"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    this.handleResendVerification();
+                  }}
+                >
+                  Resend verification email
+                </a>
+          )}
 
           <Divider className="login-modal-divider">OR</Divider>
 
@@ -212,6 +233,7 @@ class LoginModal extends Component {
 
 LoginModal.propTypes = {
   loginUser: PropTypes.func.isRequired,
+  resendVerification: PropTypes.func.isRequired,
   auth: PropTypes.object.isRequired,
   errors: PropTypes.object.isRequired,
   open: PropTypes.bool.isRequired,
@@ -225,5 +247,5 @@ const mapStateToProps = state => ({
 
 export default connect(
   mapStateToProps,
-  { loginUser }
+  { loginUser, resendVerification }
 )(LoginModal);
