@@ -74,7 +74,15 @@
       "title": "邮箱验证",
       "verifying": "正在验证您的邮箱…",
       "backToHome": "返回首页",
-      "backToLogin": "返回登录"
+      "backToLogin": "返回登录",
+      "status": {
+        "missingToken": "缺少验证令牌。",
+        "expired": "验证链接已过期，请重新申请。",
+        "notFound": "未找到该账号。",
+        "alreadyVerified": "您的邮箱已验证，可以登录了。",
+        "success": "您的邮箱已验证成功，现在可以登录了。",
+        "error": "验证邮箱时出错，请重试。"
+      }
     }
   },
   "footer": {

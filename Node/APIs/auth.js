@@ -179,28 +179,28 @@ router.get("/current", passport.authenticate("jwt", {
 router.put("/verify-email", (req, res) => {
   const VerificationToken = req.body.VerificationToken;
   if (!VerificationToken) {
-    return res.status(400).json({ verifyStatus: false, statusmsg: "Missing verification token." });
+    return res.status(400).json({ verifyStatus: false, code: "missing_token", statusmsg: "Missing verification token." });
   }
   jwt.verify(VerificationToken, process.env.EMAIL_VERIFY_SECRET, (err, decoded) => {
     if (err) {
-      return res.json({ verifyStatus: false, statusmsg: "Verification link has expired. Please request a new one." });
+      return res.json({ verifyStatus: false, code: "expired", statusmsg: "Verification link has expired. Please request a new one." });
     }
     User.findById(decoded.UserID)
       .then(user => {
         if (!user) {
-          return res.json({ verifyStatus: false, statusmsg: "Account not found." });
+          return res.json({ verifyStatus: false, code: "not_found", statusmsg: "Account not found." });
         }
         if (user.IsVerified) {
-          return res.json({ verifyStatus: true, statusmsg: "Your email is already verified. You can log in." });
+          return res.json({ verifyStatus: true, code: "already_verified", statusmsg: "Your email is already verified. You can log in." });
         }
         user.IsVerified = true;
         user.save().then(() => {
           welcomeEmail(user.FirstName, user.LastName, user.Email);
-          res.json({ verifyStatus: true, statusmsg: "Your email has been verified. You can now log in." });
+          res.json({ verifyStatus: true, code: "success", statusmsg: "Your email has been verified. You can now log in." });
         });
       })
       .catch(err => {
-        res.json({ verifyStatus: false, statusmsg: "Error verifying email. Please try again." });
+        res.json({ verifyStatus: false, code: "error", statusmsg: "Error verifying email. Please try again." });
       });
   });
 });

@@ -74,7 +74,15 @@
       "title": "Email Verification",
       "verifying": "Verifying your email...",
       "backToHome": "Back to home",
-      "backToLogin": "Back to Login"
+      "backToLogin": "Back to Login",
+      "status": {
+        "missingToken": "Missing verification token.",
+        "expired": "Verification link has expired. Please request a new one.",
+        "notFound": "Account not found.",
+        "alreadyVerified": "Your email is already verified. You can log in.",
+        "success": "Your email has been verified. You can now log in.",
+        "error": "Error verifying email. Please try again."
+      }
     }
   },
   "footer": {

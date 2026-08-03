@@ -11,9 +11,23 @@ import {
 } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
 import TBSLogo from "../../images/tbs_logo.png";
-import { verifyEmailToken } from "../../actions/authAction";
+import { verifyEmailToken, resetVerifyStatus } from "../../actions/authAction";
 import withRouter from "../../utils/withRouter";
 import "./LoginModal.css"; // Reusing the same CSS as the other auth modals
+
+// Maps the backend's fixed set of verify-email outcomes to translation keys
+// under auth.verifyEmail.status — the backend returns a small, enumerable
+// set of codes for this endpoint specifically, unlike the free-form
+// server-generated text elsewhere (chatbot replies, login error strings)
+// that would need real backend i18n to translate.
+const STATUS_KEY_BY_CODE = {
+    missing_token: 'missingToken',
+    expired: 'expired',
+    not_found: 'notFound',
+    already_verified: 'alreadyVerified',
+    success: 'success',
+    error: 'error'
+};
 
 class VerifyEmail extends Component {
     componentDidMount() {
@@ -21,13 +35,19 @@ class VerifyEmail extends Component {
         this.props.verifyEmailToken(VerificationToken);
     }
 
+    componentWillUnmount() {
+        this.props.resetVerifyStatus();
+    }
+
     handleClose = () => {
         this.props.navigate("/");
     };
 
     render() {
-        const { verifyStatus, verifyStatusMSG } = this.props.auth;
+        const { verifyStatus, verifyStatusCode, verifyStatusMSG } = this.props.auth;
         const { t } = this.props;
+        const statusKey = STATUS_KEY_BY_CODE[verifyStatusCode];
+        const statusText = statusKey ? t(`auth.verifyEmail.status.${statusKey}`) : verifyStatusMSG;
 
         return (
             <Dialog
@@ -49,7 +69,7 @@ class VerifyEmail extends Component {
                 <DialogContent className="modal-content">
                     {verifyStatus === null
                         ? <Typography>{t('auth.verifyEmail.verifying')}</Typography>
-                        : <Alert severity={verifyStatus ? "success" : "warning"}>{verifyStatusMSG}</Alert>
+                        : <Alert severity={verifyStatus ? "success" : "warning"}>{statusText}</Alert>
                     }
 
                     <div className="other-footer-links">
@@ -73,6 +93,7 @@ class VerifyEmail extends Component {
 VerifyEmail.propTypes = {
     auth: PropTypes.object.isRequired,
     verifyEmailToken: PropTypes.func.isRequired,
+    resetVerifyStatus: PropTypes.func.isRequired,
     navigate: PropTypes.func.isRequired,
     t: PropTypes.func.isRequired
 };
@@ -83,5 +104,5 @@ const mapStateToProps = state => ({
 
 export default connect(
     mapStateToProps,
-    { verifyEmailToken }
+    { verifyEmailToken, resetVerifyStatus }
 )(withTranslation()(withRouter(VerifyEmail)));

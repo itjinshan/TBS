@@ -32,6 +32,7 @@ import {
       registrationPending: false,
       registrationMessage: "",
       verifyStatus: null,
+      verifyStatusCode: "",
       verifyStatusMSG: "",
       resendStatus: null,
       resendStatusMSG: "",
@@ -119,12 +120,14 @@ import {
           return {
             ...state,
             verifyStatus: action.payload.verifyStatus,
+            verifyStatusCode: action.payload.verifyStatusCode,
             verifyStatusMSG: action.payload.statusmsg
           }
         case RESET_VERIFY_STATUS:
           return {
             ...state,
             verifyStatus: initialState.verifyStatus,
+            verifyStatusCode: initialState.verifyStatusCode,
             verifyStatusMSG: initialState.verifyStatusMSG
           }
         case RESEND_VERIFICATION_STATUS:

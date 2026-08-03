@@ -63,6 +63,7 @@ export const verifyEmailToken = VerificationToken => dispatch => {
                 type: VERIFY_STATUS,
                 payload: {
                     verifyStatus: res.data.verifyStatus,
+                    verifyStatusCode: res.data.code,
                     statusmsg: res.data.statusmsg
                 }
             });
@@ -72,6 +73,7 @@ export const verifyEmailToken = VerificationToken => dispatch => {
                 type: VERIFY_STATUS,
                 payload: {
                     verifyStatus: false,
+                    verifyStatusCode: err.response && err.response.data ? err.response.data.code : "error",
                     statusmsg: err.response && err.response.data ? err.response.data.statusmsg : "An error occurred."
                 }
             });
