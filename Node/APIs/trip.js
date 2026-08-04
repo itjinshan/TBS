@@ -226,7 +226,7 @@ router.post('/intake', function (req, res) {
                             .then(function (suggestions) {
                                 otherPrefFields.accommodationSuggestions = suggestions;
                                 var suggestionReply = 'Here are a few lodging options that fit your budget: ' +
-                                    suggestions.map(function (s, i) { return (i + 1) + '. ' + s.Name; }).join(', ') +
+                                    suggestions.map(function (s, i) { return (i + 1) + '. ' + s.Name + ' (' + s.Address + ')'; }).join(', ') +
                                     '. Which one would you like to go with?';
                                 respond(otherPrefFields, suggestionReply, STAGES.SUGGEST_ACCOMMODATION);
                             });
