@@ -22,7 +22,20 @@ module.exports = function generateAccessToken(user, usage){
                     FirstName: user.FirstName,
                     LastName: user.LastName
                 },
-                process.env.REFRESHSECRETE
+                process.env.REFRESHSECRETE,
+                {
+                    expiresIn: 604800 // 7 days
+                }
+            );
+        case 'emailVerify':
+            return jwt.sign(
+                {
+                    UserID: user.id
+                },
+                process.env.EMAIL_VERIFY_SECRET,
+                {
+                    expiresIn: 86400 // 24 hours
+                }
             );
         case 'deepseek':
             return jwt.sign(

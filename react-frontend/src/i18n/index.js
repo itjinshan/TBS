@@ -5,9 +5,10 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 import en from './locales/en/translation.json';
 import zh from './locales/zh/translation.json';
 
-// Only covers static UI chrome (nav + homepage hero + trip-intake panel) —
-// see CLAUDE.md's Pending Tasks for what's explicitly out of scope
-// (the rest of the app, and the chatbot's server-generated conversation text).
+// Covers static UI chrome (nav + homepage hero + trip-intake panel + auth
+// modals) — see CLAUDE.md's Pending Tasks for what's explicitly out of scope
+// (the Itinerary page, and any server-generated text — auth error messages
+// included — which needs backend i18n, not just this frontend catalog).
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)

@@ -18,10 +18,6 @@ module.exports = function validateRegisterInput(data) {
     errors.LastName = "Please enter your last name.";
   }
 
-  if (Validator.isEmpty(data.Phone)){
-    errors.Phone = "Phone number field is required.";
-  }
-
   if (Validator.isEmpty(data.Email)) {
     errors.Email = "Email field is required.";
   }

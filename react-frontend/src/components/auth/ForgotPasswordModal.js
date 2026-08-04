@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
+import { withTranslation } from "react-i18next";
 import { forgotPassword, resetForgetStatus } from "../../actions/authAction";
 import TextFieldGroup from "../../utils/TextFieldGroup";
 import { 
@@ -71,6 +72,7 @@ class ForgotPasswordModal extends Component {
   render() {
     const { open, onClose, errors, showRegisterOpen } = this.state;
     const { forgetStatus, forgetStatusMSG } = this.props.auth;
+    const { t } = this.props;
 
     return (
       <>
@@ -84,16 +86,16 @@ class ForgotPasswordModal extends Component {
         >
           {/* Header */}
           <div className="modal-header">
-            <IconButton 
-              className="close-btn" 
+            <IconButton
+              className="close-btn"
               onClick={this.handleClose}
               aria-label="close"
             >
               <CloseIcon />
             </IconButton>
-            
+
             <img src={TBSLogo} alt="Logo" className="modal-logo" />
-            <Typography className="modal-title">Reset Password</Typography>
+            <Typography className="modal-title">{t('auth.forgotPassword.title')}</Typography>
           </div>
 
           <DialogContent className="modal-content">
@@ -109,33 +111,33 @@ class ForgotPasswordModal extends Component {
               <TextFieldGroup
                 name="Email"
                 type="email"
-                placeholder="Email Address"
+                placeholder={t('auth.forgotPassword.email')}
                 value={this.state.Email}
                 onChange={this.onChange}
                 error={errors.Email}
               />
-              
+
               <Button
                 fullWidth
                 variant="contained"
                 type="submit"
                 className="submit-btn"
               >
-                Send Reset Link
+                {t('auth.forgotPassword.submit')}
               </Button>
             </form>
 
             {/* Footer Links */}
             <div className="other-footer-links">
-              <a 
-                href="#" 
-                className="link" 
+              <a
+                href="#"
+                className="link"
                 onClick={(e) => {
                   e.preventDefault();
                   this.props.returnToLoginClick();
                 }}
               >
-                Back to Login
+                {t('auth.forgotPassword.backToLogin')}
               </a>
             </div>
           </DialogContent>
@@ -164,7 +166,8 @@ ForgotPasswordModal.propTypes = {
   open: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   returnToLoginClick: PropTypes.func.isRequired,
-  setRegister: PropTypes.func.isRequired
+  setRegister: PropTypes.func.isRequired,
+  t: PropTypes.func.isRequired
 };
 
 const mapStateToProps = state => ({
@@ -175,4 +178,4 @@ const mapStateToProps = state => ({
 export default connect(
   mapStateToProps,
   { forgotPassword, resetForgetStatus }
-)(ForgotPasswordModal);
+)(withTranslation()(ForgotPasswordModal));

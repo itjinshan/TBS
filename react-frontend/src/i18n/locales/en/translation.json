@@ -39,6 +39,52 @@
     "generating": "Generating…",
     "errorFallback": "Something went wrong. Please try again."
   },
+  "auth": {
+    "login": {
+      "title": "Welcome Back",
+      "email": "Email Address",
+      "password": "Password",
+      "submit": "Log In",
+      "or": "OR",
+      "continueGoogle": "Continue with Google",
+      "continueWechat": "Continue with WeChat",
+      "forgotPassword": "Forgot password?",
+      "noAccount": "Don't have an account? Sign up",
+      "resendVerification": "Resend verification email"
+    },
+    "register": {
+      "title": "Create Account",
+      "checkEmailTitle": "Check your email",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "phone": "Phone Number",
+      "email": "Email Address",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "submit": "Register",
+      "backToLogin": "Back to Login"
+    },
+    "forgotPassword": {
+      "title": "Reset Password",
+      "email": "Email Address",
+      "submit": "Send Reset Link",
+      "backToLogin": "Back to Login"
+    },
+    "verifyEmail": {
+      "title": "Email Verification",
+      "verifying": "Verifying your email...",
+      "backToHome": "Back to home",
+      "backToLogin": "Back to Login",
+      "status": {
+        "missingToken": "Missing verification token.",
+        "expired": "Verification link has expired. Please request a new one.",
+        "notFound": "Account not found.",
+        "alreadyVerified": "Your email is already verified. You can log in.",
+        "success": "Your email has been verified. You can now log in.",
+        "error": "Error verifying email. Please try again."
+      }
+    }
+  },
   "footer": {
     "company": "Company",
     "aboutUs": "About Us",

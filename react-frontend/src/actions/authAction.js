@@ -1,6 +1,6 @@
-import { 
-    AUTH_ERRORS, 
-    SET_CURRENT_USER, 
+import {
+    AUTH_ERRORS,
+    SET_CURRENT_USER,
     GET_PROFILE_INFO,
     PROFILE_LOADING,
     FORGET_STATUS,
@@ -10,7 +10,13 @@ import {
     RESET_FORGET_STATUS,
     RESET_RESET_STATUS,
     GET_ERRORS,
-    RESET_ERRORS
+    RESET_ERRORS,
+    REGISTER_PENDING_VERIFICATION,
+    RESET_REGISTER_PENDING,
+    VERIFY_STATUS,
+    RESET_VERIFY_STATUS,
+    RESEND_VERIFICATION_STATUS,
+    RESET_RESEND_VERIFICATION_STATUS
      } from "./types";
 import axios from "axios";
 import setAuthToken from "../utils/setAuthToken";
@@ -22,19 +28,12 @@ export const registerUser = (userData) => dispatch => {
     axios
         .post("/auth/register", userData)
         .then(res => {
-            const { AccessToken, RefreshToken, Email } = res.data;
-            localStorage.setItem("AccessToken", AccessToken);
-            localStorage.setItem("RefreshToken", RefreshToken);
-            setAuthToken(AccessToken);
-            const decoded = jwtDecode(AccessToken);
-            let credentialDecoded = {
-                UserID: decoded.UserID,
-                Email: Email,
-                FirstName: decoded.FirstName,
-                LastName: decoded.LastName,
-            };
-
-            dispatch(setCurrentUser(credentialDecoded));
+            // Registration no longer auto-logs the user in — the account is
+            // unverified until they click the link emailed to them.
+            dispatch({
+                type: REGISTER_PENDING_VERIFICATION,
+                payload: res.data.message
+            });
         })
         .catch(err => {
             dispatch({
@@ -46,6 +45,75 @@ export const registerUser = (userData) => dispatch => {
             });
         }
         );
+};
+
+// Reset the "check your email" registration notice
+export const resetRegisterPending = () => {
+    return {
+        type: RESET_REGISTER_PENDING
+    };
+};
+
+// Verify email via the token from the emailed link
+export const verifyEmailToken = VerificationToken => dispatch => {
+    axios
+        .put("/auth/verify-email", { VerificationToken })
+        .then(res => {
+            dispatch({
+                type: VERIFY_STATUS,
+                payload: {
+                    verifyStatus: res.data.verifyStatus,
+                    verifyStatusCode: res.data.code,
+                    statusmsg: res.data.statusmsg
+                }
+            });
+        })
+        .catch(err => {
+            dispatch({
+                type: VERIFY_STATUS,
+                payload: {
+                    verifyStatus: false,
+                    verifyStatusCode: err.response && err.response.data ? err.response.data.code : "error",
+                    statusmsg: err.response && err.response.data ? err.response.data.statusmsg : "An error occurred."
+                }
+            });
+        });
+};
+
+export const resetVerifyStatus = () => {
+    return {
+        type: RESET_VERIFY_STATUS
+    };
+};
+
+// Resend the verification email
+export const resendVerification = userEmail => dispatch => {
+    axios
+        .post("/auth/resend-verification", userEmail)
+        .then(res => {
+            dispatch({
+                type: RESEND_VERIFICATION_STATUS,
+                payload: {
+                    resendStatus: res.data.resendStatus,
+                    statusmsg: res.data.statusmsg
+                }
+            });
+        })
+        .catch(err => {
+            dispatch({
+                type: AUTH_ERRORS
+            });
+            dispatch({
+                type: GET_ERRORS,
+                payload: err.response ? err.response.data : { message: "An error occurred" }
+            });
+        });
+};
+
+export const resetResendVerificationStatus = () => {
+    return {
+        type: RESET_RESEND_VERIFICATION_STATUS
+    };
 };
 
 // Login - get user token

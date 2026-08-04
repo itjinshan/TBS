@@ -1,5 +1,6 @@
 var express = require('express');
 var router = express.Router();
+var rateLimit = require('express-rate-limit');
 var validateLoginInput = require("../Validation/login");
 var validateRegisterInput = require("../Validation/register");
 var validateResetInput = require("../Validation/resetPassword");
@@ -15,8 +16,21 @@ var generateAccessToken = require('../Config/jwtgenerator');
 
 // Welcome email
 var welcomeEmail = require('../Emails/welcomeEmail');
+var verifyEmail = require('../Emails/verifyEmail');
 const forgotPasswordEmail = require('../Emails/forgotPasswordEmail');
 const createPasswordEmail = require('../Emails/createPasswordEmail');
+
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_LOCK_MS = 15 * 60 * 1000; // 15 minutes
+
+// IP-based rate limiting on login, on top of the per-account lockout below.
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { Email: "Too many login attempts from this network. Please try again later." }
+});
 
 // Register
 router.post('/register', (req, res) => {
@@ -29,83 +43,59 @@ router.post('/register', (req, res) => {
     }
 
     // Verfication of existing users
-    User.findOne({
-    "$or":[
-        {
-        // find out if the email already exists
-        Email: req.body.Email
-        },
-        {
-        // find out if the phone already exists
-        Phone: req.body.Phone
-        }
-    ]
-
-    }).then(user => {
+    User.findOne({ Email: req.body.Email }).then(user => {
     // user is the object returned by findOne()
     if (user) {
-        if(user.Email === req.body.Email ) errors.Email = "Email already exists";
-        if(user.Phone !== "xxx" && user.Phone === req.body.Phone) errors.Phone = "Phone number already exists";
+        errors.Email = "Email already exists";
         return res.status(400).json(errors);
     } else {
         // ** Create New User **
         //
         var newUser = new User({
-          // create new user if cannot find the email nor phone number
+          // create new user if cannot find the email
           FirstName: req.body.FirstName,
           LastName: req.body.LastName,
           Phone: req.body.Phone,
           Email: req.body.Email,
-          Password: req.body.Password
+          Password: req.body.Password,
+          IsVerified: false
         });
         bcrypt.genSalt(10, (err, salt) => {
         bcrypt.hash(newUser.Password, salt, (err, hash) => {
             if (err) {
               console.log("Auth API/Register: error occurred while hashing password. " + err);
               throw err;
-            } 
+            }
             newUser.Password = hash; // hash the password from the user and store it back
             newUser
             .save() // use mongoose model to save to mongodb mlab
             .then(user => {
-                  // ** Auto Login **
-                  //
-                  AccessToken = generateAccessToken(user, 'auth');
-                  RefreshToken = jwt.sign(
-                  {
-                    UserID: user.id,
-                    FirstName: user.FirstName,
-                    LastName: user.LastName
-                  },
-                  process.env.REFRESHSECRETE
-                  )
+                  // ** Require email verification before login **
+                  // (welcomeEmail is sent once the user verifies, see PUT /verify-email)
+                  const verificationToken = generateAccessToken(user, 'emailVerify');
+                  verifyEmail(user.FirstName, user.Email, verificationToken);
                   return res.json({
                     Email: user.Email,
-                    AccessToken: "Bearer " + AccessToken,
-                    RefreshToken: RefreshToken
+                    pendingVerification: true,
+                    message: "Registration successful! Please check your email to verify your account before logging in."
                   });
             })
             .catch(err => console.log(err));
         });
         });
-
-        // ** Logistics **
-        //
-        // Send Welcome Emails
-        // welcomeEmail(req.body.FirstName, req.body.LastName, Email);
     }
     });
 });
 
 // Login
-router.post('/login', (req, res) => {
+router.post('/login', loginLimiter, (req, res) => {
     const { errors, isValid } = validateLoginInput(req.body);
-  
+
     //check validation
     if (!isValid) {
       return res.status(400).json(errors);
     }
-  
+
     const Email = req.body.Email;
     const Password = req.body.Password;
 
@@ -117,28 +107,48 @@ router.post('/login', (req, res) => {
         errors.Email = "User not found";
         return res.status(404).json(errors);
       }
+
+      // Per-account lockout after repeated failed attempts
+      if (user.LockUntil && user.LockUntil > Date.now()) {
+        const minutesLeft = Math.ceil((user.LockUntil - Date.now()) / 60000);
+        errors.Email = `Too many failed attempts. Please try again in ${minutesLeft} minute(s).`;
+        return res.status(423).json(errors);
+      }
+
        // if user found in the data base then check the password
        bcrypt.compare(Password, user.Password).then(isMatch => {
         if (isMatch) {
-          //Sign Token as a sign of success validation
-          AccessToken = generateAccessToken(user, 'auth');
-          RefreshToken = jwt.sign(
-            {
-              UserID: user.id,
-              FirstName: user.FirstName,
-              LastName: user.LastName
-            },
-            process.env.REFRESHSECRETE
-          )
-          res.json({
-            Email: user.Email,
-            AccessToken: "Bearer " + AccessToken,
-            RefreshToken: RefreshToken
+          if (!user.IsVerified) {
+            errors.Email = "Please verify your email before logging in. Check your inbox for the verification link.";
+            return res.status(403).json(errors);
+          }
+
+          // Reset lockout tracking on a successful login
+          user.FailedLoginAttempts = 0;
+          user.LockUntil = undefined;
+          user.save().then(() => {
+            //Sign Token as a sign of success validation
+            AccessToken = generateAccessToken(user, 'auth');
+            RefreshToken = generateAccessToken(user, 'refresh');
+            res.json({
+              Email: user.Email,
+              AccessToken: "Bearer " + AccessToken,
+              RefreshToken: RefreshToken
+            });
           });
-          
+
         } else {
-          errors.Password = "Password incorrect";
-          return res.status(400).json(errors);
+          user.FailedLoginAttempts = (user.FailedLoginAttempts || 0) + 1;
+          if (user.FailedLoginAttempts >= LOGIN_MAX_ATTEMPTS) {
+            user.LockUntil = Date.now() + LOGIN_LOCK_MS;
+            user.FailedLoginAttempts = 0;
+          }
+          // Awaited so the lock is committed before the response goes out —
+          // otherwise rapid consecutive attempts could race past the lockout.
+          user.save().then(() => {
+            errors.Password = "Password incorrect";
+            return res.status(400).json(errors);
+          });
         }
       });
     });
@@ -152,14 +162,7 @@ router.get("/current", passport.authenticate("jwt", {
 }), // not using session
     (req, res) => {
       AccessToken = generateAccessToken(req.user, 'auth');
-      RefreshToken = jwt.sign(
-        {
-          UserID: req.user.id,
-          FirstName: req.user.FirstName,
-          LastName: req.user.LastName
-        },
-        process.env.REFRESHSECRETE
-      )
+      RefreshToken = generateAccessToken(req.user, 'refresh');
       res.json({
         UserID: req.user._id,
         Email: req.user.Email,
@@ -171,6 +174,55 @@ router.get("/current", passport.authenticate("jwt", {
       })
     }
 );
+
+// Verify Email
+router.put("/verify-email", (req, res) => {
+  const VerificationToken = req.body.VerificationToken;
+  if (!VerificationToken) {
+    return res.status(400).json({ verifyStatus: false, code: "missing_token", statusmsg: "Missing verification token." });
+  }
+  jwt.verify(VerificationToken, process.env.EMAIL_VERIFY_SECRET, (err, decoded) => {
+    if (err) {
+      return res.json({ verifyStatus: false, code: "expired", statusmsg: "Verification link has expired. Please request a new one." });
+    }
+    User.findById(decoded.UserID)
+      .then(user => {
+        if (!user) {
+          return res.json({ verifyStatus: false, code: "not_found", statusmsg: "Account not found." });
+        }
+        if (user.IsVerified) {
+          return res.json({ verifyStatus: true, code: "already_verified", statusmsg: "Your email is already verified. You can log in." });
+        }
+        user.IsVerified = true;
+        user.save().then(() => {
+          welcomeEmail(user.FirstName, user.LastName, user.Email);
+          res.json({ verifyStatus: true, code: "success", statusmsg: "Your email has been verified. You can now log in." });
+        });
+      })
+      .catch(err => {
+        res.json({ verifyStatus: false, code: "error", statusmsg: "Error verifying email. Please try again." });
+      });
+  });
+});
+
+// Resend Verification Email
+router.post("/resend-verification", (req, res) => {
+  const Email = req.body.Email;
+  const errors = {};
+  User.findOne({ Email })
+    .then(user => {
+      if (!user) {
+        errors.Email = "Email not found.";
+        return res.status(404).json(errors);
+      }
+      if (user.IsVerified) {
+        return res.json({ resendStatus: false, statusmsg: "This account is already verified. Please log in." });
+      }
+      const verificationToken = generateAccessToken(user, 'emailVerify');
+      verifyEmail(user.FirstName, user.Email, verificationToken);
+      res.json({ resendStatus: true, statusmsg: "A new verification link has been sent to your email." });
+    });
+});
 
 // Forgot Password
 router.put("/forgot-password", (req, res) => {
