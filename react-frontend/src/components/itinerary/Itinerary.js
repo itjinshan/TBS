@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import useAMap from '../../hooks/useAmap';
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
@@ -33,6 +34,7 @@ function spotsToMarkers(itinerary) {
 }
 
 const Itinerary = ({ auth }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { itinerary } = useSelector((state) => state.trip);
@@ -95,8 +97,8 @@ const Itinerary = ({ auth }) => {
             {
               id: Date.now(),
               position: position,
-              title: "Your Location",
-              content: "You are here!"
+              title: t('itinerary.map.yourLocationTitle'),
+              content: t('itinerary.map.yourLocationContent')
             }
           ]);
         } else {
@@ -279,9 +281,9 @@ const Itinerary = ({ auth }) => {
   if (!itinerary) {
     return (
       <div className="itinerary-empty">
-        <h2>No trip planned yet</h2>
-        <p>Head back to the homepage and tell us about your dream trip to generate an itinerary.</p>
-        <button onClick={() => navigate('/')}>Plan a Trip</button>
+        <h2>{t('itinerary.noTrip.title')}</h2>
+        <p>{t('itinerary.noTrip.subtitle')}</p>
+        <button onClick={() => navigate('/')}>{t('itinerary.noTrip.planTrip')}</button>
       </div>
     );
   }
@@ -299,13 +301,13 @@ const Itinerary = ({ auth }) => {
                 onClick={handleSaveTrip}
                 disabled={saveStatus === 'saving' || saveStatus === 'saved'}
               >
-                {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : saveStatus === 'error' ? 'Retry Save' : 'Save Trip'}
+                {saveStatus === 'saving' ? t('itinerary.saveTrip.saving') : saveStatus === 'saved' ? t('itinerary.saveTrip.saved') : saveStatus === 'error' ? t('itinerary.saveTrip.retry') : t('itinerary.saveTrip.save')}
               </button>
             )}
           </div>
           {itinerary.days.map((day) => (
             <div key={day.DayNumber} className="day-block">
-              <h3>Day {day.DayNumber}</h3>
+              <h3>{t('itinerary.day', { number: day.DayNumber })}</h3>
               <div className="spot-cards">
                 {day.Spots.map((spot) => (
                   <div key={spot.Name} className="spot-card">
@@ -339,7 +341,7 @@ const Itinerary = ({ auth }) => {
       <div className="right-panel" style={{ width: `${100 - splitRatio}%` }}>
         {!loaded ? (
           <div className="map-loading">
-            Loading map...
+            {t('itinerary.loadingMap')}
           </div>
         ) : (
           <>

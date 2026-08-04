@@ -85,6 +85,25 @@
       }
     }
   },
+  "itinerary": {
+    "noTrip": {
+      "title": "还没有规划行程",
+      "subtitle": "回到首页，告诉我们你梦想中的旅行，即可生成行程。",
+      "planTrip": "规划旅程"
+    },
+    "saveTrip": {
+      "save": "保存行程",
+      "saving": "保存中…",
+      "saved": "已保存 ✓",
+      "retry": "重试保存"
+    },
+    "day": "第 {{number}} 天",
+    "loadingMap": "地图加载中…",
+    "map": {
+      "yourLocationTitle": "您的位置",
+      "yourLocationContent": "您在这里！"
+    }
+  },
   "footer": {
     "company": "公司",
     "aboutUs": "关于我们",

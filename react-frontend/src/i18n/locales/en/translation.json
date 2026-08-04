@@ -85,6 +85,25 @@
       }
     }
   },
+  "itinerary": {
+    "noTrip": {
+      "title": "No trip planned yet",
+      "subtitle": "Head back to the homepage and tell us about your dream trip to generate an itinerary.",
+      "planTrip": "Plan a Trip"
+    },
+    "saveTrip": {
+      "save": "Save Trip",
+      "saving": "Saving…",
+      "saved": "Saved ✓",
+      "retry": "Retry Save"
+    },
+    "day": "Day {{number}}",
+    "loadingMap": "Loading map...",
+    "map": {
+      "yourLocationTitle": "Your Location",
+      "yourLocationContent": "You are here!"
+    }
+  },
   "footer": {
     "company": "Company",
     "aboutUs": "About Us",
