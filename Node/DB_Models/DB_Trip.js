@@ -35,6 +35,7 @@ const SpotSchema = new Schema({
         Notes: { type: String }
     },
     Rating: { type: Number }, // 0-100 worthiness score, matches DS-Service's scale
+    Category: { type: String }, // e.g. "museum", "food" — see DS-Service's SPOT_CATEGORIES; absent on older/uncategorized spots
     Photo: { type: String } // frontend placeholder only, not sourced by DS-Service
 }, { _id: false });
 
