@@ -225,9 +225,12 @@ router.post('/intake', function (req, res) {
                         return suggestAccommodations(mergedBrief)
                             .then(function (suggestions) {
                                 otherPrefFields.accommodationSuggestions = suggestions;
-                                var suggestionReply = 'Here are a few lodging options that fit your budget: ' +
-                                    suggestions.map(function (s, i) { return (i + 1) + '. ' + s.Name + ' (' + s.Address + ')'; }).join(', ') +
-                                    '. Which one would you like to go with?';
+                                var suggestionListing = suggestions.map(function (s, i) {
+                                    return (i + 1) + '. ' + s.Name + '\n' + s.Address;
+                                }).join('\n\n');
+                                var suggestionReply = 'Here are a few lodging options that fit your budget:\n\n' +
+                                    suggestionListing +
+                                    '\n\nWhich one would you like to go with?';
                                 respond(otherPrefFields, suggestionReply, STAGES.SUGGEST_ACCOMMODATION);
                             });
                     } else {
