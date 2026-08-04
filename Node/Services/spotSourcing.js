@@ -18,7 +18,8 @@ function reshapeSpot(spot, destination) {
         BestTimeToVisitInYear: spot.BestTimeToVisitInYear,
         AverageTimeSpent: spot.AverageTimeSpent,
         Fees: spot.Fees,
-        Rating: spot.Rating
+        Rating: spot.Rating,
+        Category: spot.Category
     };
 }
 

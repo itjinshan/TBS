@@ -11,16 +11,19 @@
 // to DS-Service's /datasourcing/sourceaccommodations, so that path still
 // falls back to the city-center placeholder below.
 
+// category matches DS-Service's SPOT_CATEGORIES vocabulary so the fallback
+// path exercises itineraryPlanner.js's category-balancing the same way real
+// sourced data does, instead of leaving every synthetic spot uncategorized.
 const SPOT_TEMPLATES = [
-    { name: "Old Town Walking Tour", timeOfDay: "Morning" },
-    { name: "Signature Local Market", timeOfDay: "Morning" },
-    { name: "Iconic Viewpoint", timeOfDay: "Afternoon" },
-    { name: "Historic Landmark", timeOfDay: "Afternoon" },
-    { name: "Riverside Promenade", timeOfDay: "Afternoon" },
-    { name: "Contemporary Art Museum", timeOfDay: "Afternoon" },
-    { name: "Botanical Garden", timeOfDay: "Morning" },
-    { name: "Rooftop Sunset Bar", timeOfDay: "Evening" },
-    { name: "Traditional Cuisine Tasting", timeOfDay: "Evening" }
+    { name: "Old Town Walking Tour", timeOfDay: "Morning", category: "historical" },
+    { name: "Signature Local Market", timeOfDay: "Morning", category: "shopping" },
+    { name: "Iconic Viewpoint", timeOfDay: "Afternoon", category: "landmark" },
+    { name: "Historic Landmark", timeOfDay: "Afternoon", category: "historical" },
+    { name: "Riverside Promenade", timeOfDay: "Afternoon", category: "park" },
+    { name: "Contemporary Art Museum", timeOfDay: "Afternoon", category: "museum" },
+    { name: "Botanical Garden", timeOfDay: "Morning", category: "park" },
+    { name: "Rooftop Sunset Bar", timeOfDay: "Evening", category: "nightlife" },
+    { name: "Traditional Cuisine Tasting", timeOfDay: "Evening", category: "food" }
 ];
 
 const PLACEHOLDER_PHOTOS = ["hawaii", "kyoto", "ny", "shanghai"];
@@ -113,6 +116,7 @@ function generateFlatSpots(destination, count, anchor) {
                 Notes: "Placeholder data — pricing not yet available"
             },
             Rating: Math.round(60 + Math.random() * 35),
+            Category: template.category,
             Photo: PLACEHOLDER_PHOTOS[i % PLACEHOLDER_PHOTOS.length]
         };
     });

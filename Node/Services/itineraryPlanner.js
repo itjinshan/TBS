@@ -12,6 +12,12 @@
 // edge cases (empty/overflowing clusters); a greedy tour + slice is O(n^2)
 // (trivial at this scale), deterministic, and guarantees exact day-size
 // balance by construction rather than as a convergence outcome.
+//
+// The slicing step (splitIntoDays) also biases toward a varied category mix
+// within each day — geography stays the primary signal (a day is still
+// built from a contiguous run of the tour), but a same-category repeat is
+// swapped for a fresh-category spot a few positions ahead when one's
+// available, rather than optimizing geography alone.
 
 const SPOTS_PER_DAY = 3;
 const PLACEHOLDER_PHOTOS = ["hawaii", "kyoto", "ny", "shanghai"];
@@ -76,20 +82,58 @@ function buildGreedyTour(spots, anchorPoint) {
     return tour;
 }
 
+// How far ahead splitIntoDays is willing to look, within the already
+// geography-ordered tour, for a spot to swap in when the next-up one would
+// repeat a category already placed in the current day. Small on purpose:
+// spots this close together in tour order are already geographically
+// close, so a swap within the window barely disturbs the day's geographic
+// coherence while still meaningfully reducing thematic repeats.
+const CATEGORY_LOOKAHEAD_WINDOW = 3;
+
 // Balanced contiguous chunks: first `n % duration` days get one extra spot.
 // If n < duration, the first n days get exactly one spot and the rest get
 // none — graceful degradation for short spot pools, no special-casing needed.
+//
+// Within each day, defaults to taking the next spot in tour order (geography
+// stays the primary signal), but if that spot's category is already used
+// this day, looks a few spots ahead in the tour for one with a fresh
+// category and pulls it forward instead. A spot with no Category (older
+// data, or the LLM didn't return one) never blocks and is never tracked as
+// a duplicate — category balancing is a bonus on top of geography, not a
+// hard requirement.
 function splitIntoDays(orderedSpots, duration) {
     const n = orderedSpots.length;
     const base = Math.floor(n / duration);
     const remainder = n % duration;
+    const remaining = orderedSpots.slice();
 
     const groups = [];
-    let index = 0;
     for (let day = 0; day < duration; day++) {
         const size = base + (day < remainder ? 1 : 0);
-        groups.push(orderedSpots.slice(index, index + size));
-        index += size;
+        const usedCategories = new Set();
+        const daySpots = [];
+
+        for (let slot = 0; slot < size; slot++) {
+            if (!remaining.length) break;
+
+            let pickIndex = 0;
+            if (remaining[0].Category && usedCategories.has(remaining[0].Category)) {
+                const windowEnd = Math.min(remaining.length, CATEGORY_LOOKAHEAD_WINDOW + 1);
+                for (let i = 1; i < windowEnd; i++) {
+                    const candidateCategory = remaining[i].Category;
+                    if (!candidateCategory || !usedCategories.has(candidateCategory)) {
+                        pickIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            const [picked] = remaining.splice(pickIndex, 1);
+            daySpots.push(picked);
+            if (picked.Category) usedCategories.add(picked.Category);
+        }
+
+        groups.push(daySpots);
     }
     return groups;
 }
