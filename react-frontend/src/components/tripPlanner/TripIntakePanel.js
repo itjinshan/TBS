@@ -2,11 +2,13 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Tooltip } from '@mui/material';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { sendIntakeMessage, updateTripBriefField, generateItinerary } from '../../actions/tripAction';
 import AccommodationMap from './AccommodationMap';
 import './TripIntakePanel.css';
 
-const REQUIRED_FIELDS = ['destination', 'duration', 'numOfTravelers', 'budget'];
+const REQUIRED_FIELDS = ['destination', 'duration', 'numOfTravelers', 'budget', 'pace'];
 
 const TripIntakePanel = () => {
   const { t } = useTranslation();
@@ -20,7 +22,8 @@ const TripIntakePanel = () => {
     destination: t('intake.fields.destination'),
     duration: t('intake.fields.days'),
     numOfTravelers: t('intake.fields.numOfTravelers'),
-    budget: t('intake.fields.budget')
+    budget: t('intake.fields.budget'),
+    pace: t('intake.fields.pace')
   };
   const { tripBrief, messages, isGenerating, error } = useSelector((state) => state.trip);
 
@@ -144,7 +147,27 @@ const TripIntakePanel = () => {
                 className={`brief-chip ${tripBrief[field] ? 'filled' : 'empty'}`}
                 onClick={() => startEditing(field)}
               >
-                <span className="chip-label">{FIELD_LABELS[field]}</span>
+                <span className="chip-label">
+                  {FIELD_LABELS[field]}
+                  {field === 'pace' && (
+                    <Tooltip
+                      arrow
+                      title={
+                        <>
+                          <div>{t('intake.paceOptions.explainRelaxed')}</div>
+                          <div>{t('intake.paceOptions.explainStandard')}</div>
+                          <div>{t('intake.paceOptions.explainPacked')}</div>
+                        </>
+                      }
+                    >
+                      <InfoOutlinedIcon
+                        className="chip-info-icon"
+                        fontSize="inherit"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </Tooltip>
+                  )}
+                </span>
                 {editingField === field ? (
                   field === 'budget' ? (
                     <select
@@ -157,6 +180,18 @@ const TripIntakePanel = () => {
                       <option value="budget">{t('intake.budgetOptions.budget')}</option>
                       <option value="mid-range">{t('intake.budgetOptions.midRange')}</option>
                       <option value="luxury">{t('intake.budgetOptions.luxury')}</option>
+                    </select>
+                  ) : field === 'pace' ? (
+                    <select
+                      autoFocus
+                      value={editingValue}
+                      onChange={(e) => commitValue(field, e.target.value)}
+                      onBlur={() => setEditingField(null)}
+                    >
+                      <option value="">{t('intake.paceOptions.select')}</option>
+                      <option value="relaxed">{t('intake.paceOptions.relaxed')}</option>
+                      <option value="standard">{t('intake.paceOptions.standard')}</option>
+                      <option value="packed">{t('intake.paceOptions.packed')}</option>
                     </select>
                   ) : (
                     <input

@@ -79,6 +79,10 @@ const TripSchema = new Schema({
         type: String,
         default: "mid-range"
     },
+    Pace: {
+        type: String,
+        default: "standard" // "relaxed" | "standard" | "packed" — see Services/itineraryPlanner.js's PACE_ACTIVE_BUDGET_MINUTES
+    },
     Preferences: {
         type: String
     },

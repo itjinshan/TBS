@@ -26,7 +26,8 @@
       "destination": "Destination",
       "days": "Days",
       "numOfTravelers": "Travelers",
-      "budget": "Budget"
+      "budget": "Budget",
+      "pace": "Pace"
     },
     "notSetYet": "Not set yet",
     "budgetOptions": {
@@ -34,6 +35,15 @@
       "budget": "Budget",
       "midRange": "Mid-range",
       "luxury": "Luxury"
+    },
+    "paceOptions": {
+      "select": "Select…",
+      "relaxed": "Relaxed",
+      "standard": "Standard",
+      "packed": "Packed",
+      "explainRelaxed": "Relaxed — fewer stops per day, more downtime.",
+      "explainStandard": "Standard — a balanced day of sightseeing with reasonable breaks.",
+      "explainPacked": "Packed — a fuller day of sightseeing, to see as much as possible."
     },
     "generateItinerary": "Generate Itinerary",
     "generating": "Generating…",

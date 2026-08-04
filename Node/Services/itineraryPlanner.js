@@ -19,22 +19,37 @@
 // reset every morning — see below) plus each spot's own visit time, and
 // stops taking new spots once the next one would exceed the day's active
 // budget (a day always gets at least one spot, even if that spot alone
-// exceeds the budget — see the edge case note on splitIntoDays). This
-// naturally produces variable spots-per-day: more for a day of quick,
-// close-together spots, fewer for a day with a big museum or long transfers.
+// exceeds the budget — see the edge case note on splitIntoDays). The size of
+// that budget itself comes from the traveler's chosen vacation pace —
+// relaxed, standard, or packed (PACE_ACTIVE_BUDGET_MINUTES below) — so the
+// same spot pool produces a noticeably lighter or fuller day depending on
+// which the traveler picked. Either way it naturally produces variable
+// spots-per-day: more for a day of quick, close-together spots, fewer for a
+// day with a big museum or long transfers.
 // It also still biases toward a varied category mix within each day —
 // geography and time stay the primary signal (a day is still built from a
 // contiguous run of the tour, spot-by-spot), but a same-category repeat is
 // swapped for a fresh-category spot a few positions ahead when one's
 // available and still fits the remaining budget.
 
-// ~10 active hours, minus a flat meal/rest allowance subtracted up front
-// rather than scheduled at specific times (scheduling actual meal
-// slots/restaurant picks is a separate, bigger feature). The remainder is
-// what a day actually has to spend on travel + visiting.
-const DAY_BUDGET_MINUTES = 600;
-const MEAL_REST_ALLOWANCE_MINUTES = 150;
-const DAY_ACTIVE_BUDGET_MINUTES = DAY_BUDGET_MINUTES - MEAL_REST_ALLOWANCE_MINUTES;
+// Three vacation-pace tiers a traveler can pick during intake (see
+// APIs/trip.js's OTHER_PREF_FIELDS/OTHER_PREF_QUESTIONS and the "Pace" chip
+// in TripIntakePanel.js), each with its own total day window and flat
+// meal/rest allowance subtracted up front rather than scheduled at specific
+// times (scheduling actual meal slots/restaurant picks is a separate,
+// bigger feature). What's left is what a day actually has to spend on
+// travel + visiting. "standard" matches this feature's original single
+// fixed budget, so picking no pace at all behaves exactly as before.
+const PACE_MINUTES = {
+    relaxed: { dayBudget: 540, mealRestAllowance: 240 },
+    standard: { dayBudget: 600, mealRestAllowance: 150 },
+    packed: { dayBudget: 660, mealRestAllowance: 120 }
+};
+const PACE_ACTIVE_BUDGET_MINUTES = Object.keys(PACE_MINUTES).reduce((acc, pace) => {
+    acc[pace] = PACE_MINUTES[pace].dayBudget - PACE_MINUTES[pace].mealRestAllowance;
+    return acc;
+}, {});
+const DEFAULT_PACE = 'standard';
 
 // Used when a spot's own AverageTimeSpent wasn't populated by the LLM.
 const DEFAULT_VISIT_MINUTES = 90;
@@ -177,9 +192,10 @@ const CATEGORY_LOOKAHEAD_WINDOW = 3;
 // first spot regardless of cost, so a single spot whose own visit time
 // exceeds the entire day's budget still gets a day to itself rather than
 // being dropped.
-function splitIntoDays(orderedSpots, duration, transportMode, anchorPoint) {
+function splitIntoDays(orderedSpots, duration, transportMode, anchorPoint, pace) {
     const remaining = orderedSpots.slice();
     const groups = [];
+    const activeBudgetMinutes = PACE_ACTIVE_BUDGET_MINUTES[pace];
 
     for (let day = 0; day < duration; day++) {
         const usedCategories = new Set();
@@ -203,7 +219,7 @@ function splitIntoDays(orderedSpots, duration, transportMode, anchorPoint) {
             const candidate = remaining[pickIndex];
             const cost = estimateTravelMinutes(haversineDistance(currentPosition, candidate), transportMode) + getVisitMinutes(candidate);
 
-            if (daySpots.length > 0 && elapsedMinutes + cost > DAY_ACTIVE_BUDGET_MINUTES) {
+            if (daySpots.length > 0 && elapsedMinutes + cost > activeBudgetMinutes) {
                 break;
             }
 
@@ -226,9 +242,12 @@ function assignPhotos(orderedSpots) {
 }
 
 // transportMode isn't extracted from the trip intake yet (planned follow-up)
-// — every caller currently omits it and gets DEFAULT_TRANSPORT_MODE.
-function arrangeIntoDays(spots, duration, accommodation, transportMode) {
+// — every caller currently omits it and gets DEFAULT_TRANSPORT_MODE. pace
+// is real (see APIs/trip.js) but still optional/defaulted here so existing
+// callers that predate it keep working unchanged.
+function arrangeIntoDays(spots, duration, accommodation, pace, transportMode) {
     const safeDuration = Math.max(1, Math.min(14, Number(duration) || 1));
+    const safePace = PACE_ACTIVE_BUDGET_MINUTES[pace] ? pace : DEFAULT_PACE;
     const safeTransportMode = TRANSPORT_SPEEDS_KMH[transportMode] ? transportMode : DEFAULT_TRANSPORT_MODE;
 
     if (!spots.length) {
@@ -238,7 +257,7 @@ function arrangeIntoDays(spots, duration, accommodation, transportMode) {
     const anchorPoint = resolveAnchorPoint(spots, accommodation);
     const tour = buildGreedyTour(spots, anchorPoint);
     const withPhotos = assignPhotos(tour);
-    const groups = splitIntoDays(withPhotos, safeDuration, safeTransportMode, anchorPoint);
+    const groups = splitIntoDays(withPhotos, safeDuration, safeTransportMode, anchorPoint, safePace);
 
     return groups.map((daySpots, i) => ({ DayNumber: i + 1, Date: null, Spots: daySpots }));
 }

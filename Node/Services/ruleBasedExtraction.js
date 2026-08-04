@@ -44,6 +44,17 @@ function extractOtherPrefs(message) {
         extracted.budget = 'budget';
     }
 
+    // "standard"/"balanced"/"normal" alone are too generic to trust as a bare
+    // match (unlike "luxury" or "packed"), so only count them alongside the
+    // word "pace" itself.
+    if (/\b(relax(ed)?|chill|leisurely|slow.paced|easy.?going)\b/.test(text)) {
+        extracted.pace = 'relaxed';
+    } else if (/\b(packed|fast.paced|action.packed|jam.packed)\b/.test(text)) {
+        extracted.pace = 'packed';
+    } else if (/\b(standard|balanced|normal|moderate)\b.*\bpace\b|\bpace\b.*\b(standard|balanced|normal|moderate)\b/.test(text)) {
+        extracted.pace = 'standard';
+    }
+
     return extracted;
 }
 
