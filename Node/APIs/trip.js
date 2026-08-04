@@ -5,7 +5,7 @@ require('../Config/passport')(passport);
 var axios = require('axios');
 var Trip = require('../DB_Models/DB_Trip');
 var { generateFallbackItinerary } = require('../Services/fallbackItinerary');
-var { arrangeIntoDays, SPOTS_PER_DAY } = require('../Services/itineraryPlanner');
+var { arrangeIntoDays, SPOTS_PER_DAY, SPOT_REQUEST_BUFFER_MULTIPLIER } = require('../Services/itineraryPlanner');
 var spotSourcing = require('../Services/spotSourcing');
 var nluExtraction = require('../Services/nluExtraction');
 var amapPlaces = require('../Services/amapPlaces');
@@ -279,7 +279,9 @@ router.post('/generate', function (req, res) {
     }
 
     var duration = Math.max(1, Math.min(14, Number(tripBrief.duration) || 3));
-    var minSpots = Math.max(6, duration * SPOTS_PER_DAY);
+    // Padded since day-sizing is now time-based, not a hard per-day count —
+    // see SPOT_REQUEST_BUFFER_MULTIPLIER in itineraryPlanner.js.
+    var minSpots = Math.max(6, Math.ceil(duration * SPOTS_PER_DAY * SPOT_REQUEST_BUFFER_MULTIPLIER));
 
     spotSourcing.sourceSpots(tripBrief.destination, minSpots)
         .then(function (spots) {
