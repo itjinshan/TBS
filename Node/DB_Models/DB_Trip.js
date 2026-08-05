@@ -83,6 +83,10 @@ const TripSchema = new Schema({
         type: String,
         default: "standard" // "relaxed" | "standard" | "packed" — see Services/itineraryPlanner.js's PACE_ACTIVE_BUDGET_MINUTES
     },
+    TransportMode: {
+        type: String,
+        default: "public_transit" // "walking" | "public_transit" | "taxi" | "driving" — see Services/itineraryPlanner.js's TRANSPORT_SPEEDS_KMH
+    },
     Preferences: {
         type: String
     },

@@ -27,7 +27,8 @@
       "days": "Days",
       "numOfTravelers": "Travelers",
       "budget": "Budget",
-      "pace": "Pace"
+      "pace": "Pace",
+      "transportMode": "Getting Around"
     },
     "notSetYet": "Not set yet",
     "budgetOptions": {
@@ -44,6 +45,13 @@
       "explainRelaxed": "Relaxed — fewer stops per day, more downtime.",
       "explainStandard": "Standard — a balanced day of sightseeing with reasonable breaks.",
       "explainPacked": "Packed — a fuller day of sightseeing, to see as much as possible."
+    },
+    "transportModeOptions": {
+      "select": "Select…",
+      "walking": "Walking",
+      "publicTransit": "Public transit",
+      "taxi": "Taxi",
+      "driving": "Driving"
     },
     "generateItinerary": "Generate Itinerary",
     "generating": "Generating…",

@@ -39,12 +39,13 @@ function extractDestination(message) {
 }
 
 function extractOtherPrefs(message) {
-    return callExtract(message, ['duration', 'numOfTravelers', 'budget', 'pace']).then(function (extracted) {
+    return callExtract(message, ['duration', 'numOfTravelers', 'budget', 'pace', 'transportMode']).then(function (extracted) {
         var result = {};
         if (isPresent(extracted.duration)) result.duration = extracted.duration;
         if (isPresent(extracted.numOfTravelers)) result.numOfTravelers = extracted.numOfTravelers;
         if (isPresent(extracted.budget)) result.budget = extracted.budget;
         if (isPresent(extracted.pace)) result.pace = extracted.pace;
+        if (isPresent(extracted.transportMode)) result.transportMode = extracted.transportMode;
         return result;
     }).catch(function (err) {
         console.error('NLU preference extraction failed, falling back to regex:', err.message);
