@@ -5,13 +5,13 @@ require('../Config/passport')(passport);
 var axios = require('axios');
 var Trip = require('../DB_Models/DB_Trip');
 var { generateFallbackItinerary } = require('../Services/fallbackItinerary');
-var { arrangeIntoDays, SPOTS_PER_DAY } = require('../Services/itineraryPlanner');
+var { arrangeIntoDays, SPOTS_PER_DAY, SPOT_REQUEST_BUFFER_MULTIPLIER } = require('../Services/itineraryPlanner');
 var spotSourcing = require('../Services/spotSourcing');
 var nluExtraction = require('../Services/nluExtraction');
 var amapPlaces = require('../Services/amapPlaces');
 var generateAccessToken = require('../Config/jwtgenerator');
 
-var OTHER_PREF_FIELDS = ['duration', 'numOfTravelers', 'budget'];
+var OTHER_PREF_FIELDS = ['duration', 'numOfTravelers', 'budget', 'pace'];
 
 // Conversation stages for trip intake. Accommodation is settled right after
 // destination (and before the rest of the trip preferences) because it
@@ -30,7 +30,8 @@ var STAGES = {
 var OTHER_PREF_QUESTIONS = {
     duration: "How many days are you planning to travel?",
     numOfTravelers: "How many people will be traveling?",
-    budget: "What's your budget style — budget, mid-range, or luxury?"
+    budget: "What's your budget style — budget, mid-range, or luxury?",
+    pace: "What pace are you after — relaxed, standard, or packed?"
 };
 
 function nextOtherPrefQuestion(mergedBrief) {
@@ -224,9 +225,12 @@ router.post('/intake', function (req, res) {
                         return suggestAccommodations(mergedBrief)
                             .then(function (suggestions) {
                                 otherPrefFields.accommodationSuggestions = suggestions;
-                                var suggestionReply = 'Here are a few lodging options that fit your budget: ' +
-                                    suggestions.map(function (s, i) { return (i + 1) + '. ' + s.Name; }).join(', ') +
-                                    '. Which one would you like to go with?';
+                                var suggestionListing = suggestions.map(function (s, i) {
+                                    return (i + 1) + '. ' + s.Name + '\n' + s.Address;
+                                }).join('\n\n');
+                                var suggestionReply = 'Here are a few lodging options that fit your budget:\n\n' +
+                                    suggestionListing +
+                                    '\n\nWhich one would you like to go with?';
                                 respond(otherPrefFields, suggestionReply, STAGES.SUGGEST_ACCOMMODATION);
                             });
                     } else {
@@ -279,14 +283,16 @@ router.post('/generate', function (req, res) {
     }
 
     var duration = Math.max(1, Math.min(14, Number(tripBrief.duration) || 3));
-    var minSpots = Math.max(6, duration * SPOTS_PER_DAY);
+    // Padded since day-sizing is now time-based, not a hard per-day count —
+    // see SPOT_REQUEST_BUFFER_MULTIPLIER in itineraryPlanner.js.
+    var minSpots = Math.max(6, Math.ceil(duration * SPOTS_PER_DAY * SPOT_REQUEST_BUFFER_MULTIPLIER));
 
     spotSourcing.sourceSpots(tripBrief.destination, minSpots)
         .then(function (spots) {
             if (!spots.length) {
                 return res.json(generateFallbackItinerary(tripBrief));
             }
-            var days = arrangeIntoDays(spots, duration, tripBrief.accommodation);
+            var days = arrangeIntoDays(spots, duration, tripBrief.accommodation, tripBrief.pace);
             res.json({ destination: tripBrief.destination, days: days, accommodation: tripBrief.accommodation || null });
         })
         .catch(function (err) {
@@ -303,6 +309,7 @@ router.post('/', passport.authenticate('jwt', { session: false }), function (req
         Duration: body.days ? body.days.length : 0,
         NumOfTravelers: body.numOfTravelers,
         Budget: body.budget,
+        Pace: body.pace,
         Preferences: body.preferences,
         Accommodation: body.accommodation,
         LivingPreference: body.livingPreference,

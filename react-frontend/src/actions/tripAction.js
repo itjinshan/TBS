@@ -66,6 +66,7 @@ export const saveTrip = () => (dispatch, getState) => {
             destination: itinerary.destination,
             numOfTravelers: tripBrief.numOfTravelers,
             budget: tripBrief.budget,
+            pace: tripBrief.pace,
             preferences: tripBrief.preferences,
             accommodation: tripBrief.accommodation,
             livingPreference: tripBrief.livingPreference,

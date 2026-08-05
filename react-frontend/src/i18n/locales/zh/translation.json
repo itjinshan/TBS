@@ -26,7 +26,8 @@
       "destination": "目的地",
       "days": "天数",
       "numOfTravelers": "人数",
-      "budget": "预算"
+      "budget": "预算",
+      "pace": "节奏"
     },
     "notSetYet": "未设置",
     "budgetOptions": {
@@ -34,6 +35,15 @@
       "budget": "经济型",
       "midRange": "舒适型",
       "luxury": "豪华型"
+    },
+    "paceOptions": {
+      "select": "请选择…",
+      "relaxed": "轻松",
+      "standard": "标准",
+      "packed": "紧凑",
+      "explainRelaxed": "轻松 — 每天安排较少景点，留出更多休息时间。",
+      "explainStandard": "标准 — 游览与休息兼顾的均衡行程。",
+      "explainPacked": "紧凑 — 一天安排更多景点，尽可能多看多玩。"
     },
     "generateItinerary": "生成行程",
     "generating": "生成中…",

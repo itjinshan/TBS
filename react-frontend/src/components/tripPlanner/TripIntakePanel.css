@@ -194,6 +194,18 @@
   margin-right: 0.5rem;
 }
 
+.chip-info-icon {
+  font-size: 0.95rem !important;
+  margin-left: 0.3rem;
+  color: #9aa0a6;
+  vertical-align: middle;
+  cursor: help;
+}
+
+.chip-info-icon:hover {
+  color: #4285f4;
+}
+
 .chip-value {
   color: #202124;
 }
