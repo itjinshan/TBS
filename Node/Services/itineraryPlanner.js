@@ -241,17 +241,49 @@ function assignPhotos(orderedSpots) {
     );
 }
 
-// transportMode isn't extracted from the trip intake yet (planned follow-up)
-// — every caller currently omits it and gets DEFAULT_TRANSPORT_MODE. pace
-// is real (see APIs/trip.js) but still optional/defaulted here so existing
-// callers that predate it keep working unchanged.
-function arrangeIntoDays(spots, duration, accommodation, pace, transportMode) {
+function hasCoordinates(point) {
+    return !!point && typeof point.Latitude === "number" && typeof point.Longitude === "number";
+}
+
+function toRouteStop(type, point) {
+    return { Type: type, Name: point.Name, Address: point.Address, Latitude: point.Latitude, Longitude: point.Longitude };
+}
+
+// Builds a day's visible route in true visiting order — see CLAUDE.md,
+// "Collect arrival/departure points...". Unverified/placeholder points (no
+// real Lat/Lng, e.g. an Amap lookup that failed) are left out entirely
+// rather than plotted at a fake location; the day's Spots list still shows
+// them, this is purely the map's route line.
+function buildRoute(daySpots, dayIndex, totalDays, accommodation, arrivalPoint, departurePoint) {
+    const route = [];
+    const accommodationKnown = hasCoordinates(accommodation);
+
+    if (dayIndex === 0 && hasCoordinates(arrivalPoint)) route.push(toRouteStop('arrival', arrivalPoint));
+    if (accommodationKnown) route.push(toRouteStop('accommodation', accommodation));
+    daySpots.forEach((spot) => route.push(toRouteStop('spot', spot)));
+    if (accommodationKnown) route.push(toRouteStop('accommodation', accommodation));
+    if (dayIndex === totalDays - 1 && hasCoordinates(departurePoint)) route.push(toRouteStop('departure', departurePoint));
+
+    return route;
+}
+
+// pace and transportMode are real (see APIs/trip.js) but still
+// optional/defaulted here so existing callers that predate either keep
+// working unchanged. arrivalPoint/departurePoint are optional too — a
+// traveler who never answered those questions just gets a route with no
+// arrival/departure bookend, not a missing itinerary.
+function arrangeIntoDays(spots, duration, accommodation, pace, transportMode, arrivalPoint, departurePoint) {
     const safeDuration = Math.max(1, Math.min(14, Number(duration) || 1));
     const safePace = PACE_ACTIVE_BUDGET_MINUTES[pace] ? pace : DEFAULT_PACE;
     const safeTransportMode = TRANSPORT_SPEEDS_KMH[transportMode] ? transportMode : DEFAULT_TRANSPORT_MODE;
 
     if (!spots.length) {
-        return Array.from({ length: safeDuration }, (_, i) => ({ DayNumber: i + 1, Date: null, Spots: [] }));
+        return Array.from({ length: safeDuration }, (_, i) => ({
+            DayNumber: i + 1,
+            Date: null,
+            Spots: [],
+            Route: buildRoute([], i, safeDuration, accommodation, arrivalPoint, departurePoint)
+        }));
     }
 
     const anchorPoint = resolveAnchorPoint(spots, accommodation);
@@ -259,7 +291,12 @@ function arrangeIntoDays(spots, duration, accommodation, pace, transportMode) {
     const withPhotos = assignPhotos(tour);
     const groups = splitIntoDays(withPhotos, safeDuration, safeTransportMode, anchorPoint, safePace);
 
-    return groups.map((daySpots, i) => ({ DayNumber: i + 1, Date: null, Spots: daySpots }));
+    return groups.map((daySpots, i) => ({
+        DayNumber: i + 1,
+        Date: null,
+        Spots: daySpots,
+        Route: buildRoute(daySpots, i, groups.length, accommodation, arrivalPoint, departurePoint)
+    }));
 }
 
 module.exports = { arrangeIntoDays, SPOTS_PER_DAY, SPOT_REQUEST_BUFFER_MULTIPLIER };

@@ -28,7 +28,9 @@
       "numOfTravelers": "Travelers",
       "budget": "Budget",
       "pace": "Pace",
-      "transportMode": "Getting Around"
+      "transportMode": "Getting Around",
+      "arrivalPoint": "Arriving From",
+      "departurePoint": "Departing From"
     },
     "notSetYet": "Not set yet",
     "budgetOptions": {

@@ -8,7 +8,15 @@ import { sendIntakeMessage, updateTripBriefField, generateItinerary } from '../.
 import AccommodationMap from './AccommodationMap';
 import './TripIntakePanel.css';
 
-const REQUIRED_FIELDS = ['destination', 'duration', 'numOfTravelers', 'budget', 'pace', 'transportMode'];
+const REQUIRED_FIELDS = ['destination', 'duration', 'numOfTravelers', 'budget', 'pace', 'transportMode', 'arrivalPoint', 'departurePoint'];
+
+// Unlike the other chips, these resolve to a real-world place object
+// ({ Name, Address, Latitude, Longitude }, see Node/APIs/trip.js's
+// resolvePlacePoint) rather than a plain string — shown read-only (by
+// name) rather than editable inline, same as accommodation elsewhere in
+// this flow, since there's no simple text-input equivalent that wouldn't
+// just overwrite the resolved coordinates with an unverified string.
+const PLACE_POINT_FIELDS = ['arrivalPoint', 'departurePoint'];
 
 const TripIntakePanel = () => {
   const { t } = useTranslation();
@@ -24,7 +32,9 @@ const TripIntakePanel = () => {
     numOfTravelers: t('intake.fields.numOfTravelers'),
     budget: t('intake.fields.budget'),
     pace: t('intake.fields.pace'),
-    transportMode: t('intake.fields.transportMode')
+    transportMode: t('intake.fields.transportMode'),
+    arrivalPoint: t('intake.fields.arrivalPoint'),
+    departurePoint: t('intake.fields.departurePoint')
   };
   const { tripBrief, messages, isGenerating, error } = useSelector((state) => state.trip);
 
@@ -145,8 +155,8 @@ const TripIntakePanel = () => {
             {REQUIRED_FIELDS.map((field) => (
               <div
                 key={field}
-                className={`brief-chip ${tripBrief[field] ? 'filled' : 'empty'}`}
-                onClick={() => startEditing(field)}
+                className={`brief-chip ${tripBrief[field] ? 'filled' : 'empty'} ${PLACE_POINT_FIELDS.includes(field) ? 'read-only' : ''}`}
+                onClick={() => { if (!PLACE_POINT_FIELDS.includes(field)) startEditing(field); }}
               >
                 <span className="chip-label">
                   {FIELD_LABELS[field]}
@@ -218,7 +228,11 @@ const TripIntakePanel = () => {
                     />
                   )
                 ) : (
-                  <span className="chip-value">{tripBrief[field] || t('intake.notSetYet')}</span>
+                  <span className="chip-value">
+                    {PLACE_POINT_FIELDS.includes(field)
+                      ? (tripBrief[field]?.Name || t('intake.notSetYet'))
+                      : (tripBrief[field] || t('intake.notSetYet'))}
+                  </span>
                 )}
               </div>
             ))}
