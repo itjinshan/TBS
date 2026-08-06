@@ -42,11 +42,18 @@ const TripIntakePanel = () => {
   const [inputValue, setInputValue] = useState('');
   const [editingField, setEditingField] = useState(null);
   const [editingValue, setEditingValue] = useState('');
-  const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
 
+  // Sets .intake-messages's own scrollTop directly rather than
+  // messagesEndRef.scrollIntoView() — scrollIntoView() walks up every
+  // scrollable ancestor to bring its target into view, including the
+  // whole document once the panel (especially with the accommodation map
+  // open) is taller than the viewport, dragging the entire page down on
+  // every message instead of just the chat log. Setting scrollTop touches
+  // only this container.
   useEffect(() => {
-    if (isOpen && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (isOpen && messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   }, [messages, isOpen]);
 
@@ -123,13 +130,12 @@ const TripIntakePanel = () => {
           <button type="button" className="intake-close" onClick={() => setIsOpen(false)}>×</button>
 
           <div className="intake-chat">
-            <div className="intake-messages">
+            <div className="intake-messages" ref={messagesContainerRef}>
               {messages.map((m) => (
                 <div key={m.id} className={`message ${m.sender}`}>
                   <div className="message-content">{m.text}</div>
                 </div>
               ))}
-              <div ref={messagesEndRef} />
             </div>
             <form onSubmit={handleSubmit} className="intake-input-form">
               <input

@@ -67,7 +67,7 @@ A throwaway QA account exists in the dev MongoDB for testing authenticated UI fl
 
 Actual defects — existing behavior is wrong, not just missing. Prioritized ahead of the feature backlog below.
 
-- **Trip-intake chat panel's auto-scroll drags the whole page, not just the chat pane.** `components/tripPlanner/TripIntakePanel.js`'s `useEffect` (lines ~37-39) calls `messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })` on every new message to keep the latest one visible. `.intake-messages` has its own `height: 400px` + `overflow-y: auto` scroll box, but `scrollIntoView` doesn't stop at the nearest scrollable ancestor — it scrolls *every* ancestor needed to bring the target into view, including the whole document when the panel (especially with the accommodation map open) is taller than the viewport. Net effect: every message the user sends or receives jumps the entire page, not just the chat log — jarring during a multi-turn conversation. Fix by scrolling only the inner container directly (e.g. set `.intake-messages`'s `scrollTop` to its `scrollHeight`, or pass `{ block: 'nearest' }`) instead of letting `scrollIntoView` walk up to the document. Cheap, contained fix — surfaced while testing the `pace` intake field.
+None currently open.
 
 ### Backlog
 
