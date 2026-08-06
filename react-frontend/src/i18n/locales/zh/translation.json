@@ -119,10 +119,8 @@
     },
     "day": "第 {{number}} 天",
     "loadingMap": "地图加载中…",
-    "map": {
-      "yourLocationTitle": "您的位置",
-      "yourLocationContent": "您在这里！"
-    }
+    "arrivingVia": "抵达方式",
+    "departingFrom": "出发地点"
   },
   "footer": {
     "company": "公司",

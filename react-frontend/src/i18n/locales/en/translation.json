@@ -119,10 +119,8 @@
     },
     "day": "Day {{number}}",
     "loadingMap": "Loading map...",
-    "map": {
-      "yourLocationTitle": "Your Location",
-      "yourLocationContent": "You are here!"
-    }
+    "arrivingVia": "Arriving via",
+    "departingFrom": "Departing from"
   },
   "footer": {
     "company": "Company",
