@@ -11,7 +11,7 @@ var nluExtraction = require('../Services/nluExtraction');
 var amapPlaces = require('../Services/amapPlaces');
 var generateAccessToken = require('../Config/jwtgenerator');
 
-var OTHER_PREF_FIELDS = ['duration', 'numOfTravelers', 'budget', 'pace'];
+var OTHER_PREF_FIELDS = ['duration', 'numOfTravelers', 'budget', 'pace', 'transportMode'];
 
 // Conversation stages for trip intake. Accommodation is settled right after
 // destination (and before the rest of the trip preferences) because it
@@ -31,7 +31,8 @@ var OTHER_PREF_QUESTIONS = {
     duration: "How many days are you planning to travel?",
     numOfTravelers: "How many people will be traveling?",
     budget: "What's your budget style — budget, mid-range, or luxury?",
-    pace: "What pace are you after — relaxed, standard, or packed?"
+    pace: "What pace are you after — relaxed, standard, or packed?",
+    transportMode: "How will you mostly be getting around — walking, public transit, taxi, or driving?"
 };
 
 function nextOtherPrefQuestion(mergedBrief) {
@@ -292,7 +293,7 @@ router.post('/generate', function (req, res) {
             if (!spots.length) {
                 return res.json(generateFallbackItinerary(tripBrief));
             }
-            var days = arrangeIntoDays(spots, duration, tripBrief.accommodation, tripBrief.pace);
+            var days = arrangeIntoDays(spots, duration, tripBrief.accommodation, tripBrief.pace, tripBrief.transportMode);
             res.json({ destination: tripBrief.destination, days: days, accommodation: tripBrief.accommodation || null });
         })
         .catch(function (err) {
@@ -310,6 +311,7 @@ router.post('/', passport.authenticate('jwt', { session: false }), function (req
         NumOfTravelers: body.numOfTravelers,
         Budget: body.budget,
         Pace: body.pace,
+        TransportMode: body.transportMode,
         Preferences: body.preferences,
         Accommodation: body.accommodation,
         LivingPreference: body.livingPreference,

@@ -55,6 +55,19 @@ function extractOtherPrefs(message) {
         extracted.pace = 'standard';
     }
 
+    // Checked in this order since "taxi"/"driving" keywords are unambiguous,
+    // while "public transit" needs its own multi-word phrase or a specific
+    // mode name (subway/metro/bus) rather than a generic word.
+    if (/\b(taxis?|cabs?|rideshare|uber|didi|grab)\b/.test(text)) {
+        extracted.transportMode = 'taxi';
+    } else if (/\b(driv(e|ing)|rental car|car rental|self.?drive)\b/.test(text)) {
+        extracted.transportMode = 'driving';
+    } else if (/\b(walk(ing)?|on foot|by foot)\b/.test(text)) {
+        extracted.transportMode = 'walking';
+    } else if (/\b(public transit|subway|metro|buses|bus|transit)\b/.test(text)) {
+        extracted.transportMode = 'public_transit';
+    }
+
     return extracted;
 }
 

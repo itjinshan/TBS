@@ -27,7 +27,8 @@
       "days": "天数",
       "numOfTravelers": "人数",
       "budget": "预算",
-      "pace": "节奏"
+      "pace": "节奏",
+      "transportMode": "出行方式"
     },
     "notSetYet": "未设置",
     "budgetOptions": {
@@ -44,6 +45,13 @@
       "explainRelaxed": "轻松 — 每天安排较少景点，留出更多休息时间。",
       "explainStandard": "标准 — 游览与休息兼顾的均衡行程。",
       "explainPacked": "紧凑 — 一天安排更多景点，尽可能多看多玩。"
+    },
+    "transportModeOptions": {
+      "select": "请选择…",
+      "walking": "步行",
+      "publicTransit": "公共交通",
+      "taxi": "出租车",
+      "driving": "自驾"
     },
     "generateItinerary": "生成行程",
     "generating": "生成中…",

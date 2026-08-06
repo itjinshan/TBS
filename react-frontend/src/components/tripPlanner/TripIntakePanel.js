@@ -8,7 +8,7 @@ import { sendIntakeMessage, updateTripBriefField, generateItinerary } from '../.
 import AccommodationMap from './AccommodationMap';
 import './TripIntakePanel.css';
 
-const REQUIRED_FIELDS = ['destination', 'duration', 'numOfTravelers', 'budget', 'pace'];
+const REQUIRED_FIELDS = ['destination', 'duration', 'numOfTravelers', 'budget', 'pace', 'transportMode'];
 
 const TripIntakePanel = () => {
   const { t } = useTranslation();
@@ -23,7 +23,8 @@ const TripIntakePanel = () => {
     duration: t('intake.fields.days'),
     numOfTravelers: t('intake.fields.numOfTravelers'),
     budget: t('intake.fields.budget'),
-    pace: t('intake.fields.pace')
+    pace: t('intake.fields.pace'),
+    transportMode: t('intake.fields.transportMode')
   };
   const { tripBrief, messages, isGenerating, error } = useSelector((state) => state.trip);
 
@@ -192,6 +193,19 @@ const TripIntakePanel = () => {
                       <option value="relaxed">{t('intake.paceOptions.relaxed')}</option>
                       <option value="standard">{t('intake.paceOptions.standard')}</option>
                       <option value="packed">{t('intake.paceOptions.packed')}</option>
+                    </select>
+                  ) : field === 'transportMode' ? (
+                    <select
+                      autoFocus
+                      value={editingValue}
+                      onChange={(e) => commitValue(field, e.target.value)}
+                      onBlur={() => setEditingField(null)}
+                    >
+                      <option value="">{t('intake.transportModeOptions.select')}</option>
+                      <option value="walking">{t('intake.transportModeOptions.walking')}</option>
+                      <option value="public_transit">{t('intake.transportModeOptions.publicTransit')}</option>
+                      <option value="taxi">{t('intake.transportModeOptions.taxi')}</option>
+                      <option value="driving">{t('intake.transportModeOptions.driving')}</option>
                     </select>
                   ) : (
                     <input
