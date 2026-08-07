@@ -1,8 +1,9 @@
 // Arranges a flat, real-sourced spot list (from Services/spotSourcing.js) into
 // day-by-day groups via geographic clustering — not a naive ordered slice —
-// so a day's plan doesn't zigzag across the whole city. Pure and local: no
-// DS-Service or Mongo dependency, so it's easy to hand-verify against fixture
-// spot arrays.
+// so a day's plan doesn't zigzag across the whole city. No DS-Service or
+// Mongo dependency, so the clustering/day-sizing logic is easy to
+// hand-verify against fixture spot arrays; the one external call is
+// assignPhotos()'s per-spot Amap photo lookup (Services/spotPhotos.js).
 //
 // Algorithm: greedy nearest-neighbor tour (from an anchor point — the
 // accommodation if it has real coordinates, else the spot centroid) is built
@@ -31,6 +32,8 @@
 // contiguous run of the tour, spot-by-spot), but a same-category repeat is
 // swapped for a fresh-category spot a few positions ahead when one's
 // available and still fits the remaining budget.
+
+const spotPhotos = require('./spotPhotos');
 
 // Three vacation-pace tiers a traveler can pick during intake (see
 // APIs/trip.js's OTHER_PREF_FIELDS/OTHER_PREF_QUESTIONS and the "Pace" chip
@@ -235,9 +238,16 @@ function splitIntoDays(orderedSpots, duration, transportMode, anchorPoint, pace)
     return groups;
 }
 
-function assignPhotos(orderedSpots) {
+// Real photo per spot via Services/spotPhotos.js (Amap place lookup), one
+// lookup per spot run in parallel; any spot whose lookup fails or comes back
+// empty falls back to the placeholder cycle rather than leaving the spot
+// photo-less.
+async function assignPhotos(orderedSpots) {
+    const photos = await Promise.all(
+        orderedSpots.map((spot) => spotPhotos.findSpotPhoto(spot.Name, spot.City))
+    );
     return orderedSpots.map((spot, i) =>
-        Object.assign({}, spot, { Photo: PLACEHOLDER_PHOTOS[i % PLACEHOLDER_PHOTOS.length] })
+        Object.assign({}, spot, { Photo: photos[i] || PLACEHOLDER_PHOTOS[i % PLACEHOLDER_PHOTOS.length] })
     );
 }
 
@@ -272,7 +282,7 @@ function buildRoute(daySpots, dayIndex, totalDays, accommodation, arrivalPoint, 
 // working unchanged. arrivalPoint/departurePoint are optional too — a
 // traveler who never answered those questions just gets a route with no
 // arrival/departure bookend, not a missing itinerary.
-function arrangeIntoDays(spots, duration, accommodation, pace, transportMode, arrivalPoint, departurePoint) {
+async function arrangeIntoDays(spots, duration, accommodation, pace, transportMode, arrivalPoint, departurePoint) {
     const safeDuration = Math.max(1, Math.min(14, Number(duration) || 1));
     const safePace = PACE_ACTIVE_BUDGET_MINUTES[pace] ? pace : DEFAULT_PACE;
     const safeTransportMode = TRANSPORT_SPEEDS_KMH[transportMode] ? transportMode : DEFAULT_TRANSPORT_MODE;
@@ -288,7 +298,7 @@ function arrangeIntoDays(spots, duration, accommodation, pace, transportMode, ar
 
     const anchorPoint = resolveAnchorPoint(spots, accommodation);
     const tour = buildGreedyTour(spots, anchorPoint);
-    const withPhotos = assignPhotos(tour);
+    const withPhotos = await assignPhotos(tour);
     const groups = splitIntoDays(withPhotos, safeDuration, safeTransportMode, anchorPoint, safePace);
 
     return groups.map((daySpots, i) => ({

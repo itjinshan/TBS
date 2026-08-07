@@ -8,7 +8,9 @@ import { connect } from "react-redux";
 import withRouter from "../../utils/withRouter";
 import { saveTrip } from "../../actions/tripAction";
 import './Itinerary.css';
-// placeholder photos, keyed by the `Photo` field the backend's mock generator assigns to each spot
+// fallback photos, keyed by the placeholder `Photo` value the backend
+// assigns when a real per-spot photo lookup (Services/spotPhotos.js) found
+// nothing, or when the fallback itinerary generator ran instead
 import HawaiiWall from "../../images/hawaii-wall.jpg";
 import KyotoWall from "../../images/Kyoto-wall.jpg";
 import NYWall from "../../images/ny-wall.jpg";
@@ -20,6 +22,15 @@ const PLACEHOLDER_PHOTOS = {
   ny: NYWall,
   shanghai: ShanghaiWall
 };
+
+// `spot.Photo` is either a live Amap photo URL or one of the placeholder
+// keys above — resolve whichever it is, defaulting to the Hawaii placeholder
+// if it's neither (e.g. missing on an older saved trip).
+function resolveSpotPhoto(photo) {
+  if (!photo) return HawaiiWall;
+  if (/^https?:\/\//.test(photo)) return photo;
+  return PLACEHOLDER_PHOTOS[photo] || HawaiiWall;
+}
 
 function spotsToMarkers(itinerary) {
   if (!itinerary) return [];
@@ -311,7 +322,7 @@ const Itinerary = ({ auth }) => {
               <div className="spot-cards">
                 {day.Spots.map((spot) => (
                   <div key={spot.Name} className="spot-card">
-                    <img src={PLACEHOLDER_PHOTOS[spot.Photo] || HawaiiWall} alt={spot.Name} />
+                    <img src={resolveSpotPhoto(spot.Photo)} alt={spot.Name} />
                     <div className="spot-info">
                       <h4>{spot.Name}</h4>
                       <p className="spot-address">{spot.StreetAddress}</p>

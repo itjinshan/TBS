@@ -330,14 +330,16 @@ router.post('/generate', function (req, res) {
             if (!spots.length) {
                 return res.json(generateFallbackItinerary(tripBrief));
             }
-            var days = arrangeIntoDays(spots, duration, tripBrief.accommodation, tripBrief.pace, tripBrief.transportMode, tripBrief.arrivalPoint, tripBrief.departurePoint);
-            res.json({
-                destination: tripBrief.destination,
-                days: days,
-                accommodation: tripBrief.accommodation || null,
-                arrivalPoint: tripBrief.arrivalPoint || null,
-                departurePoint: tripBrief.departurePoint || null
-            });
+            return arrangeIntoDays(spots, duration, tripBrief.accommodation, tripBrief.pace, tripBrief.transportMode, tripBrief.arrivalPoint, tripBrief.departurePoint)
+                .then(function (days) {
+                    res.json({
+                        destination: tripBrief.destination,
+                        days: days,
+                        accommodation: tripBrief.accommodation || null,
+                        arrivalPoint: tripBrief.arrivalPoint || null,
+                        departurePoint: tripBrief.departurePoint || null
+                    });
+                });
         })
         .catch(function (err) {
             console.error('Real itinerary generation failed, falling back:', err.message);
