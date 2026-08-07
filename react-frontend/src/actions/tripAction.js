@@ -70,6 +70,8 @@ export const saveTrip = () => (dispatch, getState) => {
             transportMode: tripBrief.transportMode,
             preferences: tripBrief.preferences,
             accommodation: tripBrief.accommodation,
+            arrivalPoint: tripBrief.arrivalPoint,
+            departurePoint: tripBrief.departurePoint,
             livingPreference: tripBrief.livingPreference,
             days: itinerary.days
         })

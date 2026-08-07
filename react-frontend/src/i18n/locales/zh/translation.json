@@ -28,7 +28,9 @@
       "numOfTravelers": "人数",
       "budget": "预算",
       "pace": "节奏",
-      "transportMode": "出行方式"
+      "transportMode": "出行方式",
+      "arrivalPoint": "到达地",
+      "departurePoint": "出发地"
     },
     "notSetYet": "未设置",
     "budgetOptions": {
@@ -117,10 +119,8 @@
     },
     "day": "第 {{number}} 天",
     "loadingMap": "地图加载中…",
-    "map": {
-      "yourLocationTitle": "您的位置",
-      "yourLocationContent": "您在这里！"
-    }
+    "arrivingVia": "抵达方式",
+    "departingFrom": "出发地点"
   },
   "footer": {
     "company": "公司",

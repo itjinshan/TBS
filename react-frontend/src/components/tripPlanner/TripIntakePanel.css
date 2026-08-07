@@ -189,6 +189,10 @@
   color: #5f6368;
 }
 
+.brief-chip.read-only {
+  cursor: default;
+}
+
 .chip-label {
   font-weight: 600;
   margin-right: 0.5rem;

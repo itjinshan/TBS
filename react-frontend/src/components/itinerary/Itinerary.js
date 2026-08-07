@@ -74,7 +74,15 @@ const Itinerary = ({ auth }) => {
       'AMap.Geolocation',
       'AMap.MapType' // For layer switching
     ], () => {
-      // Add Geolocation
+      // Geolocation is added as a control only — a "locate me" button the
+      // traveler can click, not auto-triggered on load. It used to fire
+      // automatically here and both center the map and drop a "you are
+      // here" marker at the browser's real-world location, which had
+      // nothing to do with the trip's destination (e.g. an automated
+      // session physically routed through mainland China would center a
+      // Ghent or Beijing itinerary on Kunming instead). The map is now
+      // centered/fit to the itinerary's own spot markers instead — see
+      // updateMarkers()'s setFitView() call.
       geolocationRef.current = new AMap.Geolocation({
         enableHighAccuracy: true,
         timeout: 10000,
@@ -84,30 +92,6 @@ const Itinerary = ({ auth }) => {
         }
       });
       mapInstance.current.addControl(geolocationRef.current);
-
-      // Get current position and center map
-      geolocationRef.current.getCurrentPosition((status, result) => {
-        if (status === 'complete') {
-          const position = [result.position.lng, result.position.lat];
-          mapInstance.current.setCenter(position);
-
-          // Add a marker for current location
-          setMarkers(prev => [
-            ...prev,
-            {
-              id: Date.now(),
-              position: position,
-              title: t('itinerary.map.yourLocationTitle'),
-              content: t('itinerary.map.yourLocationContent')
-            }
-          ]);
-        } else {
-          // Fallback to the destination (or Beijing) if geolocation fails
-          console.error('Geolocation error:', result);
-          const fallback = markers[0] ? markers[0].position : [116.397428, 39.90923];
-          mapInstance.current.setCenter(fallback);
-        }
-      });
 
       // Add ControlBar
       mapInstance.current.addControl(new AMap.ControlBar({
@@ -179,6 +163,13 @@ const Itinerary = ({ auth }) => {
 
       markersRef.current.push(marker);
     });
+
+    // Fit the viewport to the itinerary's own markers rather than leaving
+    // the map at its initial default center — see the note on the removed
+    // geolocation auto-center above.
+    if (markersRef.current.length) {
+      mapInstance.current.setFitView(markersRef.current);
+    }
   };
 
   // Add new random marker
@@ -305,6 +296,15 @@ const Itinerary = ({ auth }) => {
               </button>
             )}
           </div>
+          {itinerary.arrivalPoint?.Name && (
+            <div className="waypoint-card">
+              <span className="waypoint-icon" aria-hidden="true">✈️</span>
+              <div className="waypoint-info">
+                <span className="waypoint-label">{t('itinerary.arrivingVia')}</span>
+                <span className="waypoint-name">{itinerary.arrivalPoint.Name}</span>
+              </div>
+            </div>
+          )}
           {itinerary.days.map((day) => (
             <div key={day.DayNumber} className="day-block">
               <h3>{t('itinerary.day', { number: day.DayNumber })}</h3>
@@ -326,6 +326,15 @@ const Itinerary = ({ auth }) => {
               </div>
             </div>
           ))}
+          {itinerary.departurePoint?.Name && (
+            <div className="waypoint-card">
+              <span className="waypoint-icon" aria-hidden="true">🛫</span>
+              <div className="waypoint-info">
+                <span className="waypoint-label">{t('itinerary.departingFrom')}</span>
+                <span className="waypoint-name">{itinerary.departurePoint.Name}</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

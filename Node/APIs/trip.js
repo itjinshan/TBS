@@ -11,7 +11,7 @@ var nluExtraction = require('../Services/nluExtraction');
 var amapPlaces = require('../Services/amapPlaces');
 var generateAccessToken = require('../Config/jwtgenerator');
 
-var OTHER_PREF_FIELDS = ['duration', 'numOfTravelers', 'budget', 'pace', 'transportMode'];
+var OTHER_PREF_FIELDS = ['duration', 'numOfTravelers', 'budget', 'pace', 'transportMode', 'arrivalPoint', 'departurePoint'];
 
 // Conversation stages for trip intake. Accommodation is settled right after
 // destination (and before the rest of the trip preferences) because it
@@ -32,7 +32,9 @@ var OTHER_PREF_QUESTIONS = {
     numOfTravelers: "How many people will be traveling?",
     budget: "What's your budget style — budget, mid-range, or luxury?",
     pace: "What pace are you after — relaxed, standard, or packed?",
-    transportMode: "How will you mostly be getting around — walking, public transit, taxi, or driving?"
+    transportMode: "How will you mostly be getting around — walking, public transit, taxi, or driving?",
+    arrivalPoint: "Where will you be arriving into the destination from (airport, train station, etc.)?",
+    departurePoint: "And where will you be departing from at the end of the trip?"
 };
 
 function nextOtherPrefQuestion(mergedBrief) {
@@ -45,20 +47,52 @@ function nextOtherPrefQuestion(mergedBrief) {
 // Real place lookup via Amap (see CLAUDE.md, "Planned: Lodging Flow", action
 // item #2). Falls back to a single unverified candidate — today's prior
 // placeholder behavior — if the API call fails or turns up nothing, so the
-// stage machine keeps moving even without a working key/connection.
-function lookupAccommodationCandidates(query, city) {
+// stage machine keeps moving even without a working key/connection. Shared
+// by the accommodation confirm flow (which shows every candidate for the
+// traveler to pick from) and resolvePlacePoint below (which just takes the
+// top match, no confirm step).
+function lookupPlaceCandidates(query, city) {
     return amapPlaces.searchPlaces(query, city)
         .then(function (candidates) {
             return candidates.length ? candidates : [fallbackCandidate(query)];
         })
         .catch(function (err) {
-            console.error('Accommodation lookup failed:', err.message);
+            console.error('Place lookup failed:', err.message);
             return [fallbackCandidate(query)];
         });
 }
 
 function fallbackCandidate(query) {
     return { Name: query.trim(), Address: 'Address not verified — lookup unavailable', Latitude: null, Longitude: null };
+}
+
+// Resolves a freeform place name (e.g. an NLU-extracted arrivalPoint/
+// departurePoint) to a single best-match real-world point, with no
+// traveler-facing confirm step — lower stakes than picking a hotel to stay
+// at, this is just for anchoring the itinerary's route and plotting it on
+// the map, so the top Amap match (or the graceful unverified fallback) is
+// good enough.
+function resolvePlacePoint(name, city) {
+    return lookupPlaceCandidates(name, city).then(function (candidates) {
+        return candidates[0];
+    });
+}
+
+// nluExtraction.extractOtherPrefs returns arrivalPoint/departurePoint (if
+// present in the message) as raw place-name strings — this resolves any
+// freshly-extracted ones to a real point in place, in parallel, before the
+// OTHER_PREFS stage decides whether it's done asking questions. Fields the
+// traveler didn't just mention are left untouched (undefined, same as any
+// other unanswered OTHER_PREF_FIELDS entry).
+function resolvePlacePointFields(otherPrefFields, destination) {
+    var resolutions = ['arrivalPoint', 'departurePoint']
+        .filter(function (field) { return typeof otherPrefFields[field] === 'string' && otherPrefFields[field].trim(); })
+        .map(function (field) {
+            return resolvePlacePoint(otherPrefFields[field], destination).then(function (point) {
+                otherPrefFields[field] = point;
+            });
+        });
+    return Promise.all(resolutions).then(function () { return otherPrefFields; });
 }
 
 // Picks an item out of a candidate/suggestion list by name (substring match)
@@ -123,7 +157,7 @@ router.post('/intake', function (req, res) {
     // stays in ACCOMMODATION_CONFIRM either way; a second message either picks
     // one of these candidates or (if nothing matches) triggers a fresh search.
     function searchAndPresent(query) {
-        lookupAccommodationCandidates(query, tripBrief.destination)
+        lookupPlaceCandidates(query, tripBrief.destination)
             .then(function (candidates) {
                 var listing = candidates.map(function (c, i) {
                     return (i + 1) + '. ' + c.Name + '\n' + c.Address;
@@ -217,6 +251,9 @@ router.post('/intake', function (req, res) {
         case STAGES.OTHER_PREFS: {
             nluExtraction.extractOtherPrefs(message)
                 .then(function (otherPrefFields) {
+                    return resolvePlacePointFields(otherPrefFields, tripBrief.destination);
+                })
+                .then(function (otherPrefFields) {
                     var mergedBrief = Object.assign({}, tripBrief, otherPrefFields);
                     var otherQuestion = nextOtherPrefQuestion(mergedBrief);
 
@@ -293,8 +330,14 @@ router.post('/generate', function (req, res) {
             if (!spots.length) {
                 return res.json(generateFallbackItinerary(tripBrief));
             }
-            var days = arrangeIntoDays(spots, duration, tripBrief.accommodation, tripBrief.pace, tripBrief.transportMode);
-            res.json({ destination: tripBrief.destination, days: days, accommodation: tripBrief.accommodation || null });
+            var days = arrangeIntoDays(spots, duration, tripBrief.accommodation, tripBrief.pace, tripBrief.transportMode, tripBrief.arrivalPoint, tripBrief.departurePoint);
+            res.json({
+                destination: tripBrief.destination,
+                days: days,
+                accommodation: tripBrief.accommodation || null,
+                arrivalPoint: tripBrief.arrivalPoint || null,
+                departurePoint: tripBrief.departurePoint || null
+            });
         })
         .catch(function (err) {
             console.error('Real itinerary generation failed, falling back:', err.message);
@@ -314,6 +357,8 @@ router.post('/', passport.authenticate('jwt', { session: false }), function (req
         TransportMode: body.transportMode,
         Preferences: body.preferences,
         Accommodation: body.accommodation,
+        ArrivalPoint: body.arrivalPoint,
+        DeparturePoint: body.departurePoint,
         LivingPreference: body.livingPreference,
         Days: body.days
     });

@@ -68,6 +68,19 @@ function extractOtherPrefs(message) {
         extracted.transportMode = 'public_transit';
     }
 
+    // Best-effort only — this is a rare-path fallback (the real /nlu/extract
+    // call is the primary path, see nluExtraction.js), and unlike the closed
+    // vocabularies above, a place name has no fixed set of values to match
+    // against. Captures whatever follows a recognizable trigger phrase up to
+    // the next clause boundary; anything that doesn't match one of these
+    // phrasings just leaves the field unset, same as if nothing was said —
+    // the intake stage machine re-asks rather than failing.
+    var arrivalMatch = text.match(/\b(?:arriv\w*\s+(?:at|via|through|from|in)|flying into|landing at)\s+([^,.\n]+)/);
+    if (arrivalMatch) extracted.arrivalPoint = arrivalMatch[1].trim();
+
+    var departureMatch = text.match(/\b(?:depart\w*\s+(?:from|via)|leaving from|flying (?:out of|back from))\s+([^,.\n]+)/);
+    if (departureMatch) extracted.departurePoint = departureMatch[1].trim();
+
     return extracted;
 }
 

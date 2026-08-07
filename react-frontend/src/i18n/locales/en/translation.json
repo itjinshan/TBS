@@ -28,7 +28,9 @@
       "numOfTravelers": "Travelers",
       "budget": "Budget",
       "pace": "Pace",
-      "transportMode": "Getting Around"
+      "transportMode": "Getting Around",
+      "arrivalPoint": "Arriving From",
+      "departurePoint": "Departing From"
     },
     "notSetYet": "Not set yet",
     "budgetOptions": {
@@ -117,10 +119,8 @@
     },
     "day": "Day {{number}}",
     "loadingMap": "Loading map...",
-    "map": {
-      "yourLocationTitle": "Your Location",
-      "yourLocationContent": "You are here!"
-    }
+    "arrivingVia": "Arriving via",
+    "departingFrom": "Departing from"
   },
   "footer": {
     "company": "Company",

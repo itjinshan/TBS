@@ -39,10 +39,37 @@ const SpotSchema = new Schema({
     Photo: { type: String } // frontend placeholder only, not sourced by DS-Service
 }, { _id: false });
 
+// Shared shape for a resolved real-world place (Amap-looked-up or an
+// unverified fallback with null Lat/Lng — see Services/amapPlaces.js and
+// APIs/trip.js's lookupPlaceCandidates). Used for the trip-level
+// ArrivalPoint/DeparturePoint below.
+const PlacePointSchema = new Schema({
+    Name: { type: String },
+    Address: { type: String },
+    Latitude: { type: Number },
+    Longitude: { type: Number }
+}, { _id: false });
+
+// One stop in a day's visible route, in visiting order — built by
+// Services/itineraryPlanner.js's buildRoute(). "arrival"/"departure" only
+// ever appear on day 1/the last day respectively; "accommodation" brackets
+// every day's spots (a day starts and ends back at the traveler's lodging);
+// "spot" mirrors that day's Spots array, in the same order. Purely for the
+// Itinerary map's route line — the spot cards themselves still read from
+// Spots, not this.
+const RouteStopSchema = new Schema({
+    Type: { type: String, enum: ['arrival', 'accommodation', 'spot', 'departure'], required: true },
+    Name: { type: String },
+    Address: { type: String },
+    Latitude: { type: Number },
+    Longitude: { type: Number }
+}, { _id: false });
+
 const DaySchema = new Schema({
     DayNumber: { type: Number, required: true },
     Date: { type: Date },
-    Spots: [SpotSchema]
+    Spots: [SpotSchema],
+    Route: [RouteStopSchema]
 }, { _id: false });
 
 // Anchors each day's starting location (see CLAUDE.md, "Planned: Lodging
@@ -92,6 +119,12 @@ const TripSchema = new Schema({
     },
     Accommodation: {
         type: AccommodationSchema
+    },
+    ArrivalPoint: {
+        type: PlacePointSchema
+    },
+    DeparturePoint: {
+        type: PlacePointSchema
     },
     LivingPreference: {
         type: String
