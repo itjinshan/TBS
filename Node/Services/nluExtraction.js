@@ -38,8 +38,16 @@ function extractDestination(message) {
     });
 }
 
-function extractOtherPrefs(message) {
-    return callExtract(message, ['duration', 'numOfTravelers', 'budget', 'pace', 'transportMode', 'arrivalPoint', 'departurePoint']).then(function (extracted) {
+// `context` disambiguates which field a free-text answer is meant to fill —
+// same mechanism as extractYesNo below. Without it, an ambiguous answer
+// (e.g. a bare place name mid-OTHER_PREFS) gets extracted blind across all
+// seven fields and can land in the wrong one (see CLAUDE.md Bugs: a
+// departurePoint answer getting misfiled as a fresh arrivalPoint). Optional
+// and defaults to undefined so callers with no single pending field (e.g.
+// the initial freeform trip description) keep today's blind-extraction
+// behavior.
+function extractOtherPrefs(message, context) {
+    return callExtract(message, ['duration', 'numOfTravelers', 'budget', 'pace', 'transportMode', 'arrivalPoint', 'departurePoint'], context).then(function (extracted) {
         var result = {};
         if (isPresent(extracted.duration)) result.duration = extracted.duration;
         if (isPresent(extracted.numOfTravelers)) result.numOfTravelers = extracted.numOfTravelers;
