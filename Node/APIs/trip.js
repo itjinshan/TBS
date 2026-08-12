@@ -232,7 +232,7 @@ router.post('/intake', function (req, res) {
         }
 
         case STAGES.BUDGET_LIVING_PREF: {
-            nluExtraction.extractOtherPrefs(message)
+            nluExtraction.extractOtherPrefs(message, "the traveler's lodging budget style (budget, mid-range, or luxury)")
                 .then(function (budgetPrefs) {
                     var livingPrefFields = { livingPreference: message.trim() };
                     if (budgetPrefs.budget) livingPrefFields.budget = budgetPrefs.budget;
@@ -249,7 +249,15 @@ router.post('/intake', function (req, res) {
         }
 
         case STAGES.OTHER_PREFS: {
-            nluExtraction.extractOtherPrefs(message)
+            // The message being handled here is the traveler's answer to
+            // whichever question nextOtherPrefQuestion asked last turn — tripBrief
+            // hasn't been merged with this answer yet, so recomputing it now
+            // reliably recovers that same pending field. Passed through as
+            // extractOtherPrefs' context so an ambiguous answer (e.g. a bare
+            // place name) lands in the field actually being asked about instead
+            // of getting guessed across all seven (see CLAUDE.md Bugs).
+            var pendingQuestion = nextOtherPrefQuestion(tripBrief);
+            nluExtraction.extractOtherPrefs(message, pendingQuestion && pendingQuestion.question)
                 .then(function (otherPrefFields) {
                     return resolvePlacePointFields(otherPrefFields, tripBrief.destination);
                 })
@@ -330,14 +338,16 @@ router.post('/generate', function (req, res) {
             if (!spots.length) {
                 return res.json(generateFallbackItinerary(tripBrief));
             }
-            var days = arrangeIntoDays(spots, duration, tripBrief.accommodation, tripBrief.pace, tripBrief.transportMode, tripBrief.arrivalPoint, tripBrief.departurePoint);
-            res.json({
-                destination: tripBrief.destination,
-                days: days,
-                accommodation: tripBrief.accommodation || null,
-                arrivalPoint: tripBrief.arrivalPoint || null,
-                departurePoint: tripBrief.departurePoint || null
-            });
+            return arrangeIntoDays(spots, duration, tripBrief.accommodation, tripBrief.pace, tripBrief.transportMode, tripBrief.arrivalPoint, tripBrief.departurePoint)
+                .then(function (days) {
+                    res.json({
+                        destination: tripBrief.destination,
+                        days: days,
+                        accommodation: tripBrief.accommodation || null,
+                        arrivalPoint: tripBrief.arrivalPoint || null,
+                        departurePoint: tripBrief.departurePoint || null
+                    });
+                });
         })
         .catch(function (err) {
             console.error('Real itinerary generation failed, falling back:', err.message);
