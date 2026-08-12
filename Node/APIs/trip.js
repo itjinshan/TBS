@@ -5,7 +5,7 @@ require('../Config/passport')(passport);
 var axios = require('axios');
 var Trip = require('../DB_Models/DB_Trip');
 var { generateFallbackItinerary } = require('../Services/fallbackItinerary');
-var { arrangeIntoDays, SPOTS_PER_DAY, SPOT_REQUEST_BUFFER_MULTIPLIER } = require('../Services/itineraryPlanner');
+var { arrangeIntoDays, replaceSpotInDay, SPOTS_PER_DAY, SPOT_REQUEST_BUFFER_MULTIPLIER } = require('../Services/itineraryPlanner');
 var spotSourcing = require('../Services/spotSourcing');
 var nluExtraction = require('../Services/nluExtraction');
 var amapPlaces = require('../Services/amapPlaces');
@@ -26,6 +26,12 @@ var STAGES = {
     SUGGEST_ACCOMMODATION: 'suggest_accommodation',
     READY: 'ready'
 };
+
+// Conversation stages for the Itinerary page's post-generation refinement
+// chatbot (POST /trip/refine, below) — a separate, simpler stage machine
+// from STAGES above, since this conversation starts fresh once an itinerary
+// already exists rather than building one up field by field.
+var REFINE_STAGES = { CONFIRM: 'confirm', EDITING: 'editing', DONE: 'done' };
 
 var OTHER_PREF_QUESTIONS = {
     duration: "How many days are you planning to travel?",
@@ -353,6 +359,88 @@ router.post('/generate', function (req, res) {
             console.error('Real itinerary generation failed, falling back:', err.message);
             res.json(generateFallbackItinerary(tripBrief));
         });
+});
+
+// Targeted edits to an already-generated itinerary, from the Itinerary
+// page's persistent refinement chatbot — see CLAUDE.md, "Redesign the
+// Itinerary page around a persistent chatbot". Fully stateless, same
+// pattern as /intake and /generate: the client resends the full itinerary
+// object every turn (the same shape /generate returns) rather than this
+// route addressing a saved Mongo `_id` — nothing here touches the DB, so
+// DB_Trip.js's Days/Spots sub-schemas being `{ _id: false }` never comes
+// into play. Persistence stays the existing separate, explicit saveTrip()
+// action, which naturally picks up whatever edits happened first.
+router.post('/refine', function (req, res) {
+    var message = req.body.message || '';
+    var itinerary = req.body.itinerary;
+    var stage = req.body.refinementStage || REFINE_STAGES.CONFIRM;
+
+    if (!itinerary || !Array.isArray(itinerary.days)) {
+        return res.status(400).json({ message: 'Missing required field: itinerary' });
+    }
+
+    function respond(reply, nextStage, updatedItinerary) {
+        var payload = { reply: reply, stage: nextStage };
+        if (updatedItinerary) payload.itinerary = updatedItinerary;
+        res.json(payload);
+    }
+    function respondError(err) {
+        console.error('Trip refine error:', err);
+        res.status(502).json({ message: 'Something went wrong while processing that — please try again.' });
+    }
+
+    switch (stage) {
+        case REFINE_STAGES.CONFIRM: {
+            nluExtraction.extractYesNo(message, 'whether the traveler wants to change anything about the generated itinerary')
+                .then(function (choice) {
+                    if (choice === 'yes') {
+                        respond('Sure — what would you like to change? (e.g. "swap day 2\'s museum for something more outdoorsy")', REFINE_STAGES.EDITING);
+                    } else if (choice === 'no') {
+                        // Extension point for CLAUDE.md's logged Bug
+                        // ("Accommodation suggestions are prompted during
+                        // intake, before the itinerary exists"): once that
+                        // fix lands, a "no" here should move straight into
+                        // settling accommodation (search near the generated
+                        // spots' centroid, present results, let the
+                        // traveler pick) instead of just ending the
+                        // conversation. Deliberately left as a comment
+                        // hook — out of scope for this PR, see that Bug's
+                        // own fix design.
+                        respond('Great — enjoy your trip!', REFINE_STAGES.DONE);
+                    } else {
+                        respond('Just to confirm — would you like to change anything about this plan? (yes/no)', REFINE_STAGES.CONFIRM);
+                    }
+                })
+                .catch(respondError);
+            break;
+        }
+
+        case REFINE_STAGES.EDITING:
+        case REFINE_STAGES.DONE: {
+            // Any message once past the initial confirm — including one sent
+            // after previously answering "no" — is treated as an edit
+            // instruction; a traveler changing their mind later is the same
+            // operation "yes" up front would have led to.
+            nluExtraction.extractSpotSwap(message, 'identifying which day, which existing spot, and what kind of replacement the traveler wants for their itinerary')
+                .then(function (swap) {
+                    if (!swap.dayNumber) {
+                        return respond('Which day is this for, and what would you like changed? (e.g. "day 2, swap the museum for something more outdoorsy")', REFINE_STAGES.EDITING);
+                    }
+                    return replaceSpotInDay(itinerary, swap.dayNumber, swap.targetSpotHint, swap.replacementCategory)
+                        .then(function (result) {
+                            if (!result.ok) {
+                                return respond(result.reply, REFINE_STAGES.EDITING);
+                            }
+                            respond(result.reply + ' Anything else you\'d like to change?', REFINE_STAGES.EDITING, result.itinerary);
+                        });
+                })
+                .catch(respondError);
+            break;
+        }
+
+        default:
+            respond('Want to change anything about this plan? (yes/no)', REFINE_STAGES.CONFIRM);
+    }
 });
 
 router.post('/', passport.authenticate('jwt', { session: false }), function (req, res) {

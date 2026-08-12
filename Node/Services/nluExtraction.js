@@ -74,4 +74,23 @@ function extractYesNo(message, context) {
     });
 }
 
-module.exports = { extractDestination, extractOtherPrefs, extractYesNo };
+// Parses a free-text itinerary-edit instruction (e.g. "swap day 2's museum
+// for something more outdoorsy") into which day, which existing spot
+// (a name/description hint, not necessarily an exact match), and what
+// category of replacement the traveler wants. No rule-based fallback here —
+// there's no regex equivalent for this shape of extraction — a DS-Service
+// failure just resolves to {}, letting the caller re-ask instead of guessing.
+function extractSpotSwap(message, context) {
+    return callExtract(message, ['dayNumber', 'targetSpotHint', 'replacementCategory'], context).then(function (extracted) {
+        var result = {};
+        if (isPresent(extracted.dayNumber)) result.dayNumber = Number(extracted.dayNumber);
+        if (isPresent(extracted.targetSpotHint)) result.targetSpotHint = extracted.targetSpotHint;
+        if (isPresent(extracted.replacementCategory)) result.replacementCategory = extracted.replacementCategory;
+        return result;
+    }).catch(function (err) {
+        console.error('NLU spot-swap extraction failed:', err.message);
+        return {};
+    });
+}
+
+module.exports = { extractDestination, extractOtherPrefs, extractYesNo, extractSpotSwap };
