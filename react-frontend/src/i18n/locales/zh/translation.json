@@ -120,7 +120,14 @@
     "day": "第 {{number}} 天",
     "loadingMap": "地图加载中…",
     "arrivingVia": "抵达方式",
-    "departingFrom": "出发地点"
+    "departingFrom": "出发地点",
+    "chat": {
+      "title": "调整你的行程",
+      "toggle": "切换聊天面板",
+      "answerPlaceholder": "输入你的回答…",
+      "send": "发送",
+      "errorFallback": "出了点问题，请重试。"
+    }
   },
   "footer": {
     "company": "公司",

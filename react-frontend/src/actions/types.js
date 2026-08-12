@@ -45,3 +45,15 @@ export const SET_ITINERARY_LOADING = "SET_ITINERARY_LOADING";
 export const SET_ITINERARY = "SET_ITINERARY";
 export const TRIP_ERRORS = "TRIP_ERRORS";
 export const RESET_TRIP = "RESET_TRIP";
+
+// ITINERARY-PAGE REFINEMENT CHAT — a separate conversation/stage machine
+// from trip intake above, so it gets its own message list/loading/error
+// fields rather than reusing ADD_TRIP_MESSAGE/SET_ITINERARY_LOADING/
+// TRIP_ERRORS (which would interleave the two conversations if the user
+// ever navigated back to `/` mid-refinement).
+export const ADD_REFINEMENT_MESSAGE = "ADD_REFINEMENT_MESSAGE";
+export const SET_REFINEMENT_STAGE = "SET_REFINEMENT_STAGE";
+export const SET_REFINEMENT_LOADING = "SET_REFINEMENT_LOADING";
+export const REFINEMENT_ERRORS = "REFINEMENT_ERRORS";
+export const RESET_REFINEMENT = "RESET_REFINEMENT";
+export const UPDATE_ITINERARY = "UPDATE_ITINERARY";

@@ -7,6 +7,7 @@ import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import withRouter from "../../utils/withRouter";
 import { saveTrip } from "../../actions/tripAction";
+import ItineraryChatPanel from './ItineraryChatPanel';
 import './Itinerary.css';
 // fallback photos, keyed by the placeholder `Photo` value the backend
 // assigns when a real per-spot photo lookup (Services/spotPhotos.js) found
@@ -15,6 +16,12 @@ import HawaiiWall from "../../images/hawaii-wall.jpg";
 import KyotoWall from "../../images/Kyoto-wall.jpg";
 import NYWall from "../../images/ny-wall.jpg";
 import ShanghaiWall from "../../images/Shanghai-wall.jpg";
+
+// Kept in sync with ItineraryChatPanel.css's .itin-chat-panel.open/.collapsed
+// widths — the container below is shrunk by exactly this much so the two
+// never overlap or gap.
+const CHAT_PANEL_WIDTH = 380;
+const CHAT_PANEL_COLLAPSED_WIDTH = 56;
 
 const PLACEHOLDER_PHOTOS = {
   hawaii: HawaiiWall,
@@ -68,6 +75,17 @@ const Itinerary = ({ auth }) => {
   const geolocationRef = useRef(null);
 
   const [markers, setMarkers] = useState(() => spotsToMarkers(itinerary));
+  const [chatOpen, setChatOpen] = useState(true);
+
+  // Keeps the map's markers in sync with `itinerary` itself, not just the
+  // mount-time snapshot above — needed now that POST /trip/refine (via the
+  // Itinerary-page chat panel) can mutate `itinerary` in place while this
+  // page stays mounted. Without this, a post-swap itinerary would update
+  // the day-list cards (read directly from the itinerary selector) but
+  // leave stale map pins.
+  useEffect(() => {
+    setMarkers(spotsToMarkers(itinerary));
+  }, [itinerary]);
 
   // Initialize map when AMap is loaded
   useEffect(() => {
@@ -291,7 +309,12 @@ const Itinerary = ({ auth }) => {
   }
 
   return (
-    <div className="container" ref={containerRef}>
+    <div className="itinerary-page">
+    <div
+      className="container"
+      ref={containerRef}
+      style={{ width: `calc(100vw - ${chatOpen ? CHAT_PANEL_WIDTH : CHAT_PANEL_COLLAPSED_WIDTH}px)` }}
+    >
       {/* Left Panel - Day-by-day itinerary */}
       <div className="left-panel" style={{ width: `${splitRatio}%` }}>
         <div className="day-list">
@@ -369,6 +392,8 @@ const Itinerary = ({ auth }) => {
           </>
         )}
       </div>
+    </div>
+    <ItineraryChatPanel open={chatOpen} onToggle={() => setChatOpen((o) => !o)} />
     </div>
   );
 };

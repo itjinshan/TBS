@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes, useLocation } from "react-router-dom";
 import PrivateRoute from "./utils/PrivateRoute";
 
 import NavBar from "./components/layout/Navbar"
@@ -28,6 +28,16 @@ import Itinerary from "./components/itinerary/Itinerary"
 import { Provider } from "react-redux";
 import { store } from "./store";
 
+// Superseded by the docked ItineraryChatPanel on the Itinerary page — avoid
+// two overlapping chat entry points (the floating "Need help?" bubble sits
+// bottom-right, same corner a right-docked chat panel would occupy) on the
+// same page. See components/itinerary/ItineraryChatPanel.js.
+const GlobalLLMChatBot = () => {
+  const location = useLocation();
+  if (location.pathname === '/itinerary') return null;
+  return <LLMChatBot />;
+};
+
 
 // App class
 //
@@ -51,7 +61,7 @@ export default class App extends Component {
               </Routes>
             </div>
             <Footer />
-            <LLMChatBot />
+            <GlobalLLMChatBot />
             </div>
         </Router>
       </Provider>
