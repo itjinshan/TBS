@@ -16,12 +16,18 @@ const ItineraryChatPanel = ({ open, onToggle }) => {
   const { refinementMessages, isRefining, refinementError } = useSelector((state) => state.trip);
   const [inputValue, setInputValue] = useState('');
   const messagesRef = useRef(null);
+  const hasStartedRef = useRef(false);
 
   // Opens the confirm-then-modify conversation once, the first time this
   // panel mounts with nothing in it yet — a static local message, no
-  // backend round-trip.
+  // backend round-trip. Guarded by a ref (not just refinementMessages.length)
+  // because React.StrictMode (see src/index.js) double-invokes effects in
+  // dev — both invocations would otherwise still see an empty message list
+  // before the first dispatch's state update commits, producing two
+  // identical opening messages instead of one.
   useEffect(() => {
-    if (refinementMessages.length === 0) {
+    if (!hasStartedRef.current && refinementMessages.length === 0) {
+      hasStartedRef.current = true;
       dispatch(startRefinementConversation());
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
