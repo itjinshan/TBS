@@ -10,7 +10,8 @@ import {
     SET_REFINEMENT_LOADING,
     REFINEMENT_ERRORS,
     RESET_REFINEMENT,
-    UPDATE_ITINERARY
+    UPDATE_ITINERARY,
+    SET_ACCOMMODATION_CANDIDATES
 } from "./types";
 import axios from "axios";
 
@@ -79,7 +80,14 @@ export const saveTrip = () => (dispatch, getState) => {
             pace: tripBrief.pace,
             transportMode: tripBrief.transportMode,
             preferences: tripBrief.preferences,
-            accommodation: tripBrief.accommodation,
+            // itinerary.accommodation, not tripBrief.accommodation — the
+            // no-place path never sets accommodation on tripBrief at all
+            // anymore (see CLAUDE.md's resolved accommodation-timing bug);
+            // a post-generation pick via the refinement chat only ever
+            // lands on itinerary.accommodation (see itineraryPlanner.js's
+            // applyAccommodation()), which is the authoritative post-edit
+            // state here, same as itinerary.days already is below.
+            accommodation: itinerary.accommodation,
             arrivalPoint: tripBrief.arrivalPoint,
             departurePoint: tripBrief.departurePoint,
             livingPreference: tripBrief.livingPreference,
@@ -111,15 +119,24 @@ export const sendRefinementMessage = (message) => (dispatch, getState) => {
     dispatch({ type: ADD_REFINEMENT_MESSAGE, payload: { text: message, sender: 'user' } });
     dispatch({ type: SET_REFINEMENT_LOADING, payload: true });
 
-    const { itinerary, refinementStage } = getState().trip;
+    const { itinerary, refinementStage, accommodationCandidates } = getState().trip;
 
     return axios
-        .post('/trip/refine', { message, itinerary, refinementStage })
+        // accommodationCandidates is resent the same way itinerary/
+        // refinementStage are — /trip/refine is fully stateless, so the
+        // client must resend whatever candidate list REFINE_STAGES.
+        // PICK_ACCOMMODATION last presented (same pattern /trip/intake
+        // already uses for its own accommodationCandidates).
+        .post('/trip/refine', { message, itinerary, refinementStage, accommodationCandidates })
         .then(res => {
-            const { reply, stage, itinerary: updatedItinerary } = res.data;
+            const { reply, stage, itinerary: updatedItinerary, accommodationCandidates: newCandidates } = res.data;
             if (updatedItinerary) {
                 dispatch({ type: UPDATE_ITINERARY, payload: updatedItinerary });
             }
+            // Cleared automatically once the flow moves past picking — the
+            // server only includes accommodationCandidates in its response
+            // while presenting/re-prompting the list.
+            dispatch({ type: SET_ACCOMMODATION_CANDIDATES, payload: newCandidates || [] });
             dispatch({ type: ADD_REFINEMENT_MESSAGE, payload: { text: reply, sender: 'bot' } });
             dispatch({ type: SET_REFINEMENT_STAGE, payload: stage });
             dispatch({ type: SET_REFINEMENT_LOADING, payload: false });

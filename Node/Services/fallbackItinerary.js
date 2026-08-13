@@ -141,7 +141,7 @@ function generateFallbackItinerary(tripBrief) {
         };
     });
 
-    return { destination, days, accommodation: tripBrief.accommodation || null };
+    return { destination, days, accommodation: tripBrief.accommodation || null, budget: tripBrief.budget || null };
 }
 
 module.exports = { generateFallbackItinerary };

@@ -10,7 +10,8 @@ import {
     SET_REFINEMENT_LOADING,
     REFINEMENT_ERRORS,
     RESET_REFINEMENT,
-    UPDATE_ITINERARY
+    UPDATE_ITINERARY,
+    SET_ACCOMMODATION_CANDIDATES
 } from "../actions/types";
 
 const initialState = {
@@ -21,8 +22,9 @@ const initialState = {
     error: null,
     refinementMessages: [],
     isRefining: false,
-    refinementStage: null, // null | 'confirm' | 'editing' | 'done'
-    refinementError: null
+    refinementStage: null, // null | 'confirm' | 'editing' | 'pick_accommodation' | 'done'
+    refinementError: null,
+    accommodationCandidates: []
 };
 
 export default function (state = initialState, action) {
@@ -82,12 +84,18 @@ export default function (state = initialState, action) {
                 refinementMessages: [],
                 isRefining: false,
                 refinementStage: null,
-                refinementError: null
+                refinementError: null,
+                accommodationCandidates: []
             };
         case UPDATE_ITINERARY:
             return {
                 ...state,
                 itinerary: action.payload
+            };
+        case SET_ACCOMMODATION_CANDIDATES:
+            return {
+                ...state,
+                accommodationCandidates: action.payload
             };
         default:
             return state;

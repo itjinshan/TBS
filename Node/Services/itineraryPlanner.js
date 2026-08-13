@@ -131,6 +131,28 @@ function computeCentroid(spots) {
     return { Latitude: sum.lat / spots.length, Longitude: sum.lng / spots.length };
 }
 
+// Sorts accommodation candidates by distance from the itinerary's actual
+// spot centroid, nearest first — the proximity-biasing DS-Service's
+// /datasourcing/sourceaccommodations contract doesn't support yet (city+
+// budget only, see DS-Service's CLAUDE.md). Lives here rather than in
+// APIs/trip.js so it can reuse computeCentroid/haversineDistance directly
+// without exporting either of those low-level private helpers — same
+// encapsulation convention this file already follows (buildRoute stays
+// private too, exposed only via composed operations like arrangeIntoDays/
+// replaceSpotInDay). Candidates with no real coordinates (the fallback/
+// unverified placeholder pair from trip.js's fallbackSuggestions()) sort to
+// the end rather than being dropped — same graceful-degradation contract
+// suggestAccommodations() already has. No spots yet (e.g. a fallback
+// itinerary with none sourced) returns candidates in their original order.
+function sortAccommodationsByProximity(candidates, spots) {
+    if (!spots.length) return candidates.slice();
+    const anchor = computeCentroid(spots);
+    const withCoords = candidates.filter(hasCoordinates);
+    const withoutCoords = candidates.filter((c) => !hasCoordinates(c));
+    withCoords.sort((a, b) => haversineDistance(anchor, a) - haversineDistance(anchor, b));
+    return withCoords.concat(withoutCoords);
+}
+
 // Accommodation only has real coordinates once it's gone through a real
 // lookup (Amap has-a-place path, or a real DS-Service suggestion) — a
 // placeholder/unverified accommodation still has null Lat/Lng, so this
@@ -405,4 +427,31 @@ async function replaceSpotInDay(itinerary, dayNumber, targetSpotHint, replacemen
     };
 }
 
-module.exports = { arrangeIntoDays, replaceSpotInDay, SPOTS_PER_DAY, SPOT_REQUEST_BUFFER_MULTIPLIER };
+// Applies a traveler's post-generation accommodation pick (see
+// APIs/trip.js's REFINE_STAGES.PICK_ACCOMMODATION) and recomputes every
+// day's Route, since buildRoute() takes accommodation as a bookend
+// parameter for every day, not just one. Unlike replaceSpotInDay, this
+// touches every day (not just one), but deliberately still does NOT touch
+// Spots or day clustering — re-clustering all spots around a new anchor is
+// the same kind of expensive, not-well-defined "regenerate everything"
+// operation replaceSpotInDay's own doc comment already argues against;
+// picking a hotel doesn't change which spots exist or which day they're
+// in, only where each day's route starts/ends. Synchronous (no DS-Service
+// call needed, unlike replaceSpotInDay), and assumes itinerary.days is in
+// DayNumber-ascending array order — the same assumption arrangeIntoDays's
+// own output already guarantees and replaceSpotInDay's splice preserves.
+// Works unmodified even on a day object with no Route field at all (e.g.
+// fallbackItinerary.js's output) since buildRoute() is always called fresh
+// here rather than reading the day's existing Route.
+function applyAccommodation(itinerary, accommodation) {
+    const days = itinerary.days || [];
+    const newDays = days.map((day, i) => {
+        const daySpots = day.Spots || [];
+        return Object.assign({}, day, {
+            Route: buildRoute(daySpots, i, days.length, accommodation, itinerary.arrivalPoint, itinerary.departurePoint)
+        });
+    });
+    return Object.assign({}, itinerary, { accommodation, days: newDays });
+}
+
+module.exports = { arrangeIntoDays, replaceSpotInDay, applyAccommodation, sortAccommodationsByProximity, SPOTS_PER_DAY, SPOT_REQUEST_BUFFER_MULTIPLIER };

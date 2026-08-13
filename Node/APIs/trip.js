@@ -5,7 +5,7 @@ require('../Config/passport')(passport);
 var axios = require('axios');
 var Trip = require('../DB_Models/DB_Trip');
 var { generateFallbackItinerary } = require('../Services/fallbackItinerary');
-var { arrangeIntoDays, replaceSpotInDay, SPOTS_PER_DAY, SPOT_REQUEST_BUFFER_MULTIPLIER } = require('../Services/itineraryPlanner');
+var { arrangeIntoDays, replaceSpotInDay, applyAccommodation, sortAccommodationsByProximity, SPOTS_PER_DAY, SPOT_REQUEST_BUFFER_MULTIPLIER } = require('../Services/itineraryPlanner');
 var spotSourcing = require('../Services/spotSourcing');
 var nluExtraction = require('../Services/nluExtraction');
 var amapPlaces = require('../Services/amapPlaces');
@@ -23,7 +23,6 @@ var STAGES = {
     ACCOMMODATION_CONFIRM: 'accommodation_confirm',
     BUDGET_LIVING_PREF: 'budget_living_pref',
     OTHER_PREFS: 'other_prefs',
-    SUGGEST_ACCOMMODATION: 'suggest_accommodation',
     READY: 'ready'
 };
 
@@ -31,7 +30,7 @@ var STAGES = {
 // chatbot (POST /trip/refine, below) — a separate, simpler stage machine
 // from STAGES above, since this conversation starts fresh once an itinerary
 // already exists rather than building one up field by field.
-var REFINE_STAGES = { CONFIRM: 'confirm', EDITING: 'editing', DONE: 'done' };
+var REFINE_STAGES = { CONFIRM: 'confirm', EDITING: 'editing', PICK_ACCOMMODATION: 'pick_accommodation', DONE: 'done' };
 
 var OTHER_PREF_QUESTIONS = {
     duration: "How many days are you planning to travel?",
@@ -119,10 +118,15 @@ function fallbackSuggestions(tripBrief) {
     ];
 }
 
-// Real suggestions via DS-Service's POST /datasourcing/sourceaccommodations
-// (see CLAUDE.md, "Planned: Lodging Flow", action item #6). Falls back to a
-// placeholder pair — today's prior behavior — if DS-Service is unreachable
-// or returns nothing, so the stage machine keeps moving either way.
+// Real suggestions via DS-Service's POST /datasourcing/sourceaccommodations.
+// No longer called during intake (see CLAUDE.md's resolved accommodation-
+// timing bug) — now called post-generation, from /refine's
+// REFINE_STAGES.PICK_ACCOMMODATION flow (settleAccommodation() below), with
+// a `{ destination, budget }`-shaped pseudo-brief built from the itinerary
+// object rather than a real tripBrief — this function only ever reads those
+// two fields, so it works unmodified. Falls back to a placeholder pair if
+// DS-Service is unreachable or returns nothing, so the stage machine keeps
+// moving either way.
 function suggestAccommodations(tripBrief) {
     var accessToken = generateAccessToken('', 'deepseek');
     return axios.post(process.env.DS_SERVICE_BASEURL + '/datasourcing/sourceaccommodations', {
@@ -142,6 +146,35 @@ function suggestAccommodations(tripBrief) {
         console.error('Accommodation suggestion lookup failed:', err.message);
         return fallbackSuggestions(tripBrief);
     });
+}
+
+// Sources hotel candidates near the itinerary's actual spots — not a
+// city-wide search — once the traveler has confirmed they're happy with the
+// generated plan (POST /refine's REFINE_STAGES.CONFIRM "no" branch).
+// DS-Service's /datasourcing/sourceaccommodations still only accepts
+// city+budget (no location-biasing parameter — a documented future
+// enhancement on DS-Service's side), so this reuses suggestAccommodations()
+// as-is and sorts the result TBS-side by distance to the spot centroid
+// instead — the same over-fetch/client-side-filter precedent this codebase
+// already used for spot-swap replacement sourcing (see itineraryPlanner.js's
+// findReplacementSpot). A single TBS-side change, no DS-Service contract
+// change, no cross-repo dependency.
+function settleAccommodation(itinerary) {
+    var allSpots = (itinerary.days || []).reduce(function (acc, day) {
+        return acc.concat(day.Spots || []);
+    }, []);
+    var budget = itinerary.budget || 'mid-range'; // matches DB_Trip.js's Budget schema default
+    return suggestAccommodations({ destination: itinerary.destination, budget: budget })
+        .then(function (candidates) {
+            var sorted = sortAccommodationsByProximity(candidates, allSpots);
+            var listing = sorted.map(function (c, i) {
+                return (i + 1) + '. ' + c.Name + '\n' + c.Address;
+            }).join('\n\n');
+            var reply = "Now let's settle your accommodation — here are some options near where you'll actually be visiting:\n\n" +
+                listing +
+                '\n\nWhich one would you like to go with? (you can also click a marker on the map)';
+            return { reply: reply, candidates: sorted };
+        });
 }
 
 router.post('/intake', function (req, res) {
@@ -247,7 +280,12 @@ router.post('/intake', function (req, res) {
                     if (firstOtherQuestion) {
                         respond(livingPrefFields, 'Got it. ' + firstOtherQuestion.question, STAGES.OTHER_PREFS);
                     } else {
-                        respond(livingPrefFields, "Got it — I've got everything I need. Let me pull together some lodging suggestions.", STAGES.SUGGEST_ACCOMMODATION);
+                        // No hotel prompt during intake (see CLAUDE.md's
+                        // resolved accommodation-timing bug) — settling
+                        // accommodation happens on the Itinerary page after
+                        // the traveler has actually seen the generated spots
+                        // (POST /refine's REFINE_STAGES.PICK_ACCOMMODATION).
+                        respond(livingPrefFields, "Don't worry — we'll generate the itinerary first, then recommend a more suitable hotel based on where you'll actually be visiting. Hit Generate Itinerary whenever you're ready!", STAGES.READY);
                     }
                 })
                 .catch(respondError);
@@ -274,38 +312,17 @@ router.post('/intake', function (req, res) {
                     if (otherQuestion) {
                         respond(otherPrefFields, otherQuestion.question, STAGES.OTHER_PREFS);
                     } else if (mergedBrief.accommodationChoice === 'no_place') {
-                        return suggestAccommodations(mergedBrief)
-                            .then(function (suggestions) {
-                                otherPrefFields.accommodationSuggestions = suggestions;
-                                var suggestionListing = suggestions.map(function (s, i) {
-                                    return (i + 1) + '. ' + s.Name + '\n' + s.Address;
-                                }).join('\n\n');
-                                var suggestionReply = 'Here are a few lodging options that fit your budget:\n\n' +
-                                    suggestionListing +
-                                    '\n\nWhich one would you like to go with?';
-                                respond(otherPrefFields, suggestionReply, STAGES.SUGGEST_ACCOMMODATION);
-                            });
+                        // No hotel prompt during intake (see CLAUDE.md's
+                        // resolved accommodation-timing bug) — settling
+                        // accommodation happens on the Itinerary page after
+                        // the traveler has actually seen the generated spots
+                        // (POST /refine's REFINE_STAGES.PICK_ACCOMMODATION).
+                        respond(otherPrefFields, "Don't worry — we'll generate the itinerary first, then recommend a more suitable hotel based on where you'll actually be visiting. Hit Generate Itinerary whenever you're ready!", STAGES.READY);
                     } else {
                         respond(otherPrefFields, "I've got everything I need — hit Generate Itinerary whenever you're ready!", STAGES.READY);
                     }
                 })
                 .catch(respondError);
-            break;
-        }
-
-        case STAGES.SUGGEST_ACCOMMODATION: {
-            var suggestionList = tripBrief.accommodationSuggestions || [];
-            var pickedSuggestion = pickFromList(suggestionList, message) || suggestionList[0];
-
-            if (pickedSuggestion) {
-                respond(
-                    { accommodation: Object.assign({}, pickedSuggestion, { Source: 'suggested' }) },
-                    'Great choice — ' + pickedSuggestion.Name + ". I've got everything I need — hit Generate Itinerary whenever you're ready!",
-                    STAGES.READY
-                );
-            } else {
-                respond({}, 'Which of those options would you like to go with?', STAGES.SUGGEST_ACCOMMODATION);
-            }
             break;
         }
 
@@ -351,7 +368,8 @@ router.post('/generate', function (req, res) {
                         days: days,
                         accommodation: tripBrief.accommodation || null,
                         arrivalPoint: tripBrief.arrivalPoint || null,
-                        departurePoint: tripBrief.departurePoint || null
+                        departurePoint: tripBrief.departurePoint || null,
+                        budget: tripBrief.budget || null
                     });
                 });
         })
@@ -379,9 +397,10 @@ router.post('/refine', function (req, res) {
         return res.status(400).json({ message: 'Missing required field: itinerary' });
     }
 
-    function respond(reply, nextStage, updatedItinerary) {
+    function respond(reply, nextStage, updatedItinerary, extra) {
         var payload = { reply: reply, stage: nextStage };
         if (updatedItinerary) payload.itinerary = updatedItinerary;
+        if (extra) Object.assign(payload, extra);
         res.json(payload);
     }
     function respondError(err) {
@@ -396,22 +415,54 @@ router.post('/refine', function (req, res) {
                     if (choice === 'yes') {
                         respond('Sure — what would you like to change? (e.g. "swap day 2\'s museum for something more outdoorsy")', REFINE_STAGES.EDITING);
                     } else if (choice === 'no') {
-                        // Extension point for CLAUDE.md's logged Bug
-                        // ("Accommodation suggestions are prompted during
-                        // intake, before the itinerary exists"): once that
-                        // fix lands, a "no" here should move straight into
-                        // settling accommodation (search near the generated
-                        // spots' centroid, present results, let the
-                        // traveler pick) instead of just ending the
-                        // conversation. Deliberately left as a comment
-                        // hook — out of scope for this PR, see that Bug's
-                        // own fix design.
+                        // itinerary.accommodation is falsy only on the
+                        // no-place intake path (see CLAUDE.md's resolved
+                        // accommodation-timing bug) — a real user-provided
+                        // pick is always a truthy object here (possibly with
+                        // null Lat/Lng if the Amap lookup failed, but still
+                        // truthy), so this never overrides an
+                        // already-booked/in-mind place.
+                        if (!itinerary.accommodation) {
+                            return settleAccommodation(itinerary).then(function (result) {
+                                respond(result.reply, REFINE_STAGES.PICK_ACCOMMODATION, null, { accommodationCandidates: result.candidates });
+                            });
+                        }
                         respond('Great — enjoy your trip!', REFINE_STAGES.DONE);
                     } else {
                         respond('Just to confirm — would you like to change anything about this plan? (yes/no)', REFINE_STAGES.CONFIRM);
                     }
                 })
                 .catch(respondError);
+            break;
+        }
+
+        case REFINE_STAGES.PICK_ACCOMMODATION: {
+            // Separate from EDITING's spot-swap parsing below — this is a
+            // plain pickFromList match against the candidate list just
+            // presented, same mechanism (and same statelessness workaround:
+            // the client must resend accommodationCandidates every turn,
+            // mirroring how /trip/intake already makes the client resend
+            // accommodationCandidates/accommodationSuggestions) as
+            // STAGES.ACCOMMODATION_CONFIRM above.
+            var candidates = req.body.accommodationCandidates || [];
+            var picked = pickFromList(candidates, message);
+
+            if (!picked) {
+                respond(
+                    'Which of those would you like to go with? (reply with the name or number, or click a marker on the map)',
+                    REFINE_STAGES.PICK_ACCOMMODATION,
+                    null,
+                    { accommodationCandidates: candidates }
+                );
+                break;
+            }
+
+            var updatedItinerary = applyAccommodation(itinerary, Object.assign({}, picked, { Source: 'suggested' }));
+            respond(
+                'Great choice — ' + picked.Name + ". I've updated your itinerary's routes around it. Anything else you'd like to change?",
+                REFINE_STAGES.EDITING,
+                updatedItinerary
+            );
             break;
         }
 

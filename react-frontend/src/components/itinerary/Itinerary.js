@@ -6,7 +6,7 @@ import useAMap from '../../hooks/useAmap';
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import withRouter from "../../utils/withRouter";
-import { saveTrip } from "../../actions/tripAction";
+import { saveTrip, sendRefinementMessage } from "../../actions/tripAction";
 import ItineraryChatPanel from './ItineraryChatPanel';
 import './Itinerary.css';
 // fallback photos, keyed by the placeholder `Photo` value the backend
@@ -44,6 +44,7 @@ function spotsToMarkers(itinerary) {
   return itinerary.days.flatMap((day) =>
     day.Spots.map((spot) => ({
       id: `${day.DayNumber}-${spot.Name}`,
+      type: 'spot',
       position: [spot.Longitude, spot.Latitude],
       title: spot.Name,
       content: spot.StreetAddress
@@ -51,11 +52,28 @@ function spotsToMarkers(itinerary) {
   );
 }
 
+// Candidates with no real coordinates (the unverified fallback pair — see
+// APIs/trip.js's fallbackSuggestions()) aren't plottable; same "leave it
+// out of the map, not the chat list" pattern buildRoute() already uses for
+// unverified route bookends server-side.
+function accommodationCandidatesToMarkers(candidates) {
+  return (candidates || [])
+    .filter((c) => typeof c.Latitude === 'number' && typeof c.Longitude === 'number')
+    .map((c) => ({
+      id: `accommodation-${c.Name}`,
+      type: 'accommodation-candidate',
+      position: [c.Longitude, c.Latitude],
+      title: c.Name,
+      content: c.Address,
+      raw: c
+    }));
+}
+
 const Itinerary = ({ auth }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { itinerary } = useSelector((state) => state.trip);
+  const { itinerary, refinementStage, accommodationCandidates } = useSelector((state) => state.trip);
   const [saveStatus, setSaveStatus] = useState('idle'); // idle | saving | saved | error
 
   // AMap hook
@@ -82,10 +100,17 @@ const Itinerary = ({ auth }) => {
   // Itinerary-page chat panel) can mutate `itinerary` in place while this
   // page stays mounted. Without this, a post-swap itinerary would update
   // the day-list cards (read directly from the itinerary selector) but
-  // leave stale map pins.
+  // leave stale map pins. Also merges in accommodation-candidate markers,
+  // alongside (not replacing) the spot markers, while the refinement chat
+  // is presenting them — the traveler picks a hotel relative to where the
+  // spots actually are, so showing both together is the point.
   useEffect(() => {
-    setMarkers(spotsToMarkers(itinerary));
-  }, [itinerary]);
+    const showCandidates = refinementStage === 'pick_accommodation';
+    setMarkers([
+      ...spotsToMarkers(itinerary),
+      ...(showCandidates ? accommodationCandidatesToMarkers(accommodationCandidates) : [])
+    ]);
+  }, [itinerary, refinementStage, accommodationCandidates]);
 
   // Initialize map when AMap is loaded
   useEffect(() => {
@@ -175,19 +200,27 @@ const Itinerary = ({ auth }) => {
       });
 
       // Create InfoWindow
+      const isAccommodationCandidate = markerData.type === 'accommodation-candidate';
       const infoWindow = new AMap.InfoWindow({
         content: `
           <div style="padding: 5px;">
-            <h3 style="margin: 0 0 5px 0;">${markerData.title}</h3>
+            <h3 style="margin: 0 0 5px 0;">${isAccommodationCandidate ? '🏨 ' : ''}${markerData.title}</h3>
             <p style="margin: 0;">${markerData.content}</p>
+            ${isAccommodationCandidate ? '<p style="margin:4px 0 0;font-size:12px;color:#666;">Click marker to choose this hotel</p>' : ''}
           </div>
         `,
         offset: new AMap.Pixel(0, -30)
       });
 
-      // Add click event to show InfoWindow
+      // Add click event to show InfoWindow — an accommodation-candidate
+      // marker also picks it, same as typing its name in the refinement
+      // chat (see ItineraryChatPanel.js / AccommodationMap.js's onSelect
+      // for the intake-flow equivalent of this interaction).
       marker.on('click', () => {
         infoWindow.open(mapInstance.current, markerData.position);
+        if (isAccommodationCandidate) {
+          dispatch(sendRefinementMessage(markerData.raw.Name));
+        }
       });
 
       markersRef.current.push(marker);
