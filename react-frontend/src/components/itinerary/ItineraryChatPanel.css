@@ -1,0 +1,129 @@
+.itin-chat-panel {
+  height: 100vh;
+  flex-shrink: 0;
+  border-left: 1px solid #e8eaed;
+  background: #fff;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.2s ease;
+}
+
+.itin-chat-panel.open {
+  width: 380px;
+}
+
+.itin-chat-panel.collapsed {
+  width: 56px;
+  align-items: center;
+}
+
+.itin-chat-toggle {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  border: none;
+  background: transparent;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #5f6368;
+  padding: 0.4rem;
+  border-radius: 6px;
+}
+
+.itin-chat-toggle:hover {
+  background: #f1f3f4;
+}
+
+.itin-chat-panel.collapsed .itin-chat-toggle {
+  position: static;
+  margin-top: 0.75rem;
+}
+
+.itin-chat-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 3rem 1.25rem 1rem;
+}
+
+.itin-chat-title {
+  margin-bottom: 0.75rem;
+  color: #202124;
+}
+
+.itin-chat-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.itin-chat-messages .itin-chat-message {
+  display: flex;
+  margin-bottom: 0.6rem;
+}
+
+.itin-chat-messages .itin-chat-message.user {
+  justify-content: flex-end;
+}
+
+.itin-chat-messages .itin-chat-message-content {
+  max-width: 80%;
+  padding: 0.6rem 1rem;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  white-space: pre-line;
+}
+
+.itin-chat-messages .itin-chat-message.bot .itin-chat-message-content {
+  background: #e8eaed;
+  color: #202124;
+}
+
+.itin-chat-messages .itin-chat-message.user .itin-chat-message-content {
+  background: #4285f4;
+  color: white;
+}
+
+.itin-chat-input-form {
+  display: flex;
+  border: 1px solid #e8eaed;
+  border-radius: 24px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.itin-chat-input-form input {
+  flex: 1;
+  border: none;
+  padding: 0.7rem 1rem;
+  font-size: 0.9rem;
+  outline: none;
+  min-width: 0;
+}
+
+.itin-chat-input-form button {
+  border: none;
+  background: #4285f4;
+  color: white;
+  padding: 0 1.3rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.itin-chat-input-form button:disabled {
+  background: #9aa0a6;
+  cursor: not-allowed;
+}
+
+.itin-chat-error {
+  color: #ea4335;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  flex-shrink: 0;
+}

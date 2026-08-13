@@ -4,7 +4,13 @@ import {
     SET_ITINERARY_LOADING,
     SET_ITINERARY,
     TRIP_ERRORS,
-    RESET_TRIP
+    RESET_TRIP,
+    ADD_REFINEMENT_MESSAGE,
+    SET_REFINEMENT_STAGE,
+    SET_REFINEMENT_LOADING,
+    REFINEMENT_ERRORS,
+    RESET_REFINEMENT,
+    UPDATE_ITINERARY
 } from "../actions/types";
 
 const initialState = {
@@ -12,7 +18,11 @@ const initialState = {
     messages: [],
     isGenerating: false,
     itinerary: null,
-    error: null
+    error: null,
+    refinementMessages: [],
+    isRefining: false,
+    refinementStage: null, // null | 'confirm' | 'editing' | 'done'
+    refinementError: null
 };
 
 export default function (state = initialState, action) {
@@ -46,6 +56,39 @@ export default function (state = initialState, action) {
             };
         case RESET_TRIP:
             return initialState;
+        case ADD_REFINEMENT_MESSAGE:
+            return {
+                ...state,
+                refinementMessages: [...state.refinementMessages, { id: state.refinementMessages.length + 1, ...action.payload }]
+            };
+        case SET_REFINEMENT_STAGE:
+            return {
+                ...state,
+                refinementStage: action.payload
+            };
+        case SET_REFINEMENT_LOADING:
+            return {
+                ...state,
+                isRefining: action.payload
+            };
+        case REFINEMENT_ERRORS:
+            return {
+                ...state,
+                refinementError: action.payload
+            };
+        case RESET_REFINEMENT:
+            return {
+                ...state,
+                refinementMessages: [],
+                isRefining: false,
+                refinementStage: null,
+                refinementError: null
+            };
+        case UPDATE_ITINERARY:
+            return {
+                ...state,
+                itinerary: action.payload
+            };
         default:
             return state;
     }

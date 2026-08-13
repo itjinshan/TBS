@@ -34,6 +34,7 @@
 // available and still fits the remaining budget.
 
 const spotPhotos = require('./spotPhotos');
+const spotSourcing = require('./spotSourcing');
 
 // Three vacation-pace tiers a traveler can pick during intake (see
 // APIs/trip.js's OTHER_PREF_FIELDS/OTHER_PREF_QUESTIONS and the "Pace" chip
@@ -309,4 +310,99 @@ async function arrangeIntoDays(spots, duration, accommodation, pace, transportMo
     }));
 }
 
-module.exports = { arrangeIntoDays, SPOTS_PER_DAY, SPOT_REQUEST_BUFFER_MULTIPLIER };
+// How many candidates to over-fetch from DS-Service when sourcing a
+// replacement spot for a swap — /datasourcing/sourcespots has no
+// exclude-list/category-bias parameter (see DS-Service's CLAUDE.md API
+// Contract), so this pulls the widest pool the contract allows and
+// filters/excludes client-side instead. 40 is that contract's own
+// documented minCount cap.
+const REPLACEMENT_OVERFETCH_MIN_COUNT = 40;
+
+// Finds the spot in `daySpots` a free-text hint most likely refers to — an
+// exact/partial name match first (either direction, so "museum" matches
+// "National Museum of China" and vice versa), falling back to a category
+// match (hint "the museum" against Category "museum"). A day with exactly
+// one spot has no ambiguity to resolve even with no hint at all; otherwise
+// no match returns -1 rather than guessing.
+function findTargetSpotIndex(daySpots, hint) {
+    if (!hint) return daySpots.length === 1 ? 0 : -1;
+    const lowerHint = hint.toLowerCase();
+    const byName = daySpots.findIndex((s) => {
+        const lowerName = s.Name.toLowerCase();
+        return lowerName.includes(lowerHint) || lowerHint.includes(lowerName);
+    });
+    if (byName !== -1) return byName;
+    return daySpots.findIndex((s) => s.Category && lowerHint.includes(s.Category.toLowerCase()));
+}
+
+// Sources a replacement spot for a swap: over-fetches the destination's spot
+// pool, excludes anything already anywhere in the itinerary (by name), and
+// prefers the requested category if one was given — falling back to any
+// non-duplicate if the category has no match, rather than failing outright.
+// Highest-rated candidate wins.
+async function findReplacementSpot(destination, usedNamesLower, replacementCategory) {
+    const pool = await spotSourcing.sourceSpots(destination, REPLACEMENT_OVERFETCH_MIN_COUNT);
+    const candidates = pool.filter((s) => !usedNamesLower.has(s.Name.toLowerCase()));
+
+    const categoryMatched = replacementCategory ? candidates.filter((s) => s.Category === replacementCategory) : [];
+    const pickFrom = categoryMatched.length ? categoryMatched : candidates;
+    if (!pickFrom.length) return null;
+
+    pickFrom.sort((a, b) => (b.Rating || 0) - (a.Rating || 0));
+    const chosen = pickFrom[0];
+
+    const photo = await spotPhotos.findSpotPhoto(chosen.Name, chosen.City).catch(() => null);
+    return Object.assign({}, chosen, { Photo: photo || PLACEHOLDER_PHOTOS[0] });
+}
+
+// Applies a single-spot swap within one day — the one architecturally cheap
+// edit operation this file supports. Deliberately does NOT touch
+// buildGreedyTour/splitIntoDays: those run one continuous, order-dependent
+// pass over every spot in the trip at once (see this file's header comment),
+// so "regenerate day N" isn't a well-defined operation without reshuffling
+// every other day too. A swap only needs buildRoute() recomputed for the
+// one affected day — already pure and day-local, no dependency on other
+// days. Operates purely on the in-memory itinerary object the caller
+// already holds (the same shape arrangeIntoDays/`/trip/generate` produce) —
+// no Mongo access, so DB_Trip.js's `Days`/`Spots` sub-schemas being
+// `{ _id: false }` (no stable per-day/per-spot ids) never comes into play.
+async function replaceSpotInDay(itinerary, dayNumber, targetSpotHint, replacementCategory) {
+    const days = itinerary.days || [];
+    const dayIndex = days.findIndex((d) => d.DayNumber === dayNumber);
+    if (dayIndex === -1) {
+        return { ok: false, reply: `I couldn't find day ${dayNumber} in this itinerary — this trip only has ${days.length} day${days.length === 1 ? '' : 's'}.` };
+    }
+
+    const day = days[dayIndex];
+    const spotIndex = findTargetSpotIndex(day.Spots, targetSpotHint);
+    if (spotIndex === -1) {
+        return { ok: false, reply: `I couldn't tell which spot on day ${dayNumber} you meant — could you name it more specifically?` };
+    }
+
+    const targetSpot = day.Spots[spotIndex];
+    const usedNames = new Set(days.flatMap((d) => d.Spots.map((s) => s.Name.toLowerCase())));
+
+    const replacement = await findReplacementSpot(itinerary.destination, usedNames, replacementCategory);
+    if (!replacement) {
+        return { ok: false, reply: `I couldn't find a good replacement for ${targetSpot.Name} right now — try a different category, or try again in a moment.` };
+    }
+
+    const newDaySpots = day.Spots.slice();
+    newDaySpots[spotIndex] = replacement;
+
+    const newDay = Object.assign({}, day, {
+        Spots: newDaySpots,
+        Route: buildRoute(newDaySpots, dayIndex, days.length, itinerary.accommodation, itinerary.arrivalPoint, itinerary.departurePoint)
+    });
+
+    const newDays = days.slice();
+    newDays[dayIndex] = newDay;
+
+    return {
+        ok: true,
+        reply: `Swapped ${targetSpot.Name} for ${replacement.Name} on day ${dayNumber}.`,
+        itinerary: Object.assign({}, itinerary, { days: newDays })
+    };
+}
+
+module.exports = { arrangeIntoDays, replaceSpotInDay, SPOTS_PER_DAY, SPOT_REQUEST_BUFFER_MULTIPLIER };

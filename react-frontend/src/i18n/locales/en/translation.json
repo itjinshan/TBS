@@ -120,7 +120,14 @@
     "day": "Day {{number}}",
     "loadingMap": "Loading map...",
     "arrivingVia": "Arriving via",
-    "departingFrom": "Departing from"
+    "departingFrom": "Departing from",
+    "chat": {
+      "title": "Refine your trip",
+      "toggle": "Toggle chat",
+      "answerPlaceholder": "Type your answer…",
+      "send": "Send",
+      "errorFallback": "Something went wrong. Please try again."
+    }
   },
   "footer": {
     "company": "Company",
