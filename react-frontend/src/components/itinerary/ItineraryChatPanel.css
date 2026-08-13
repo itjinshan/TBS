@@ -1,5 +1,11 @@
 .itin-chat-panel {
-  height: 100vh;
+  /* Fills whatever height the parent .itinerary-page ends up being
+     (100vh minus NavBar's own height — see Itinerary.css), not a flat
+     100vh of its own — this is the fix for CLAUDE.md's resolved
+     chat-input-scroll bug: the input is pinned to the bottom of this
+     column via flexbox, but only works if the column itself never grows
+     taller than the actual space available in the viewport. */
+  height: 100%;
   flex-shrink: 0;
   border-left: 1px solid #e8eaed;
   background: #fff;
