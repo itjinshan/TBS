@@ -28,8 +28,15 @@ const useAMap = () => {
       delete window[callbackName];
     };
 
+    // AMap.Polyline is loaded here (not via Itinerary.js's own dynamic
+    // AMap.plugin([...]) call) so it's guaranteed available synchronously
+    // the moment `loaded` becomes true — Itinerary.js's map-init effect
+    // calls updateMarkers() (which now also draws day-route polylines)
+    // immediately after its own AMap.plugin([...]) call, without waiting
+    // for that call's async callback, so a plugin only loaded there would
+    // race and be undefined on first mount.
     const script = document.createElement('script');
-    script.src = `https://webapi.amap.com/maps?v=2.0&key=${key}&plugin=AMap.Marker,AMap.InfoWindow,AMap.Geolocation,AMap.ControlBar&callback=${callbackName}`;
+    script.src = `https://webapi.amap.com/maps?v=2.0&key=${key}&plugin=AMap.Marker,AMap.InfoWindow,AMap.Geolocation,AMap.ControlBar,AMap.Polyline&callback=${callbackName}`;
     script.async = true;
     script.onerror = () => {
       console.error('AMap script failed to load');

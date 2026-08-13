@@ -39,18 +39,67 @@ function resolveSpotPhoto(photo) {
   return PLACEHOLDER_PHOTOS[photo] || HawaiiWall;
 }
 
-function spotsToMarkers(itinerary) {
-  if (!itinerary) return [];
-  return itinerary.days.flatMap((day) =>
-    day.Spots.map((spot) => ({
-      id: `${day.DayNumber}-${spot.Name}`,
-      type: 'spot',
-      position: [spot.Longitude, spot.Latitude],
-      title: spot.Name,
-      content: spot.StreetAddress
-    }))
-  );
+// Spot-only fallback for a day with no Route at all — e.g.
+// fallbackItinerary.js's output, which predates the Route field and never
+// sets one. Same marker shape this file used for every day before route
+// markers existed.
+function daySpotsToMarkers(day) {
+  return day.Spots.map((spot) => ({
+    id: `${day.DayNumber}-spot-${spot.Name}`,
+    type: 'spot',
+    position: [spot.Longitude, spot.Latitude],
+    title: spot.Name,
+    content: spot.StreetAddress
+  }));
 }
+
+function toWaypointMarker(stop) {
+  return {
+    id: `${stop.Type}-${stop.Name}-${stop.Latitude}-${stop.Longitude}`,
+    type: stop.Type, // 'arrival' | 'accommodation' | 'spot' | 'departure'
+    position: [stop.Longitude, stop.Latitude],
+    title: stop.Name,
+    content: stop.Address
+  };
+}
+
+// Builds one marker per unique waypoint across the whole itinerary — fed
+// from each day's Route (arrival/accommodation/spot/departure, in true
+// visiting order — see itineraryPlanner.js's buildRoute()), not just
+// Spots, per CLAUDE.md's "Reflect the itinerary's full route..." backlog
+// item. Accommodation can appear verbatim in more than one day's Route
+// array (the same hotel bookends both day N's end and day N+1's start) —
+// deduped to one marker per unique waypoint so a multi-day trip doesn't
+// stack duplicate pins on the same hotel; the day-by-day polylines built
+// alongside this (see updateMarkers()) still connect through the shared
+// point correctly, since each day's line is built independently from that
+// day's own Route array, not from this deduped list.
+function routeToMarkers(itinerary) {
+  if (!itinerary) return [];
+  const seen = new Set();
+  const markers = [];
+  itinerary.days.forEach((day) => {
+    const stops = day.Route && day.Route.length ? day.Route : null;
+    if (!stops) {
+      markers.push(...daySpotsToMarkers(day));
+      return;
+    }
+    stops.forEach((stop) => {
+      if (typeof stop.Latitude !== 'number' || typeof stop.Longitude !== 'number') return;
+      const marker = toWaypointMarker(stop);
+      if (seen.has(marker.id)) return;
+      seen.add(marker.id);
+      markers.push(marker);
+    });
+  });
+  return markers;
+}
+
+// Custom marker content (in place of AMap's default pin) so
+// arrival/accommodation/departure waypoints read as visually distinct from
+// regular spot stops — full per-day colored/numbered markers are a
+// separate, larger backlog item, not part of this one.
+const WAYPOINT_ICONS = { arrival: '✈️', accommodation: '🏨', departure: '🛫' };
 
 // Candidates with no real coordinates (the unverified fallback pair — see
 // APIs/trip.js's fallbackSuggestions()) aren't plottable; same "leave it
@@ -90,9 +139,10 @@ const Itinerary = ({ auth }) => {
   // Map references
   const mapInstance = useRef(null);
   const markersRef = useRef([]);
+  const routesRef = useRef([]);
   const geolocationRef = useRef(null);
 
-  const [markers, setMarkers] = useState(() => spotsToMarkers(itinerary));
+  const [markers, setMarkers] = useState(() => routeToMarkers(itinerary));
   const [chatOpen, setChatOpen] = useState(true);
 
   // Keeps the map's markers in sync with `itinerary` itself, not just the
@@ -107,7 +157,7 @@ const Itinerary = ({ auth }) => {
   useEffect(() => {
     const showCandidates = refinementStage === 'pick_accommodation';
     setMarkers([
-      ...spotsToMarkers(itinerary),
+      ...routeToMarkers(itinerary),
       ...(showCandidates ? accommodationCandidatesToMarkers(accommodationCandidates) : [])
     ]);
   }, [itinerary, refinementStage, accommodationCandidates]);
@@ -193,10 +243,18 @@ const Itinerary = ({ auth }) => {
 
     // Add new markers with InfoWindows
     newMarkers.forEach(markerData => {
+      // arrival/accommodation/departure get a custom emoji marker in place
+      // of AMap's default pin, so they read as visually distinct from
+      // regular spot stops on the route — see WAYPOINT_ICONS above.
+      const icon = WAYPOINT_ICONS[markerData.type];
       const marker = new AMap.Marker({
         position: markerData.position,
         title: markerData.title,
-        map: mapInstance.current
+        map: mapInstance.current,
+        ...(icon ? {
+          content: `<div style="font-size:22px;line-height:1;">${icon}</div>`,
+          offset: new AMap.Pixel(-11, -22)
+        } : {})
       });
 
       // Create InfoWindow
@@ -226,11 +284,41 @@ const Itinerary = ({ auth }) => {
       markersRef.current.push(marker);
     });
 
-    // Fit the viewport to the itinerary's own markers rather than leaving
-    // the map at its initial default center — see the note on the removed
-    // geolocation auto-center above.
-    if (markersRef.current.length) {
-      mapInstance.current.setFitView(markersRef.current);
+    // Draw each day's route as its own polyline, in true visiting order —
+    // built from that day's own Route array (itinerary.days[].Route, see
+    // itineraryPlanner.js's buildRoute()) rather than the flattened/deduped
+    // `newMarkers` list above, since flattening loses which day each point
+    // belongs to. A day with fewer than two verified points can't form a
+    // line and is skipped (e.g. no accommodation/arrival/departure known
+    // and zero spots) — same "just show what's there" degradation the
+    // route data itself already follows. Uniform styling across days
+    // (not per-day colors) — that's the separate, larger "per-day colored
+    // and numbered markers" backlog item, not part of this one.
+    routesRef.current.forEach(line => line.setMap(null));
+    routesRef.current = [];
+    itinerary.days.forEach(day => {
+      const path = (day.Route || [])
+        .filter(stop => typeof stop.Latitude === 'number' && typeof stop.Longitude === 'number')
+        .map(stop => [stop.Longitude, stop.Latitude]);
+      if (path.length < 2) return;
+
+      const polyline = new AMap.Polyline({
+        path,
+        strokeColor: '#4285f4',
+        strokeWeight: 4,
+        strokeStyle: 'solid',
+        showDir: true,
+        map: mapInstance.current
+      });
+      routesRef.current.push(polyline);
+    });
+
+    // Fit the viewport to the itinerary's own markers and route lines
+    // rather than leaving the map at its initial default center — see the
+    // note on the removed geolocation auto-center above.
+    const overlays = [...markersRef.current, ...routesRef.current];
+    if (overlays.length) {
+      mapInstance.current.setFitView(overlays);
     }
   };
 
