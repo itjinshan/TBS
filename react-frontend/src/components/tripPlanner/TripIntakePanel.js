@@ -63,13 +63,12 @@ const TripIntakePanel = () => {
   const canGenerate = tripBrief.intakeStage === 'ready';
 
   // The map is a reveal, not always-on: it only mounts once there's an actual
-  // candidate/suggestion list to show, alongside the matching chat prompt.
+  // candidate list to show, alongside the matching chat prompt.
+  // (suggest_accommodation no longer occurs — see CLAUDE.md's resolved
+  // accommodation-timing bug; hotel suggestion now happens post-generation
+  // on the Itinerary page instead.)
   const stage = tripBrief.intakeStage;
-  const mapLocations = stage === 'accommodation_confirm'
-    ? tripBrief.accommodationCandidates
-    : stage === 'suggest_accommodation'
-      ? tripBrief.accommodationSuggestions
-      : null;
+  const mapLocations = stage === 'accommodation_confirm' ? tripBrief.accommodationCandidates : null;
   const showMap = Array.isArray(mapLocations) && mapLocations.length > 0;
 
   const handleSubmit = (e) => {
