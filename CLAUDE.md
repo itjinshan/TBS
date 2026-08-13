@@ -69,6 +69,8 @@ Actual defects — existing behavior is wrong, not just missing. Prioritized ahe
 
 None currently open.
 
+- **The Itinerary-page chat panel's text input isn't visible without scrolling to the bottom of the whole page.** The chat input should be pinned to the bottom of the browser window at all times, the way `TripIntakePanel.js`'s own input already is — instead it's pinned to the bottom of `ItineraryChatPanel.js`'s own flex column (`.itin-chat-panel`/`.itin-chat-body`/`.itin-chat-input-form` in `ItineraryChatPanel.css`), which is itself correct in isolation, but that column's `height: 100vh` doesn't account for `NavBar`/`Footer` (`App.js`) both rendering unconditionally on every route, `/itinerary` included — `Itinerary.js`'s own root (`.itinerary-page`, `Itinerary.css`) is also `height: 100vh`. Stacked together, total page height is `NavBar height + 100vh + Footer height`, taller than the viewport, so the whole page (not just an internal panel) scrolls — pushing the chat input down below the fold along with the Footer, rather than the input staying fixed at the bottom of the window the way the rest of the Itinerary page's layout (list/map/divider) already correctly does via its own internal `overflow` handling. Likely fix: suppress `Footer` (and possibly `NavBar`, to match the intake page's own full-bleed treatment) on `/itinerary`, the same way `GlobalLLMChatBot` in `App.js` is already suppressed there — or make `.itinerary-page` account for `NavBar`'s actual rendered height instead of assuming `100vh` starts at the true top of the viewport.
+
 ### Backlog
 
 Backlog items surfaced while working on other plans, deliberately kept out of the active plan's PR scope. Pick these up as their own future PRs.
