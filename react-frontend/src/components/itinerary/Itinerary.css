@@ -1,13 +1,21 @@
 .itinerary-page {
   display: flex;
   width: 100vw;
-  height: 100vh;
+  /* NavBar (App.js) is `position: sticky`, not `fixed` — it still occupies
+     its own 60px of document flow (see Navbar.css), so a flat 100vh here
+     made total page height taller than the viewport, forcing the whole
+     page to scroll instead of just this page's own internal regions (day
+     list, map, chat panel) — see CLAUDE.md's resolved chat-input-scroll
+     bug. Footer is also suppressed on this route (App.js) for the same
+     reason; NavBar itself stays, since it provides real navigation/login
+     state the itinerary page still wants. */
+  height: calc(100vh - 60px);
   overflow: hidden;
 }
 
 .container {
   display: flex;
-  height: 100vh;
+  height: 100%;
   position: relative;
   overflow: hidden;
 }

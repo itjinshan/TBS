@@ -38,6 +38,21 @@ const GlobalLLMChatBot = () => {
   return <LLMChatBot />;
 };
 
+// Itinerary.js renders a fixed-viewport, non-scrolling app view
+// (`.itinerary-page`, height: calc(100vh - navbar height) — see
+// Itinerary.css) with its own internal scroll regions (day list, map, chat
+// panel). Footer is marketing-page chrome with no purpose there, and its
+// extra height was previously pushing the whole page taller than the
+// viewport, forcing the ENTIRE page to scroll — including the chat panel's
+// input, which is otherwise correctly pinned to the bottom of its own
+// column — rather than staying fixed at the bottom of the window (see
+// CLAUDE.md's resolved chat-input-scroll bug for the full diagnosis).
+const GlobalFooter = () => {
+  const location = useLocation();
+  if (location.pathname === '/itinerary') return null;
+  return <Footer />;
+};
+
 
 // App class
 //
@@ -60,7 +75,7 @@ export default class App extends Component {
                 <Route path="/itinerary" element={<Itinerary />} />
               </Routes>
             </div>
-            <Footer />
+            <GlobalFooter />
             <GlobalLLMChatBot />
             </div>
         </Router>
