@@ -343,8 +343,8 @@ const Itinerary = ({ auth }) => {
           if (!path || routeRequestIdRef.current !== requestId || !mapInstance.current) return;
           const polyline = new AMap.Polyline({
             path,
-            strokeColor: '#4285f4',
-            strokeWeight: 4,
+            strokeColor: '#FF6600',
+            strokeWeight: 5,
             strokeStyle: 'solid',
             showDir: true,
             map: mapInstance.current
