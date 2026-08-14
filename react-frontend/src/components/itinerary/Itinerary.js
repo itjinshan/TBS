@@ -9,6 +9,7 @@ import { connect } from "react-redux";
 import withRouter from "../../utils/withRouter";
 import { saveTrip, sendRefinementMessage } from "../../actions/tripAction";
 import ItineraryChatPanel from './ItineraryChatPanel';
+import { dayColor } from './dayColors';
 import './Itinerary.css';
 // fallback photos, keyed by the placeholder `Photo` value the backend
 // assigns when a real per-spot photo lookup (Services/spotPhotos.js) found
@@ -105,30 +106,8 @@ function routeToMarkers(itinerary) {
 // Custom marker content (in place of AMap's default pin) so
 // arrival/accommodation/departure waypoints read as visually distinct from
 // regular spot stops (which get their own per-day colored/numbered badge —
-// see DAY_COLORS/dayColor() below).
+// see dayColors.js).
 const WAYPOINT_ICONS = { arrival: '✈️', accommodation: '🏨', departure: '🛫' };
-
-// Per-day marker color, one distinct hue per DayNumber up to the 14-day max
-// trip length (Node/Services/itineraryPlanner.js's safeDuration cap). Hues
-// are spread around the wheel in an order chosen so *consecutive* day
-// numbers — the ones most likely to sit near each other on the map, since
-// itineraryPlanner.js clusters each day's spots geographically — land far
-// apart on the wheel, with lightness alternating for extra separation
-// between angularly-closer pairs. This is a best-effort spread, not a
-// colorblind-validated categorical palette (that guarantee only holds up to
-// ~8 categories; see the dataviz skill's palette.md) — so color isn't the
-// only way to tell days apart: the badge's visit-order number, each day's
-// geographic spot clustering, and the "Day N · Stop M" text on click
-// (see updateMarkers()'s InfoWindow content) all work without relying on
-// hue perception.
-const DAY_COLORS = [
-  '#c52020', '#1ba7a7', '#c56720', '#1b6ba7', '#c5ae20', '#1b2fa7', '#96c520',
-  '#431ba7', '#4fc520', '#7f1ba7', '#20c538', '#a71b93', '#20c57f', '#a71b57'
-];
-
-function dayColor(dayNumber) {
-  return DAY_COLORS[(dayNumber - 1) % DAY_COLORS.length];
-}
 
 // Mirrors itineraryPlanner.js's DEFAULT_TRANSPORT_MODE — an itinerary from
 // before the transportMode field flowed through to the client (or the
