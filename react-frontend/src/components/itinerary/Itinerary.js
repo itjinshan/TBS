@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import axios from 'axios';
 import useAMap from '../../hooks/useAmap';
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
@@ -101,6 +102,29 @@ function routeToMarkers(itinerary) {
 // separate, larger backlog item, not part of this one.
 const WAYPOINT_ICONS = { arrival: '✈️', accommodation: '🏨', departure: '🛫' };
 
+// Mirrors itineraryPlanner.js's DEFAULT_TRANSPORT_MODE — an itinerary from
+// before the transportMode field flowed through to the client (or the
+// fallback-itinerary path, which doesn't collect it) falls back the same way
+// the backend's own day-arrangement math already does.
+const DEFAULT_TRANSPORT_MODE = 'public_transit';
+
+// Real navigation path for one leg (a pair of consecutive Route stops),
+// fetched from the backend rather than computed by an AMap JS routing
+// plugin client-side — the frontend's Amap key is JS-API-only (see
+// useAmap.js) and can't authorize AMap.Driving/Walking/Transfer's lookups
+// itself (confirmed live: all three failed with INVALID_USER_SCODE against
+// it), so POST /trip/route proxies the same request through the backend's
+// AMAP_WEB_SERVICE_KEY instead (Node/Services/amapRouting.js). Resolves
+// null (never throws) on any failure, mirroring findSpotPhoto()'s
+// null-on-failure contract — a leg that can't be routed just doesn't draw,
+// same as an unresolved spot photo just shows a placeholder.
+function fetchRoutePath(origin, destination, transportMode, city) {
+  return axios
+    .post('/trip/route', { origin, destination, transportMode, city })
+    .then((res) => res.data.path || null)
+    .catch(() => null);
+}
+
 // Candidates with no real coordinates (the unverified fallback pair — see
 // APIs/trip.js's fallbackSuggestions()) aren't plottable; same "leave it
 // out of the map, not the chat list" pattern buildRoute() already uses for
@@ -140,6 +164,7 @@ const Itinerary = ({ auth }) => {
   const mapInstance = useRef(null);
   const markersRef = useRef([]);
   const routesRef = useRef([]);
+  const routeRequestIdRef = useRef(0);
   const geolocationRef = useRef(null);
 
   const [markers, setMarkers] = useState(() => routeToMarkers(itinerary));
@@ -284,41 +309,59 @@ const Itinerary = ({ auth }) => {
       markersRef.current.push(marker);
     });
 
-    // Draw each day's route as its own polyline, in true visiting order —
-    // built from that day's own Route array (itinerary.days[].Route, see
-    // itineraryPlanner.js's buildRoute()) rather than the flattened/deduped
-    // `newMarkers` list above, since flattening loses which day each point
-    // belongs to. A day with fewer than two verified points can't form a
-    // line and is skipped (e.g. no accommodation/arrival/departure known
-    // and zero spots) — same "just show what's there" degradation the
-    // route data itself already follows. Uniform styling across days
-    // (not per-day colors) — that's the separate, larger "per-day colored
-    // and numbered markers" backlog item, not part of this one.
+    // Draw each day's real navigation route, one leg per pair of consecutive
+    // Route stops (itinerary.days[].Route, see itineraryPlanner.js's
+    // buildRoute()) — not the flattened/deduped `newMarkers` list above,
+    // since flattening loses which day each point belongs to. Each leg's
+    // path comes from the backend (POST /trip/route, see fetchRoutePath()
+    // above) — real streets/turns/transit lines for the trip's chosen
+    // transportMode, not a straight line. A day with fewer than two
+    // verified points can't form a route and is skipped (e.g. no
+    // accommodation/arrival/departure known and zero spots) — same "just
+    // show what's there" degradation the route data itself already
+    // follows. A leg whose lookup fails is just left undrawn rather than
+    // falling back to a straight line — same best-effort spirit as
+    // spotPhotos.js resolving null on failure instead of throwing. Uniform
+    // styling across days (not per-day colors) — that's the separate,
+    // larger "per-day colored and numbered markers" backlog item, not part
+    // of this one.
     routesRef.current.forEach(line => line.setMap(null));
     routesRef.current = [];
+    // Guards against a slower-to-resolve fetch from a previous
+    // updateMarkers() call landing after this one already cleared
+    // routesRef above — its polyline would draw but never get cleaned up
+    // until the *next* update. Each call claims a new id; a leg's fetch
+    // only draws if its call is still the latest by the time it resolves.
+    const requestId = ++routeRequestIdRef.current;
+    const transportMode = itinerary.transportMode || DEFAULT_TRANSPORT_MODE;
     itinerary.days.forEach(day => {
-      const path = (day.Route || [])
+      const points = (day.Route || [])
         .filter(stop => typeof stop.Latitude === 'number' && typeof stop.Longitude === 'number')
         .map(stop => [stop.Longitude, stop.Latitude]);
-      if (path.length < 2) return;
-
-      const polyline = new AMap.Polyline({
-        path,
-        strokeColor: '#4285f4',
-        strokeWeight: 4,
-        strokeStyle: 'solid',
-        showDir: true,
-        map: mapInstance.current
-      });
-      routesRef.current.push(polyline);
+      for (let i = 0; i < points.length - 1; i++) {
+        fetchRoutePath(points[i], points[i + 1], transportMode, itinerary.destination).then(path => {
+          if (!path || routeRequestIdRef.current !== requestId || !mapInstance.current) return;
+          const polyline = new AMap.Polyline({
+            path,
+            strokeColor: '#4285f4',
+            strokeWeight: 4,
+            strokeStyle: 'solid',
+            showDir: true,
+            map: mapInstance.current
+          });
+          routesRef.current.push(polyline);
+        });
+      }
     });
 
-    // Fit the viewport to the itinerary's own markers and route lines
-    // rather than leaving the map at its initial default center — see the
-    // note on the removed geolocation auto-center above.
-    const overlays = [...markersRef.current, ...routesRef.current];
-    if (overlays.length) {
-      mapInstance.current.setFitView(overlays);
+    // Fit the viewport to the itinerary's own markers rather than leaving
+    // the map at its initial default center — see the note on the removed
+    // geolocation auto-center above. Routes aren't included here (they
+    // resolve asynchronously, after this runs), but every route runs
+    // between two markers already in this list, so fitting to markers
+    // alone keeps the whole route in view in practice.
+    if (markersRef.current.length) {
+      mapInstance.current.setFitView(markersRef.current);
     }
   };
 
