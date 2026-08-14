@@ -67,7 +67,7 @@ A throwaway QA account exists in the dev MongoDB for testing authenticated UI fl
 
 Actual defects — existing behavior is wrong, not just missing. Prioritized ahead of the feature backlog below.
 
-None currently open.
+- **Vague arrival/departure-point answers can fuzzy-match to an unrelated real place.** During intake, answering the "where will you be departing from" question with something like "same airport" (instead of repeating the airport's full name) got resolved via Amap's place-text-search to "SAME SIAM热啊东南亚餐厅(中关村领展广场店)" — a Thai restaurant whose name happens to start with "SAME" — rather than being recognized as referring back to the already-given arrival point, or re-prompting for a clearer answer. Surfaced while testing the Itinerary map's route-drawing feature (arrival/departure resolution, `Services/amapPlaces.js` / `APIs/trip.js`'s `resolvePlacePoint()`); not fixed as part of that work.
 
 ### Backlog
 
