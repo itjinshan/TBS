@@ -341,11 +341,19 @@ const Itinerary = ({ auth }) => {
       for (let i = 0; i < points.length - 1; i++) {
         fetchRoutePath(points[i], points[i + 1], transportMode, itinerary.destination).then(path => {
           if (!path || routeRequestIdRef.current !== requestId || !mapInstance.current) return;
+          // Magenta (rather than orange/blue/green, all already used heavily
+          // by Amap's own road/park/water styling) plus a white "halo"
+          // outline (isOutline/outlineColor/borderWeight) — the same cased-
+          // line technique Google/Apple Maps use for route lines — so it
+          // stays legible over any base-map color underneath it.
           const polyline = new AMap.Polyline({
             path,
-            strokeColor: '#FF6600',
+            strokeColor: '#E6007E',
             strokeWeight: 5,
             strokeStyle: 'solid',
+            isOutline: true,
+            outlineColor: '#ffffff',
+            borderWeight: 2,
             showDir: true,
             map: mapInstance.current
           });
