@@ -45,22 +45,26 @@ function resolveSpotPhoto(photo) {
 // sets one. Same marker shape this file used for every day before route
 // markers existed.
 function daySpotsToMarkers(day) {
-  return day.Spots.map((spot) => ({
+  return day.Spots.map((spot, index) => ({
     id: `${day.DayNumber}-spot-${spot.Name}`,
     type: 'spot',
     position: [spot.Longitude, spot.Latitude],
     title: spot.Name,
-    content: spot.StreetAddress
+    content: spot.StreetAddress,
+    dayNumber: day.DayNumber,
+    order: index + 1
   }));
 }
 
-function toWaypointMarker(stop) {
+function toWaypointMarker(stop, dayNumber, order) {
   return {
     id: `${stop.Type}-${stop.Name}-${stop.Latitude}-${stop.Longitude}`,
     type: stop.Type, // 'arrival' | 'accommodation' | 'spot' | 'departure'
     position: [stop.Longitude, stop.Latitude],
     title: stop.Name,
-    content: stop.Address
+    content: stop.Address,
+    dayNumber,
+    order // 1-based visit order among dayNumber's spot stops; undefined for non-spot types
   };
 }
 
@@ -85,9 +89,11 @@ function routeToMarkers(itinerary) {
       markers.push(...daySpotsToMarkers(day));
       return;
     }
+    let spotOrder = 0;
     stops.forEach((stop) => {
       if (typeof stop.Latitude !== 'number' || typeof stop.Longitude !== 'number') return;
-      const marker = toWaypointMarker(stop);
+      if (stop.Type === 'spot') spotOrder += 1;
+      const marker = toWaypointMarker(stop, day.DayNumber, stop.Type === 'spot' ? spotOrder : undefined);
       if (seen.has(marker.id)) return;
       seen.add(marker.id);
       markers.push(marker);
@@ -98,9 +104,31 @@ function routeToMarkers(itinerary) {
 
 // Custom marker content (in place of AMap's default pin) so
 // arrival/accommodation/departure waypoints read as visually distinct from
-// regular spot stops — full per-day colored/numbered markers are a
-// separate, larger backlog item, not part of this one.
+// regular spot stops (which get their own per-day colored/numbered badge —
+// see DAY_COLORS/dayColor() below).
 const WAYPOINT_ICONS = { arrival: '✈️', accommodation: '🏨', departure: '🛫' };
+
+// Per-day marker color, one distinct hue per DayNumber up to the 14-day max
+// trip length (Node/Services/itineraryPlanner.js's safeDuration cap). Hues
+// are spread around the wheel in an order chosen so *consecutive* day
+// numbers — the ones most likely to sit near each other on the map, since
+// itineraryPlanner.js clusters each day's spots geographically — land far
+// apart on the wheel, with lightness alternating for extra separation
+// between angularly-closer pairs. This is a best-effort spread, not a
+// colorblind-validated categorical palette (that guarantee only holds up to
+// ~8 categories; see the dataviz skill's palette.md) — so color isn't the
+// only way to tell days apart: the badge's visit-order number, each day's
+// geographic spot clustering, and the "Day N · Stop M" text on click
+// (see updateMarkers()'s InfoWindow content) all work without relying on
+// hue perception.
+const DAY_COLORS = [
+  '#c52020', '#1ba7a7', '#c56720', '#1b6ba7', '#c5ae20', '#1b2fa7', '#96c520',
+  '#431ba7', '#4fc520', '#7f1ba7', '#20c538', '#a71b93', '#20c57f', '#a71b57'
+];
+
+function dayColor(dayNumber) {
+  return DAY_COLORS[(dayNumber - 1) % DAY_COLORS.length];
+}
 
 // Mirrors itineraryPlanner.js's DEFAULT_TRANSPORT_MODE — an itinerary from
 // before the transportMode field flowed through to the client (or the
@@ -270,8 +298,14 @@ const Itinerary = ({ auth }) => {
     newMarkers.forEach(markerData => {
       // arrival/accommodation/departure get a custom emoji marker in place
       // of AMap's default pin, so they read as visually distinct from
-      // regular spot stops on the route — see WAYPOINT_ICONS above.
+      // regular spot stops on the route — see WAYPOINT_ICONS above. A spot
+      // stop instead gets a colored, numbered badge (per-day color, visit
+      // order within that day) — see DAY_COLORS/dayColor() above.
       const icon = WAYPOINT_ICONS[markerData.type];
+      const isDaySpot = markerData.type === 'spot' && markerData.dayNumber != null && markerData.order != null;
+      const badgeContent = isDaySpot
+        ? `<div style="width:26px;height:26px;border-radius:50%;background:${dayColor(markerData.dayNumber)};border:2px solid #ffffff;box-shadow:0 1px 3px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:#ffffff;font-size:12px;font-weight:700;font-family:system-ui,-apple-system,sans-serif;">${markerData.order}</div>`
+        : null;
       const marker = new AMap.Marker({
         position: markerData.position,
         title: markerData.title,
@@ -279,15 +313,25 @@ const Itinerary = ({ auth }) => {
         ...(icon ? {
           content: `<div style="font-size:22px;line-height:1;">${icon}</div>`,
           offset: new AMap.Pixel(-11, -22)
+        } : badgeContent ? {
+          content: badgeContent,
+          offset: new AMap.Pixel(-13, -13)
         } : {})
       });
 
       // Create InfoWindow
       const isAccommodationCandidate = markerData.type === 'accommodation-candidate';
+      // Non-color-dependent identity for the badge above — spells out the
+      // exact day/stop on click, since the badge's hue alone isn't a
+      // reliable identity channel for 14 possible days (see DAY_COLORS).
+      const dayStopLabel = isDaySpot
+        ? `<p style="margin:0 0 4px;font-size:12px;color:#666;">${t('itinerary.mapDayStop', { day: markerData.dayNumber, stop: markerData.order })}</p>`
+        : '';
       const infoWindow = new AMap.InfoWindow({
         content: `
           <div style="padding: 5px;">
             <h3 style="margin: 0 0 5px 0;">${isAccommodationCandidate ? '🏨 ' : ''}${markerData.title}</h3>
+            ${dayStopLabel}
             <p style="margin: 0;">${markerData.content}</p>
             ${isAccommodationCandidate ? '<p style="margin:4px 0 0;font-size:12px;color:#666;">Click marker to choose this hotel</p>' : ''}
           </div>
@@ -321,10 +365,11 @@ const Itinerary = ({ auth }) => {
     // show what's there" degradation the route data itself already
     // follows. A leg whose lookup fails is just left undrawn rather than
     // falling back to a straight line — same best-effort spirit as
-    // spotPhotos.js resolving null on failure instead of throwing. Uniform
-    // styling across days (not per-day colors) — that's the separate,
-    // larger "per-day colored and numbered markers" backlog item, not part
-    // of this one.
+    // spotPhotos.js resolving null on failure instead of throwing. Route
+    // lines stay uniformly styled (not per-day colors) even though markers
+    // now are (see DAY_COLORS above) — coloring the lines to match is a
+    // reasonable future follow-up, not done here to keep this change
+    // scoped to markers, which is what was asked for.
     routesRef.current.forEach(line => line.setMap(null));
     routesRef.current = [];
     // Guards against a slower-to-resolve fetch from a previous

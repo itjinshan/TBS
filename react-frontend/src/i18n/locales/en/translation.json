@@ -121,6 +121,7 @@
     "loadingMap": "Loading map...",
     "arrivingVia": "Arriving via",
     "departingFrom": "Departing from",
+    "mapDayStop": "Day {{day}} · Stop {{stop}}",
     "chat": {
       "title": "Refine your trip",
       "toggle": "Toggle chat",
