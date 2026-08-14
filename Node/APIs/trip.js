@@ -84,21 +84,61 @@ function resolvePlacePoint(name, city) {
     });
 }
 
+// True when a departurePoint answer is meant to echo the arrival point
+// rather than name a distinct place — either the LLM already substituted
+// the arrival point's exact name per buildOtherPrefsContext's instruction
+// below, or the traveler's raw text is a short referential
+// phrase ("same", "same airport", "same place") that never named anything
+// concrete for Amap to search on. Guards the resolvePlacePointFields
+// short-circuit below (see CLAUDE.md Bugs: "same airport" fuzzy-matched to
+// an unrelated restaurant instead of being recognized as the arrival point).
+function isSamePlaceAnswer(departureText, arrivalName) {
+    var normalized = departureText.trim().toLowerCase();
+    if (arrivalName && normalized === arrivalName.trim().toLowerCase()) return true;
+    return /^(the )?same( (place|airport|station|spot|one|point))?$/.test(normalized);
+}
+
 // nluExtraction.extractOtherPrefs returns arrivalPoint/departurePoint (if
 // present in the message) as raw place-name strings — this resolves any
 // freshly-extracted ones to a real point in place, in parallel, before the
 // OTHER_PREFS stage decides whether it's done asking questions. Fields the
 // traveler didn't just mention are left untouched (undefined, same as any
 // other unanswered OTHER_PREF_FIELDS entry).
-function resolvePlacePointFields(otherPrefFields, destination) {
+//
+// departurePoint gets one extra check first: a referential answer meaning
+// "same as arrival" is resolved by reusing the already-resolved
+// arrivalPoint object directly rather than re-running it through Amap's
+// place-text-search, which has no way to know "same airport" refers back to
+// a place already named earlier in the conversation and can fuzzy-match it
+// to an unrelated real place instead (see CLAUDE.md Bugs).
+function resolvePlacePointFields(otherPrefFields, destination, existingArrivalPoint) {
     var resolutions = ['arrivalPoint', 'departurePoint']
         .filter(function (field) { return typeof otherPrefFields[field] === 'string' && otherPrefFields[field].trim(); })
         .map(function (field) {
+            if (field === 'departurePoint' && existingArrivalPoint && isSamePlaceAnswer(otherPrefFields[field], existingArrivalPoint.Name)) {
+                otherPrefFields[field] = existingArrivalPoint;
+                return Promise.resolve();
+            }
             return resolvePlacePoint(otherPrefFields[field], destination).then(function (point) {
                 otherPrefFields[field] = point;
             });
         });
     return Promise.all(resolutions).then(function () { return otherPrefFields; });
+}
+
+// Appends an instruction to the pending-question context so the LLM
+// resolves a referential departure answer ("same airport", "same as
+// arrival") to the arrival point's exact name instead of passing the literal
+// word "same" through to Amap's place search. Only applies when arrival is
+// already resolved and departurePoint is actually the field being asked
+// about — arrival is always asked first (OTHER_PREF_FIELDS order), so
+// arrivalPoint can never itself be a forward reference to departurePoint.
+function buildOtherPrefsContext(pendingQuestion, tripBrief) {
+    if (!pendingQuestion) return undefined;
+    if (pendingQuestion.field !== 'departurePoint' || !tripBrief.arrivalPoint || !tripBrief.arrivalPoint.Name) {
+        return pendingQuestion.question;
+    }
+    return pendingQuestion.question + ' If the traveler says they\'re departing from the same place as arrival (e.g. "same airport", "same place"), extract departurePoint as exactly "' + tripBrief.arrivalPoint.Name + '" — the arrival point already given — not the word "same".';
 }
 
 // Picks an item out of a candidate/suggestion list by name (substring match)
@@ -302,9 +342,9 @@ router.post('/intake', function (req, res) {
             // place name) lands in the field actually being asked about instead
             // of getting guessed across all seven (see CLAUDE.md Bugs).
             var pendingQuestion = nextOtherPrefQuestion(tripBrief);
-            nluExtraction.extractOtherPrefs(message, pendingQuestion && pendingQuestion.question)
+            nluExtraction.extractOtherPrefs(message, buildOtherPrefsContext(pendingQuestion, tripBrief))
                 .then(function (otherPrefFields) {
-                    return resolvePlacePointFields(otherPrefFields, tripBrief.destination);
+                    return resolvePlacePointFields(otherPrefFields, tripBrief.destination, tripBrief.arrivalPoint);
                 })
                 .then(function (otherPrefFields) {
                     var mergedBrief = Object.assign({}, tripBrief, otherPrefFields);
