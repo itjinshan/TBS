@@ -60,4 +60,4 @@ function searchPlaces(query, city) {
     });
 }
 
-module.exports = { searchPlaces: searchPlaces };
+module.exports = { searchPlaces: searchPlaces, toAmapCityParam: toAmapCityParam };

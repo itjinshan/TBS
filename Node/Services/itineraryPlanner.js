@@ -279,7 +279,11 @@ function hasCoordinates(point) {
 }
 
 function toRouteStop(type, point) {
-    return { Type: type, Name: point.Name, Address: point.Address, Latitude: point.Latitude, Longitude: point.Longitude };
+    // Spots use StreetAddress (DB_Trip.js's SpotSchema); arrival/departure/
+    // accommodation points use Address (PlacePointSchema/AccommodationSchema)
+    // — RouteStopSchema standardizes on Address, so read whichever the
+    // source object actually has.
+    return { Type: type, Name: point.Name, Address: point.Address || point.StreetAddress, Latitude: point.Latitude, Longitude: point.Longitude };
 }
 
 // Builds a day's visible route in true visiting order — see CLAUDE.md,
@@ -287,15 +291,34 @@ function toRouteStop(type, point) {
 // real Lat/Lng, e.g. an Amap lookup that failed) are left out entirely
 // rather than plotted at a fake location; the day's Spots list still shows
 // them, this is purely the map's route line.
+//
+// Accommodation only brackets the days *between* arrival and departure on
+// both sides — day 1 begins at arrivalPoint instead (the traveler hasn't
+// checked in yet the moment they land) and the last day ends at
+// departurePoint instead (checking back into the hotel isn't really "the
+// end" of the trip once departure is already the next stop). A single-day
+// trip is both the first and last day, so both substitutions apply and it
+// falls out correctly as arrival -> spots -> departure with no
+// accommodation stop at all — there's no overnight stay to anchor.
 function buildRoute(daySpots, dayIndex, totalDays, accommodation, arrivalPoint, departurePoint) {
     const route = [];
     const accommodationKnown = hasCoordinates(accommodation);
+    const isFirstDay = dayIndex === 0;
+    const isLastDay = dayIndex === totalDays - 1;
 
-    if (dayIndex === 0 && hasCoordinates(arrivalPoint)) route.push(toRouteStop('arrival', arrivalPoint));
-    if (accommodationKnown) route.push(toRouteStop('accommodation', accommodation));
+    if (isFirstDay) {
+        if (hasCoordinates(arrivalPoint)) route.push(toRouteStop('arrival', arrivalPoint));
+    } else if (accommodationKnown) {
+        route.push(toRouteStop('accommodation', accommodation));
+    }
+
     daySpots.forEach((spot) => route.push(toRouteStop('spot', spot)));
-    if (accommodationKnown) route.push(toRouteStop('accommodation', accommodation));
-    if (dayIndex === totalDays - 1 && hasCoordinates(departurePoint)) route.push(toRouteStop('departure', departurePoint));
+
+    if (isLastDay) {
+        if (hasCoordinates(departurePoint)) route.push(toRouteStop('departure', departurePoint));
+    } else if (accommodationKnown) {
+        route.push(toRouteStop('accommodation', accommodation));
+    }
 
     return route;
 }

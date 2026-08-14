@@ -9,6 +9,7 @@ var { arrangeIntoDays, replaceSpotInDay, applyAccommodation, sortAccommodationsB
 var spotSourcing = require('../Services/spotSourcing');
 var nluExtraction = require('../Services/nluExtraction');
 var amapPlaces = require('../Services/amapPlaces');
+var amapRouting = require('../Services/amapRouting');
 var generateAccessToken = require('../Config/jwtgenerator');
 
 var OTHER_PREF_FIELDS = ['duration', 'numOfTravelers', 'budget', 'pace', 'transportMode', 'arrivalPoint', 'departurePoint'];
@@ -369,7 +370,11 @@ router.post('/generate', function (req, res) {
                         accommodation: tripBrief.accommodation || null,
                         arrivalPoint: tripBrief.arrivalPoint || null,
                         departurePoint: tripBrief.departurePoint || null,
-                        budget: tripBrief.budget || null
+                        budget: tripBrief.budget || null,
+                        // Itinerary.js's map uses this to pick which AMap routing
+                        // plugin (Driving/Walking/Transfer) draws each day's real
+                        // navigation route — see CLAUDE.md's route-drawing item.
+                        transportMode: tripBrief.transportMode || null
                     });
                 });
         })
@@ -492,6 +497,24 @@ router.post('/refine', function (req, res) {
         default:
             respond('Want to change anything about this plan? (yes/no)', REFINE_STAGES.CONFIRM);
     }
+});
+
+// Real navigation route for one leg of the Itinerary map (a pair of
+// consecutive stops in a day's Route array) — see Itinerary.js's
+// updateMarkers(), which calls this once per leg rather than sending the
+// whole day at once, matching the per-leg shape Services/amapRouting.js's
+// underlying Amap REST calls need anyway. Unauthenticated, same as
+// /intake, /generate, /refine — the Itinerary page works without login.
+router.post('/route', function (req, res) {
+    var origin = req.body.origin;
+    var destination = req.body.destination;
+    if (!Array.isArray(origin) || !Array.isArray(destination)) {
+        return res.status(400).json({ message: 'Missing required field: origin/destination ([lng, lat])' });
+    }
+
+    amapRouting.getRoutePath(origin, destination, req.body.transportMode, req.body.city)
+        .then(function (path) { res.json({ path: path || null }); })
+        .catch(function () { res.json({ path: null }); });
 });
 
 router.post('/', passport.authenticate('jwt', { session: false }), function (req, res) {

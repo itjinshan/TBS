@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import axios from 'axios';
 import useAMap from '../../hooks/useAmap';
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
@@ -39,17 +40,89 @@ function resolveSpotPhoto(photo) {
   return PLACEHOLDER_PHOTOS[photo] || HawaiiWall;
 }
 
-function spotsToMarkers(itinerary) {
+// Spot-only fallback for a day with no Route at all — e.g.
+// fallbackItinerary.js's output, which predates the Route field and never
+// sets one. Same marker shape this file used for every day before route
+// markers existed.
+function daySpotsToMarkers(day) {
+  return day.Spots.map((spot) => ({
+    id: `${day.DayNumber}-spot-${spot.Name}`,
+    type: 'spot',
+    position: [spot.Longitude, spot.Latitude],
+    title: spot.Name,
+    content: spot.StreetAddress
+  }));
+}
+
+function toWaypointMarker(stop) {
+  return {
+    id: `${stop.Type}-${stop.Name}-${stop.Latitude}-${stop.Longitude}`,
+    type: stop.Type, // 'arrival' | 'accommodation' | 'spot' | 'departure'
+    position: [stop.Longitude, stop.Latitude],
+    title: stop.Name,
+    content: stop.Address
+  };
+}
+
+// Builds one marker per unique waypoint across the whole itinerary — fed
+// from each day's Route (arrival/accommodation/spot/departure, in true
+// visiting order — see itineraryPlanner.js's buildRoute()), not just
+// Spots, per CLAUDE.md's "Reflect the itinerary's full route..." backlog
+// item. Accommodation can appear verbatim in more than one day's Route
+// array (the same hotel bookends both day N's end and day N+1's start) —
+// deduped to one marker per unique waypoint so a multi-day trip doesn't
+// stack duplicate pins on the same hotel; the day-by-day polylines built
+// alongside this (see updateMarkers()) still connect through the shared
+// point correctly, since each day's line is built independently from that
+// day's own Route array, not from this deduped list.
+function routeToMarkers(itinerary) {
   if (!itinerary) return [];
-  return itinerary.days.flatMap((day) =>
-    day.Spots.map((spot) => ({
-      id: `${day.DayNumber}-${spot.Name}`,
-      type: 'spot',
-      position: [spot.Longitude, spot.Latitude],
-      title: spot.Name,
-      content: spot.StreetAddress
-    }))
-  );
+  const seen = new Set();
+  const markers = [];
+  itinerary.days.forEach((day) => {
+    const stops = day.Route && day.Route.length ? day.Route : null;
+    if (!stops) {
+      markers.push(...daySpotsToMarkers(day));
+      return;
+    }
+    stops.forEach((stop) => {
+      if (typeof stop.Latitude !== 'number' || typeof stop.Longitude !== 'number') return;
+      const marker = toWaypointMarker(stop);
+      if (seen.has(marker.id)) return;
+      seen.add(marker.id);
+      markers.push(marker);
+    });
+  });
+  return markers;
+}
+
+// Custom marker content (in place of AMap's default pin) so
+// arrival/accommodation/departure waypoints read as visually distinct from
+// regular spot stops — full per-day colored/numbered markers are a
+// separate, larger backlog item, not part of this one.
+const WAYPOINT_ICONS = { arrival: '✈️', accommodation: '🏨', departure: '🛫' };
+
+// Mirrors itineraryPlanner.js's DEFAULT_TRANSPORT_MODE — an itinerary from
+// before the transportMode field flowed through to the client (or the
+// fallback-itinerary path, which doesn't collect it) falls back the same way
+// the backend's own day-arrangement math already does.
+const DEFAULT_TRANSPORT_MODE = 'public_transit';
+
+// Real navigation path for one leg (a pair of consecutive Route stops),
+// fetched from the backend rather than computed by an AMap JS routing
+// plugin client-side — the frontend's Amap key is JS-API-only (see
+// useAmap.js) and can't authorize AMap.Driving/Walking/Transfer's lookups
+// itself (confirmed live: all three failed with INVALID_USER_SCODE against
+// it), so POST /trip/route proxies the same request through the backend's
+// AMAP_WEB_SERVICE_KEY instead (Node/Services/amapRouting.js). Resolves
+// null (never throws) on any failure, mirroring findSpotPhoto()'s
+// null-on-failure contract — a leg that can't be routed just doesn't draw,
+// same as an unresolved spot photo just shows a placeholder.
+function fetchRoutePath(origin, destination, transportMode, city) {
+  return axios
+    .post('/trip/route', { origin, destination, transportMode, city })
+    .then((res) => res.data.path || null)
+    .catch(() => null);
 }
 
 // Candidates with no real coordinates (the unverified fallback pair — see
@@ -90,9 +163,11 @@ const Itinerary = ({ auth }) => {
   // Map references
   const mapInstance = useRef(null);
   const markersRef = useRef([]);
+  const routesRef = useRef([]);
+  const routeRequestIdRef = useRef(0);
   const geolocationRef = useRef(null);
 
-  const [markers, setMarkers] = useState(() => spotsToMarkers(itinerary));
+  const [markers, setMarkers] = useState(() => routeToMarkers(itinerary));
   const [chatOpen, setChatOpen] = useState(true);
 
   // Keeps the map's markers in sync with `itinerary` itself, not just the
@@ -107,7 +182,7 @@ const Itinerary = ({ auth }) => {
   useEffect(() => {
     const showCandidates = refinementStage === 'pick_accommodation';
     setMarkers([
-      ...spotsToMarkers(itinerary),
+      ...routeToMarkers(itinerary),
       ...(showCandidates ? accommodationCandidatesToMarkers(accommodationCandidates) : [])
     ]);
   }, [itinerary, refinementStage, accommodationCandidates]);
@@ -193,10 +268,18 @@ const Itinerary = ({ auth }) => {
 
     // Add new markers with InfoWindows
     newMarkers.forEach(markerData => {
+      // arrival/accommodation/departure get a custom emoji marker in place
+      // of AMap's default pin, so they read as visually distinct from
+      // regular spot stops on the route — see WAYPOINT_ICONS above.
+      const icon = WAYPOINT_ICONS[markerData.type];
       const marker = new AMap.Marker({
         position: markerData.position,
         title: markerData.title,
-        map: mapInstance.current
+        map: mapInstance.current,
+        ...(icon ? {
+          content: `<div style="font-size:22px;line-height:1;">${icon}</div>`,
+          offset: new AMap.Pixel(-11, -22)
+        } : {})
       });
 
       // Create InfoWindow
@@ -226,9 +309,66 @@ const Itinerary = ({ auth }) => {
       markersRef.current.push(marker);
     });
 
+    // Draw each day's real navigation route, one leg per pair of consecutive
+    // Route stops (itinerary.days[].Route, see itineraryPlanner.js's
+    // buildRoute()) — not the flattened/deduped `newMarkers` list above,
+    // since flattening loses which day each point belongs to. Each leg's
+    // path comes from the backend (POST /trip/route, see fetchRoutePath()
+    // above) — real streets/turns/transit lines for the trip's chosen
+    // transportMode, not a straight line. A day with fewer than two
+    // verified points can't form a route and is skipped (e.g. no
+    // accommodation/arrival/departure known and zero spots) — same "just
+    // show what's there" degradation the route data itself already
+    // follows. A leg whose lookup fails is just left undrawn rather than
+    // falling back to a straight line — same best-effort spirit as
+    // spotPhotos.js resolving null on failure instead of throwing. Uniform
+    // styling across days (not per-day colors) — that's the separate,
+    // larger "per-day colored and numbered markers" backlog item, not part
+    // of this one.
+    routesRef.current.forEach(line => line.setMap(null));
+    routesRef.current = [];
+    // Guards against a slower-to-resolve fetch from a previous
+    // updateMarkers() call landing after this one already cleared
+    // routesRef above — its polyline would draw but never get cleaned up
+    // until the *next* update. Each call claims a new id; a leg's fetch
+    // only draws if its call is still the latest by the time it resolves.
+    const requestId = ++routeRequestIdRef.current;
+    const transportMode = itinerary.transportMode || DEFAULT_TRANSPORT_MODE;
+    itinerary.days.forEach(day => {
+      const points = (day.Route || [])
+        .filter(stop => typeof stop.Latitude === 'number' && typeof stop.Longitude === 'number')
+        .map(stop => [stop.Longitude, stop.Latitude]);
+      for (let i = 0; i < points.length - 1; i++) {
+        fetchRoutePath(points[i], points[i + 1], transportMode, itinerary.destination).then(path => {
+          if (!path || routeRequestIdRef.current !== requestId || !mapInstance.current) return;
+          // A lighter, more saturated hot pink than the previous deep
+          // magenta — still nothing Amap's own road/park/water styling
+          // uses, but brighter/punchier at a glance — plus a thicker white
+          // "halo" outline (isOutline/outlineColor/borderWeight, the same
+          // cased-line technique Google/Apple Maps use for route lines) so
+          // it stays legible over any base-map color underneath it.
+          const polyline = new AMap.Polyline({
+            path,
+            strokeColor: '#FF2D95',
+            strokeWeight: 6,
+            strokeStyle: 'solid',
+            isOutline: true,
+            outlineColor: '#ffffff',
+            borderWeight: 3,
+            showDir: true,
+            map: mapInstance.current
+          });
+          routesRef.current.push(polyline);
+        });
+      }
+    });
+
     // Fit the viewport to the itinerary's own markers rather than leaving
     // the map at its initial default center — see the note on the removed
-    // geolocation auto-center above.
+    // geolocation auto-center above. Routes aren't included here (they
+    // resolve asynchronously, after this runs), but every route runs
+    // between two markers already in this list, so fitting to markers
+    // alone keeps the whole route in view in practice.
     if (markersRef.current.length) {
       mapInstance.current.setFitView(markersRef.current);
     }
