@@ -1,7 +1,8 @@
 const Validator = require("validator");
 const isEmpty = require("./isEmpty");
+const { t } = require("../Utils/i18n");
 // this will be sent to register route in routes/users.js
-module.exports = function validateRegisterInput(data) {
+module.exports = function validateRegisterInput(data, lang) {
   let errors = {};
 
   // if it is empty change it to empty string so Validator can work
@@ -12,22 +13,22 @@ module.exports = function validateRegisterInput(data) {
   data.Password2 = !isEmpty(data.Password2) ? data.Password2 : "";
 
   if (Validator.isEmpty(data.FirstName)) {
-    errors.FirstName = "Please enter your first name.";
+    errors.FirstName = t(lang, "firstNameRequired");
   }
   if (Validator.isEmpty(data.LastName)) {
-    errors.LastName = "Please enter your last name.";
+    errors.LastName = t(lang, "lastNameRequired");
   }
 
   if (Validator.isEmpty(data.Email)) {
-    errors.Email = "Email field is required.";
+    errors.Email = t(lang, "emailRequired");
   }
 
   if (!Validator.isEmail(data.Email)) {
-    errors.Email = "Email field is invalid.";
+    errors.Email = t(lang, "emailInvalid");
   }
 
   if (Validator.isEmpty(data.Password)) {
-    errors.Password = "Password field is required.";
+    errors.Password = t(lang, "passwordRequired");
   }
 
   if (
@@ -36,15 +37,15 @@ module.exports = function validateRegisterInput(data) {
       max: 30
     })
   ) {
-    errors.Password = "Password must be between 6 and 30 characters.";
+    errors.Password = t(lang, "passwordLength");
   }
 
   if (Validator.isEmpty(data.Password2)) {
-    errors.Password2 = "Confirm Password field is required.";
+    errors.Password2 = t(lang, "confirmPasswordRequired");
   }
 
   if (!Validator.equals(data.Password, data.Password2)) {
-    errors.Password = "Passwords must match.";
+    errors.Password = t(lang, "passwordsMustMatch");
   }
 
   // if errors isEmpty() is true -> no valid input

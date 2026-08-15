@@ -1,7 +1,8 @@
 const Validator = require("validator");
 const isEmpty = require("./isEmpty");
+const { t } = require("../Utils/i18n");
 // this will be sent to register route in routes/users.js
-module.exports = function validateLoginInput(data) {
+module.exports = function validateLoginInput(data, lang) {
   let errors = {};
 
   // if it is empty change it to empty string so Validator can work
@@ -9,15 +10,15 @@ module.exports = function validateLoginInput(data) {
   data.Password = !isEmpty(data.Password) ? data.Password : "";
 
   if (!Validator.isEmail(data.Email)) {
-    errors.Email = "Email field is invalid";
+    errors.Email = t(lang, "emailInvalid");
   }
 
   if (Validator.isEmpty(data.Password)) {
-    errors.Password = "Password field is required";
+    errors.Password = t(lang, "passwordRequired");
   }
 
   if (Validator.isEmpty(data.Email)) {
-    errors.Email = "Email field is required";
+    errors.Email = t(lang, "emailRequired");
   }
 
   // if errors isEmpty() is true -> no valid input

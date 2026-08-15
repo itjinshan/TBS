@@ -1,6 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
+import axios from 'axios';
 
 import en from './locales/en/translation.json';
 import zh from './locales/zh/translation.json';
@@ -33,5 +34,16 @@ i18n
       lookupLocalStorage: 'tbs_language'
     }
   });
+
+// Keeps the backend in sync with whatever this covers on the frontend —
+// the Node backend's server-generated text (chat replies, auth error
+// messages, ...) can't be reached by this client-side catalog, so it reads
+// the traveler's language off this standard header instead (see Node/index.js's
+// language middleware and Node/Utils/i18n.js). Fires once during init
+// (with the detected/persisted language) and again on every LanguageSwitcher
+// click, so every request from then on carries the current language.
+i18n.on('languageChanged', (lng) => {
+  axios.defaults.headers.common['Accept-Language'] = lng;
+});
 
 export default i18n;

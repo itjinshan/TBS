@@ -13,6 +13,7 @@ var amapPlaces = require('../Services/amapPlaces');
 var amapRouting = require('../Services/amapRouting');
 var spotPhotos = require('../Services/spotPhotos');
 var generateAccessToken = require('../Config/jwtgenerator');
+var { t } = require('../Utils/i18n');
 
 var OTHER_PREF_FIELDS = ['duration', 'startDate', 'numOfTravelers', 'budget', 'pace', 'transportMode', 'arrivalPoint', 'departurePoint'];
 
@@ -35,22 +36,25 @@ var STAGES = {
 // already exists rather than building one up field by field.
 var REFINE_STAGES = { CONFIRM: 'confirm', EDITING: 'editing', PICK_ACCOMMODATION: 'pick_accommodation', DONE: 'done' };
 
-var OTHER_PREF_QUESTIONS = {
-    duration: "How many days are you planning to travel?",
-    startDate: "When are you planning to start the trip?",
-    numOfTravelers: "How many people will be traveling?",
-    budget: "What's your budget style — budget, mid-range, or luxury?",
-    pace: "What pace are you after — relaxed, standard, or packed?",
-    transportMode: "How will you mostly be getting around — walking, public transit, taxi, or driving?",
-    arrivalPoint: "Where will you be arriving into the destination from (airport, train station, etc.)?",
-    departurePoint: "And where will you be departing from at the end of the trip?"
+// Maps each OTHER_PREF_FIELDS entry to its Utils/i18n.js key — the question
+// text itself lives there now (alongside every other server-generated
+// string), not as a literal here.
+var OTHER_PREF_QUESTION_KEYS = {
+    duration: 'questionDuration',
+    startDate: 'questionStartDate',
+    numOfTravelers: 'questionNumOfTravelers',
+    budget: 'questionBudget',
+    pace: 'questionPace',
+    transportMode: 'questionTransportMode',
+    arrivalPoint: 'questionArrivalPoint',
+    departurePoint: 'questionDeparturePoint'
 };
 
-function nextOtherPrefQuestion(mergedBrief) {
+function nextOtherPrefQuestion(mergedBrief, lang) {
     var missing = OTHER_PREF_FIELDS.filter(function (field) {
         return mergedBrief[field] === undefined || mergedBrief[field] === null || mergedBrief[field] === '';
     });
-    return missing.length ? { field: missing[0], question: OTHER_PREF_QUESTIONS[missing[0]] } : null;
+    return missing.length ? { field: missing[0], question: t(lang, OTHER_PREF_QUESTION_KEYS[missing[0]]) } : null;
 }
 
 // Real place lookup via Amap (see CLAUDE.md, "Planned: Lodging Flow", action
@@ -60,19 +64,19 @@ function nextOtherPrefQuestion(mergedBrief) {
 // by the accommodation confirm flow (which shows every candidate for the
 // traveler to pick from) and resolvePlacePoint below (which just takes the
 // top match, no confirm step).
-function lookupPlaceCandidates(query, city) {
+function lookupPlaceCandidates(query, city, lang) {
     return amapPlaces.searchPlaces(query, city)
         .then(function (candidates) {
-            return candidates.length ? candidates : [fallbackCandidate(query)];
+            return candidates.length ? candidates : [fallbackCandidate(query, lang)];
         })
         .catch(function (err) {
             console.error('Place lookup failed:', err.message);
-            return [fallbackCandidate(query)];
+            return [fallbackCandidate(query, lang)];
         });
 }
 
-function fallbackCandidate(query) {
-    return { Name: query.trim(), Address: 'Address not verified — lookup unavailable', Latitude: null, Longitude: null };
+function fallbackCandidate(query, lang) {
+    return { Name: query.trim(), Address: t(lang, 'addressNotVerified'), Latitude: null, Longitude: null };
 }
 
 // Resolves a freeform place name (e.g. an NLU-extracted arrivalPoint/
@@ -81,8 +85,8 @@ function fallbackCandidate(query) {
 // at, this is just for anchoring the itinerary's route and plotting it on
 // the map, so the top Amap match (or the graceful unverified fallback) is
 // good enough.
-function resolvePlacePoint(name, city) {
-    return lookupPlaceCandidates(name, city).then(function (candidates) {
+function resolvePlacePoint(name, city, lang) {
+    return lookupPlaceCandidates(name, city, lang).then(function (candidates) {
         return candidates[0];
     });
 }
@@ -114,7 +118,7 @@ function isSamePlaceAnswer(departureText, arrivalName) {
 // place-text-search, which has no way to know "same airport" refers back to
 // a place already named earlier in the conversation and can fuzzy-match it
 // to an unrelated real place instead (see CLAUDE.md Bugs).
-function resolvePlacePointFields(otherPrefFields, destination, existingArrivalPoint) {
+function resolvePlacePointFields(otherPrefFields, destination, existingArrivalPoint, lang) {
     var resolutions = ['arrivalPoint', 'departurePoint']
         .filter(function (field) { return typeof otherPrefFields[field] === 'string' && otherPrefFields[field].trim(); })
         .map(function (field) {
@@ -122,7 +126,7 @@ function resolvePlacePointFields(otherPrefFields, destination, existingArrivalPo
                 otherPrefFields[field] = existingArrivalPoint;
                 return Promise.resolve();
             }
-            return resolvePlacePoint(otherPrefFields[field], destination).then(function (point) {
+            return resolvePlacePoint(otherPrefFields[field], destination, lang).then(function (point) {
                 otherPrefFields[field] = point;
             });
         });
@@ -154,11 +158,11 @@ function pickFromList(list, message) {
     return list.find(function (item) { return lowerText.includes(item.Name.toLowerCase()); });
 }
 
-function fallbackSuggestions(tripBrief) {
+function fallbackSuggestions(tripBrief, lang) {
     var destination = tripBrief.destination || 'your destination';
     return [
-        { Name: 'Suggested stay #1 in ' + destination, Address: 'Address pending — DS-Service unavailable', Latitude: null, Longitude: null },
-        { Name: 'Suggested stay #2 in ' + destination, Address: 'Address pending — DS-Service unavailable', Latitude: null, Longitude: null }
+        { Name: t(lang, 'suggestedStay', 1, destination), Address: t(lang, 'addressPending'), Latitude: null, Longitude: null },
+        { Name: t(lang, 'suggestedStay', 2, destination), Address: t(lang, 'addressPending'), Latitude: null, Longitude: null }
     ];
 }
 
@@ -171,7 +175,7 @@ function fallbackSuggestions(tripBrief) {
 // two fields, so it works unmodified. Falls back to a placeholder pair if
 // DS-Service is unreachable or returns nothing, so the stage machine keeps
 // moving either way.
-function suggestAccommodations(tripBrief) {
+function suggestAccommodations(tripBrief, lang) {
     var accessToken = generateAccessToken('', 'deepseek');
     return axios.post(process.env.DS_SERVICE_BASEURL + '/datasourcing/sourceaccommodations', {
         token: accessToken,
@@ -181,14 +185,14 @@ function suggestAccommodations(tripBrief) {
     }).then(function (res) {
         var accommodations = res.data.accommodations || [];
         if (!accommodations.length) {
-            return fallbackSuggestions(tripBrief);
+            return fallbackSuggestions(tripBrief, lang);
         }
         return accommodations.map(function (a) {
             return { Name: a.Name, Address: a.Address, Latitude: a.Latitude, Longitude: a.Longitude };
         });
     }).catch(function (err) {
         console.error('Accommodation suggestion lookup failed:', err.message);
-        return fallbackSuggestions(tripBrief);
+        return fallbackSuggestions(tripBrief, lang);
     });
 }
 
@@ -203,20 +207,20 @@ function suggestAccommodations(tripBrief) {
 // already used for spot-swap replacement sourcing (see itineraryPlanner.js's
 // findReplacementSpot). A single TBS-side change, no DS-Service contract
 // change, no cross-repo dependency.
-function settleAccommodation(itinerary) {
+function settleAccommodation(itinerary, lang) {
     var allSpots = (itinerary.days || []).reduce(function (acc, day) {
         return acc.concat(day.Spots || []);
     }, []);
     var budget = itinerary.budget || 'mid-range'; // matches DB_Trip.js's Budget schema default
-    return suggestAccommodations({ destination: itinerary.destination, budget: budget })
+    return suggestAccommodations({ destination: itinerary.destination, budget: budget }, lang)
         .then(function (candidates) {
             var sorted = sortAccommodationsByProximity(candidates, allSpots);
             var listing = sorted.map(function (c, i) {
                 return (i + 1) + '. ' + c.Name + '\n' + c.Address;
             }).join('\n\n');
-            var reply = "Now let's settle your accommodation — here are some options near where you'll actually be visiting:\n\n" +
+            var reply = t(lang, 'accommodationSettleIntro') + '\n\n' +
                 listing +
-                '\n\nWhich one would you like to go with? (you can also click a marker on the map)';
+                '\n\n' + t(lang, 'accommodationSettleOutro');
             return { reply: reply, candidates: sorted };
         });
 }
@@ -233,23 +237,22 @@ router.post('/intake', function (req, res) {
 
     function respondError(err) {
         console.error('Trip intake error:', err);
-        res.status(502).json({ message: 'Something went wrong while processing that — please try again.' });
+        res.status(502).json({ message: t(req.lang, 'intakeGenericError') });
     }
 
     // Runs an Amap lookup and presents every match for the user to confirm —
     // stays in ACCOMMODATION_CONFIRM either way; a second message either picks
     // one of these candidates or (if nothing matches) triggers a fresh search.
     function searchAndPresent(query) {
-        lookupPlaceCandidates(query, tripBrief.destination)
+        lookupPlaceCandidates(query, tripBrief.destination, req.lang)
             .then(function (candidates) {
                 var listing = candidates.map(function (c, i) {
                     return (i + 1) + '. ' + c.Name + '\n' + c.Address;
                 }).join('\n\n');
                 var intro = candidates.length > 1
-                    ? 'Here are some similar hotels, could you please confirm:'
-                    : 'Here\'s what I found for "' + query.trim() + '", could you please confirm:';
-                var reply = intro + '\n\n' + listing +
-                    '\n\nWhich one is yours? (reply with the name or number, or type the name again to search differently)';
+                    ? t(req.lang, 'accommodationListingSimilar')
+                    : t(req.lang, 'accommodationListingConfirm', query.trim());
+                var reply = intro + '\n\n' + listing + '\n\n' + t(req.lang, 'accommodationListingOutro');
                 respond({ accommodationCandidates: candidates }, reply, STAGES.ACCOMMODATION_CONFIRM);
             })
             .catch(respondError);
@@ -262,11 +265,11 @@ router.post('/intake', function (req, res) {
                     if (destination) {
                         respond(
                             { destination: destination },
-                            'Got it — ' + destination + '. Do you already have a place to stay booked or in mind?',
+                            t(req.lang, 'destinationConfirmed', destination),
                             STAGES.ACCOMMODATION_CHOICE
                         );
                     } else {
-                        respond({}, 'Where are you headed?', STAGES.DESTINATION);
+                        respond({}, t(req.lang, 'whereHeaded'), STAGES.DESTINATION);
                     }
                 })
                 .catch(respondError);
@@ -279,17 +282,17 @@ router.post('/intake', function (req, res) {
                     if (choice === 'yes') {
                         respond(
                             { accommodationChoice: 'has_place' },
-                            "Great — what's the name (and city, if it helps) of the place? I'll look it up.",
+                            t(req.lang, 'placeNameAsk'),
                             STAGES.ACCOMMODATION_CONFIRM
                         );
                     } else if (choice === 'no') {
                         respond(
                             { accommodationChoice: 'no_place' },
-                            "No problem — what's your lodging budget (budget, mid-range, or luxury), and any living preferences (e.g. central location, quiet neighborhood, hotel vs. apartment)?",
+                            t(req.lang, 'budgetLivingPrefAsk'),
                             STAGES.BUDGET_LIVING_PREF
                         );
                     } else {
-                        respond({}, 'Just to confirm — do you already have a place booked or in mind? (yes/no)', STAGES.ACCOMMODATION_CHOICE);
+                        respond({}, t(req.lang, 'confirmHavePlace'), STAGES.ACCOMMODATION_CHOICE);
                     }
                 })
                 .catch(respondError);
@@ -302,11 +305,11 @@ router.post('/intake', function (req, res) {
 
             if (picked) {
                 var extractedFields = { accommodation: Object.assign({}, picked, { Source: 'user-provided' }) };
-                var afterConfirm = nextOtherPrefQuestion(Object.assign({}, tripBrief, extractedFields));
+                var afterConfirm = nextOtherPrefQuestion(Object.assign({}, tripBrief, extractedFields), req.lang);
                 if (afterConfirm) {
-                    respond(extractedFields, 'Got it — ' + picked.Name + '. ' + afterConfirm.question, STAGES.OTHER_PREFS);
+                    respond(extractedFields, t(req.lang, 'gotItThenQuestion', picked.Name, afterConfirm.question), STAGES.OTHER_PREFS);
                 } else {
-                    respond(extractedFields, 'Got it — ' + picked.Name + ". I've got everything I need — hit Generate Itinerary whenever you're ready!", STAGES.READY);
+                    respond(extractedFields, t(req.lang, 'gotItReadyNoQuestions', picked.Name), STAGES.READY);
                 }
             } else {
                 searchAndPresent(message);
@@ -320,16 +323,16 @@ router.post('/intake', function (req, res) {
                     var livingPrefFields = { livingPreference: message.trim() };
                     if (budgetPrefs.budget) livingPrefFields.budget = budgetPrefs.budget;
 
-                    var firstOtherQuestion = nextOtherPrefQuestion(Object.assign({}, tripBrief, livingPrefFields));
+                    var firstOtherQuestion = nextOtherPrefQuestion(Object.assign({}, tripBrief, livingPrefFields), req.lang);
                     if (firstOtherQuestion) {
-                        respond(livingPrefFields, 'Got it. ' + firstOtherQuestion.question, STAGES.OTHER_PREFS);
+                        respond(livingPrefFields, t(req.lang, 'gotItQuestion', firstOtherQuestion.question), STAGES.OTHER_PREFS);
                     } else {
                         // No hotel prompt during intake (see CLAUDE.md's
                         // resolved accommodation-timing bug) — settling
                         // accommodation happens on the Itinerary page after
                         // the traveler has actually seen the generated spots
                         // (POST /refine's REFINE_STAGES.PICK_ACCOMMODATION).
-                        respond(livingPrefFields, "Don't worry — we'll generate the itinerary first, then recommend a more suitable hotel based on where you'll actually be visiting. Hit Generate Itinerary whenever you're ready!", STAGES.READY);
+                        respond(livingPrefFields, t(req.lang, 'willGenerateFirst'), STAGES.READY);
                     }
                 })
                 .catch(respondError);
@@ -344,14 +347,14 @@ router.post('/intake', function (req, res) {
             // extractOtherPrefs' context so an ambiguous answer (e.g. a bare
             // place name) lands in the field actually being asked about instead
             // of getting guessed across all seven (see CLAUDE.md Bugs).
-            var pendingQuestion = nextOtherPrefQuestion(tripBrief);
+            var pendingQuestion = nextOtherPrefQuestion(tripBrief, req.lang);
             nluExtraction.extractOtherPrefs(message, buildOtherPrefsContext(pendingQuestion, tripBrief))
                 .then(function (otherPrefFields) {
-                    return resolvePlacePointFields(otherPrefFields, tripBrief.destination, tripBrief.arrivalPoint);
+                    return resolvePlacePointFields(otherPrefFields, tripBrief.destination, tripBrief.arrivalPoint, req.lang);
                 })
                 .then(function (otherPrefFields) {
                     var mergedBrief = Object.assign({}, tripBrief, otherPrefFields);
-                    var otherQuestion = nextOtherPrefQuestion(mergedBrief);
+                    var otherQuestion = nextOtherPrefQuestion(mergedBrief, req.lang);
 
                     if (otherQuestion) {
                         respond(otherPrefFields, otherQuestion.question, STAGES.OTHER_PREFS);
@@ -361,9 +364,9 @@ router.post('/intake', function (req, res) {
                         // accommodation happens on the Itinerary page after
                         // the traveler has actually seen the generated spots
                         // (POST /refine's REFINE_STAGES.PICK_ACCOMMODATION).
-                        respond(otherPrefFields, "Don't worry — we'll generate the itinerary first, then recommend a more suitable hotel based on where you'll actually be visiting. Hit Generate Itinerary whenever you're ready!", STAGES.READY);
+                        respond(otherPrefFields, t(req.lang, 'willGenerateFirst'), STAGES.READY);
                     } else {
-                        respond(otherPrefFields, "I've got everything I need — hit Generate Itinerary whenever you're ready!", STAGES.READY);
+                        respond(otherPrefFields, t(req.lang, 'readyToGenerate'), STAGES.READY);
                     }
                 })
                 .catch(respondError);
@@ -374,7 +377,7 @@ router.post('/intake', function (req, res) {
         default: {
             nluExtraction.extractOtherPrefs(message)
                 .then(function (otherPrefFields) {
-                    respond(otherPrefFields, "I've got everything I need — hit Generate Itinerary whenever you're ready!", STAGES.READY);
+                    respond(otherPrefFields, t(req.lang, 'readyToGenerate'), STAGES.READY);
                 })
                 .catch(respondError);
             break;
@@ -392,7 +395,7 @@ router.post('/intake', function (req, res) {
 router.post('/generate', function (req, res) {
     var tripBrief = req.body.tripBrief;
     if (!tripBrief || !tripBrief.destination) {
-        return res.status(400).json({ message: 'Missing required field: destination' });
+        return res.status(400).json({ message: t(req.lang, 'missingDestination') });
     }
 
     var duration = Math.max(1, Math.min(14, Number(tripBrief.duration) || 3));
@@ -442,7 +445,7 @@ router.post('/refine', function (req, res) {
     var stage = req.body.refinementStage || REFINE_STAGES.CONFIRM;
 
     if (!itinerary || !Array.isArray(itinerary.days)) {
-        return res.status(400).json({ message: 'Missing required field: itinerary' });
+        return res.status(400).json({ message: t(req.lang, 'missingItinerary') });
     }
 
     function respond(reply, nextStage, updatedItinerary, extra) {
@@ -453,7 +456,7 @@ router.post('/refine', function (req, res) {
     }
     function respondError(err) {
         console.error('Trip refine error:', err);
-        res.status(502).json({ message: 'Something went wrong while processing that — please try again.' });
+        res.status(502).json({ message: t(req.lang, 'refineGenericError') });
     }
 
     switch (stage) {
@@ -461,7 +464,7 @@ router.post('/refine', function (req, res) {
             nluExtraction.extractYesNo(message, 'whether the traveler wants to change anything about the generated itinerary')
                 .then(function (choice) {
                     if (choice === 'yes') {
-                        respond('Sure — what would you like to change? (e.g. "swap day 2\'s museum for something more outdoorsy")', REFINE_STAGES.EDITING);
+                        respond(t(req.lang, 'refineWhatToChange'), REFINE_STAGES.EDITING);
                     } else if (choice === 'no') {
                         // itinerary.accommodation is falsy only on the
                         // no-place intake path (see CLAUDE.md's resolved
@@ -471,13 +474,13 @@ router.post('/refine', function (req, res) {
                         // truthy), so this never overrides an
                         // already-booked/in-mind place.
                         if (!itinerary.accommodation) {
-                            return settleAccommodation(itinerary).then(function (result) {
+                            return settleAccommodation(itinerary, req.lang).then(function (result) {
                                 respond(result.reply, REFINE_STAGES.PICK_ACCOMMODATION, null, { accommodationCandidates: result.candidates });
                             });
                         }
-                        respond('Great — enjoy your trip!', REFINE_STAGES.DONE);
+                        respond(t(req.lang, 'refineEnjoyTrip'), REFINE_STAGES.DONE);
                     } else {
-                        respond('Just to confirm — would you like to change anything about this plan? (yes/no)', REFINE_STAGES.CONFIRM);
+                        respond(t(req.lang, 'refineConfirmChangeAnything'), REFINE_STAGES.CONFIRM);
                     }
                 })
                 .catch(respondError);
@@ -497,7 +500,7 @@ router.post('/refine', function (req, res) {
 
             if (!picked) {
                 respond(
-                    'Which of those would you like to go with? (reply with the name or number, or click a marker on the map)',
+                    t(req.lang, 'refinePickAccommodation'),
                     REFINE_STAGES.PICK_ACCOMMODATION,
                     null,
                     { accommodationCandidates: candidates }
@@ -507,7 +510,7 @@ router.post('/refine', function (req, res) {
 
             var updatedItinerary = applyAccommodation(itinerary, Object.assign({}, picked, { Source: 'suggested' }));
             respond(
-                'Great choice — ' + picked.Name + ". I've updated your itinerary's routes around it. Anything else you'd like to change?",
+                t(req.lang, 'refineGreatChoice', picked.Name),
                 REFINE_STAGES.EDITING,
                 updatedItinerary
             );
@@ -523,14 +526,14 @@ router.post('/refine', function (req, res) {
             nluExtraction.extractSpotSwap(message, 'identifying which day, which existing spot, and what kind of replacement the traveler wants for their itinerary')
                 .then(function (swap) {
                     if (!swap.dayNumber) {
-                        return respond('Which day is this for, and what would you like changed? (e.g. "day 2, swap the museum for something more outdoorsy")', REFINE_STAGES.EDITING);
+                        return respond(t(req.lang, 'refineWhichDayWhatChange'), REFINE_STAGES.EDITING);
                     }
-                    return replaceSpotInDay(itinerary, swap.dayNumber, swap.targetSpotHint, swap.replacementCategory)
+                    return replaceSpotInDay(itinerary, swap.dayNumber, swap.targetSpotHint, swap.replacementCategory, req.lang)
                         .then(function (result) {
                             if (!result.ok) {
                                 return respond(result.reply, REFINE_STAGES.EDITING);
                             }
-                            respond(result.reply + ' Anything else you\'d like to change?', REFINE_STAGES.EDITING, result.itinerary);
+                            respond(result.reply + t(req.lang, 'refineAnythingElseSuffix'), REFINE_STAGES.EDITING, result.itinerary);
                         });
                 })
                 .catch(respondError);
@@ -538,7 +541,7 @@ router.post('/refine', function (req, res) {
         }
 
         default:
-            respond('Want to change anything about this plan? (yes/no)', REFINE_STAGES.CONFIRM);
+            respond(t(req.lang, 'refineWantToChangeAnything'), REFINE_STAGES.CONFIRM);
     }
 });
 
@@ -552,7 +555,7 @@ router.post('/route', function (req, res) {
     var origin = req.body.origin;
     var destination = req.body.destination;
     if (!Array.isArray(origin) || !Array.isArray(destination)) {
-        return res.status(400).json({ message: 'Missing required field: origin/destination ([lng, lat])' });
+        return res.status(400).json({ message: t(req.lang, 'missingOriginDestination') });
     }
 
     amapRouting.getRoutePath(origin, destination, req.body.transportMode, req.body.city)
@@ -593,7 +596,7 @@ router.post('/', passport.authenticate('jwt', { session: false }), function (req
         });
     }).catch(function (err) {
         console.log(err);
-        res.status(400).json({ message: 'Failed to save trip' });
+        res.status(400).json({ message: t(req.lang, 'failedToSaveTrip') });
     });
 });
 
@@ -624,12 +627,12 @@ router.put('/:id', passport.authenticate('jwt', { session: false }), function (r
         { new: true }
     )
         .then(function (trip) {
-            if (!trip) return res.status(404).json({ message: 'Trip not found' });
+            if (!trip) return res.status(404).json({ message: t(req.lang, 'tripNotFound') });
             res.json(trip);
         })
         .catch(function (err) {
             console.log(err);
-            res.status(400).json({ message: 'Failed to update trip' });
+            res.status(400).json({ message: t(req.lang, 'failedToUpdateTrip') });
         });
 });
 
@@ -672,19 +675,19 @@ router.get('/mine', passport.authenticate('jwt', { session: false }), function (
         })
         .catch(function (err) {
             console.log(err);
-            res.status(400).json({ message: 'Failed to load trip history' });
+            res.status(400).json({ message: t(req.lang, 'failedToLoadHistory') });
         });
 });
 
 router.get('/:id', passport.authenticate('jwt', { session: false }), function (req, res) {
     Trip.findOne({ _id: req.params.id, Owner: req.user.id })
         .then(function (trip) {
-            if (!trip) return res.status(404).json({ message: 'Trip not found' });
+            if (!trip) return res.status(404).json({ message: t(req.lang, 'tripNotFound') });
             res.json(trip);
         })
         .catch(function (err) {
             console.log(err);
-            res.status(400).json({ message: 'Invalid trip id' });
+            res.status(400).json({ message: t(req.lang, 'invalidTripId') });
         });
 });
 
