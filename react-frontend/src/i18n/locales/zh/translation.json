@@ -2,6 +2,7 @@
   "nav": {
     "login": "登录",
     "myProfile": "我的资料",
+    "tripHistory": "行程历史",
     "settings": "设置",
     "logout": "退出登录"
   },
@@ -143,22 +144,33 @@
       "firstName": "名",
       "lastName": "姓",
       "phone": "电话",
-      "save": "保存修改",
+      "edit": "编辑资料",
+      "save": "保存",
       "saving": "保存中…",
       "saved": "已保存",
-      "retry": "重试"
+      "cancel": "取消",
+      "retry": "出了点问题，请重试。"
     },
-    "history": {
-      "title": "我的行程",
+    "trips": {
       "upcoming": "即将出行",
-      "past": "历史行程",
+      "seeAll": "查看全部行程",
       "noUpcoming": "暂无即将出行的行程。",
-      "noPast": "暂无历史行程。",
       "noDate": "未设置日期",
       "duration": "{{count}} 天",
       "loadingList": "正在加载你的行程…",
       "opening": "打开中…"
     }
+  },
+  "history": {
+    "title": "行程历史",
+    "columns": {
+      "destination": "目的地",
+      "duration": "天数",
+      "startDate": "出发日期",
+      "travelers": "出行人数",
+      "budget": "预算"
+    },
+    "empty": "暂无行程 —— 从首页开始规划一个吧。"
   },
   "footer": {
     "company": "公司",

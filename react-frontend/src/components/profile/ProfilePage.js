@@ -1,15 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { updateProfile } from '../../actions/authAction';
 import { getMyTrips, loadTripById } from '../../actions/tripAction';
 import './ProfilePage.css';
 
-// Wanderlog-style layout: editable identity info, then a trip-history list
-// split into upcoming/past (see CLAUDE.md's "Pending Tasks", "Build a
-// profile management page"). Reachable from Navbar.js's "My Profile"
-// dropdown item.
+const initials = (user) => `${user?.FirstName?.[0] || ''}${user?.LastName?.[0] || ''}`.toUpperCase();
+
+// Wanderlog-style layout: a fixed identity sidebar alongside a full-width
+// main column, rather than a single narrow centered card — see CLAUDE.md's
+// "Pending Tasks", "Build a profile management page". The main column shows
+// only upcoming trips as cards (the actionable ones); the complete
+// past+upcoming list lives on its own full-width table at /history
+// (HistoryPage.js), mirroring how Wanderlog splits "your profile" (cards)
+// from "your history" (table) into two destinations rather than one.
 const ProfilePage = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -19,6 +24,7 @@ const ProfilePage = () => {
 
   const [form, setForm] = useState({ FirstName: '', LastName: '', Phone: '' });
   const [formErrors, setFormErrors] = useState({});
+  const [isEditing, setIsEditing] = useState(false);
   const [saveStatus, setSaveStatus] = useState('idle'); // idle | saving | saved | error
   const [loadingTripId, setLoadingTripId] = useState(null);
 
@@ -40,9 +46,6 @@ const ProfilePage = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-    // Editing again after a save/error clears the stale status/error rather
-    // than leaving a "Saved"/error label sitting on an already-changed form.
-    if (saveStatus !== 'idle') setSaveStatus('idle');
     if (formErrors[name]) setFormErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
@@ -50,11 +53,24 @@ const ProfilePage = () => {
     e.preventDefault();
     setSaveStatus('saving');
     dispatch(updateProfile(form))
-      .then(() => setSaveStatus('saved'))
+      .then(() => {
+        setSaveStatus('saved');
+        setIsEditing(false);
+      })
       .catch((err) => {
         setSaveStatus('error');
         setFormErrors(err.response && err.response.data ? err.response.data : {});
       });
+  };
+
+  const handleCancelEdit = () => {
+    setForm({
+      FirstName: user?.FirstName || '',
+      LastName: user?.LastName || '',
+      Phone: user?.Phone || ''
+    });
+    setFormErrors({});
+    setIsEditing(false);
   };
 
   const handleTripClick = (tripId) => {
@@ -75,35 +91,22 @@ const ProfilePage = () => {
     );
   }
 
-  const renderTripCard = (trip) => (
-    <div
-      key={trip.id}
-      className={`trip-card${loadingTripId === trip.id ? ' trip-card-loading' : ''}`}
-      onClick={() => handleTripClick(trip.id)}
-    >
-      <div className="trip-card-destination">{trip.destination}</div>
-      <div className="trip-card-meta">
-        {trip.startDate ? new Date(trip.startDate).toLocaleDateString() : t('profile.history.noDate')}
-        {' · '}
-        {t('profile.history.duration', { count: trip.duration })}
-      </div>
-      {loadingTripId === trip.id && <div className="trip-card-loading-label">{t('profile.history.opening')}</div>}
-    </div>
-  );
-
   return (
     <div className="profile-page">
-      <div className="profile-content">
-        <section className="profile-section">
-          <h2>{t('profile.info.title')}</h2>
+      <aside className="profile-sidebar">
+        <div className="profile-avatar">{initials(user) || '?'}</div>
+        <h2 className="profile-name">{user?.FirstName} {user?.LastName}</h2>
+        <p className="profile-email">{user?.Email}</p>
+
+        {!isEditing ? (
+          <button type="button" className="profile-edit-btn" onClick={() => setIsEditing(true)}>
+            {t('profile.info.edit')}
+          </button>
+        ) : (
           <form onSubmit={handleSubmit} className="profile-form">
             <div className="profile-field">
-              <label>{t('profile.info.email')}</label>
-              <input type="text" value={user?.Email || ''} disabled />
-            </div>
-            <div className="profile-field">
               <label>{t('profile.info.firstName')}</label>
-              <input type="text" name="FirstName" value={form.FirstName} onChange={handleChange} />
+              <input type="text" name="FirstName" value={form.FirstName} onChange={handleChange} autoFocus />
               {formErrors.FirstName && <span className="profile-field-error">{formErrors.FirstName}</span>}
             </div>
             <div className="profile-field">
@@ -115,40 +118,54 @@ const ProfilePage = () => {
               <label>{t('profile.info.phone')}</label>
               <input type="text" name="Phone" value={form.Phone} onChange={handleChange} />
             </div>
-            <button type="submit" className="profile-save-btn" disabled={saveStatus === 'saving'}>
-              {saveStatus === 'saving'
-                ? t('profile.info.saving')
-                : saveStatus === 'saved'
-                ? t('profile.info.saved')
-                : saveStatus === 'error'
-                ? t('profile.info.retry')
-                : t('profile.info.save')}
-            </button>
+            <div className="profile-form-actions">
+              <button type="submit" className="profile-save-btn" disabled={saveStatus === 'saving'}>
+                {saveStatus === 'saving' ? t('profile.info.saving') : t('profile.info.save')}
+              </button>
+              <button type="button" className="profile-cancel-btn" onClick={handleCancelEdit}>
+                {t('profile.info.cancel')}
+              </button>
+            </div>
+            {saveStatus === 'error' && <p className="profile-field-error">{t('profile.info.retry')}</p>}
           </form>
-        </section>
+        )}
+      </aside>
 
-        <section className="profile-section">
-          <h2>{t('profile.history.title')}</h2>
-          {myTripsLoading && <p>{t('profile.history.loadingList')}</p>}
-          {myTripsError && <p className="profile-field-error">{myTripsError.message}</p>}
-          {!myTripsLoading && !myTripsError && (
-            <>
-              <h3 className="profile-subheading">{t('profile.history.upcoming')}</h3>
-              {myTrips.upcoming.length ? (
-                <div className="trip-card-list">{myTrips.upcoming.map(renderTripCard)}</div>
-              ) : (
-                <p className="profile-empty-list">{t('profile.history.noUpcoming')}</p>
-              )}
-              <h3 className="profile-subheading">{t('profile.history.past')}</h3>
-              {myTrips.past.length ? (
-                <div className="trip-card-list">{myTrips.past.map(renderTripCard)}</div>
-              ) : (
-                <p className="profile-empty-list">{t('profile.history.noPast')}</p>
-              )}
-            </>
-          )}
-        </section>
-      </div>
+      <main className="profile-main">
+        <div className="profile-main-header">
+          <h2>{t('profile.trips.upcoming')}</h2>
+          <Link to="/history" className="profile-see-all">{t('profile.trips.seeAll')}</Link>
+        </div>
+
+        {myTripsLoading && <p>{t('profile.trips.loadingList')}</p>}
+        {myTripsError && <p className="profile-field-error">{myTripsError.message}</p>}
+        {!myTripsLoading && !myTripsError && (
+          myTrips.upcoming.length ? (
+            <div className="trip-card-grid">
+              {myTrips.upcoming.map((trip) => (
+                <div
+                  key={trip.id}
+                  className={`trip-card${loadingTripId === trip.id ? ' trip-card-loading' : ''}`}
+                  onClick={() => handleTripClick(trip.id)}
+                >
+                  <div className="trip-card-cover" aria-hidden="true">{trip.destination?.[0] || '?'}</div>
+                  <div className="trip-card-body">
+                    <div className="trip-card-destination">{trip.destination}</div>
+                    <div className="trip-card-meta">
+                      {trip.startDate ? new Date(trip.startDate).toLocaleDateString() : t('profile.trips.noDate')}
+                      {' · '}
+                      {t('profile.trips.duration', { count: trip.duration })}
+                    </div>
+                    {loadingTripId === trip.id && <div className="trip-card-loading-label">{t('profile.trips.opening')}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="profile-empty-list">{t('profile.trips.noUpcoming')}</p>
+          )
+        )}
+      </main>
     </div>
   );
 };

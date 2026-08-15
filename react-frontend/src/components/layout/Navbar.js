@@ -64,6 +64,11 @@ const Navbar = () => {
     navigate('/profile');
   };
 
+  const handleGoToHistory = () => {
+    setShowDropdown(false);
+    navigate('/history');
+  };
+
   return (
     <>
     <nav className="navbar">
@@ -92,6 +97,7 @@ const Navbar = () => {
               {showDropdown && (
                 <div className="dropdown-menu">
                   <div className="dropdown-item" onClick={handleGoToProfile}>{t('nav.myProfile')}</div>
+                  <div className="dropdown-item" onClick={handleGoToHistory}>{t('nav.tripHistory')}</div>
                   <div className="dropdown-item">{t('nav.settings')}</div>
                   <div className="dropdown-divider"></div>
                   <div className="dropdown-item" onClick={handleLogout}>{t('nav.logout')}</div>

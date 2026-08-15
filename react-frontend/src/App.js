@@ -24,6 +24,7 @@ import Itinerary from "./components/itinerary/Itinerary"
 
 // Profile
 import ProfilePage from "./components/profile/ProfilePage"
+import HistoryPage from "./components/profile/HistoryPage"
 
 
 // Redux provider
@@ -77,6 +78,7 @@ export default class App extends Component {
                 <Route path="/verify-email" element={<><Home /><VerifyEmail /></>} />
                 <Route path="/itinerary" element={<Itinerary />} />
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/history" element={<HistoryPage />} />
               </Routes>
             </div>
             <GlobalFooter />
