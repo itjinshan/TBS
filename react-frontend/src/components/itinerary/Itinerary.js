@@ -7,7 +7,7 @@ import useAMap from '../../hooks/useAmap';
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import withRouter from "../../utils/withRouter";
-import { saveTrip, sendRefinementMessage } from "../../actions/tripAction";
+import { sendRefinementMessage } from "../../actions/tripAction";
 import ItineraryChatPanel from './ItineraryChatPanel';
 import { dayColor } from './dayColors';
 import './Itinerary.css';
@@ -153,8 +153,7 @@ const Itinerary = ({ auth }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { itinerary, refinementStage, accommodationCandidates } = useSelector((state) => state.trip);
-  const [saveStatus, setSaveStatus] = useState('idle'); // idle | saving | saved | error
+  const { itinerary, refinementStage, accommodationCandidates, isSavingTrip, tripSaveError } = useSelector((state) => state.trip);
 
   // AMap hook
   const { AMap, loaded } = useAMap();
@@ -488,13 +487,6 @@ const Itinerary = ({ auth }) => {
     };
   }, [isDragging]);
 
-  const handleSaveTrip = () => {
-    setSaveStatus('saving');
-    dispatch(saveTrip())
-      .then(() => setSaveStatus('saved'))
-      .catch(() => setSaveStatus('error'));
-  };
-
   if (!itinerary) {
     return (
       <div className="itinerary-empty">
@@ -518,13 +510,15 @@ const Itinerary = ({ auth }) => {
           <div className="destination-header">
             <h2 className="destination-heading">{itinerary.destination}</h2>
             {auth?.isAuthenticated && (
-              <button
-                className="save-trip-btn"
-                onClick={handleSaveTrip}
-                disabled={saveStatus === 'saving' || saveStatus === 'saved'}
-              >
-                {saveStatus === 'saving' ? t('itinerary.saveTrip.saving') : saveStatus === 'saved' ? t('itinerary.saveTrip.saved') : saveStatus === 'error' ? t('itinerary.saveTrip.retry') : t('itinerary.saveTrip.save')}
-              </button>
+              <span className="save-status">
+                {isSavingTrip
+                  ? t('itinerary.saveTrip.saving')
+                  : tripSaveError
+                  ? t('itinerary.saveTrip.error')
+                  : itinerary._id
+                  ? t('itinerary.saveTrip.saved')
+                  : null}
+              </span>
             )}
           </div>
           {itinerary.arrivalPoint?.Name && (

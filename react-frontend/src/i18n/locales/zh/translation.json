@@ -2,6 +2,7 @@
   "nav": {
     "login": "登录",
     "myProfile": "我的资料",
+    "tripHistory": "行程历史",
     "settings": "设置",
     "logout": "退出登录"
   },
@@ -25,6 +26,7 @@
     "fields": {
       "destination": "目的地",
       "days": "天数",
+      "startDate": "出发日期",
       "numOfTravelers": "人数",
       "budget": "预算",
       "pace": "节奏",
@@ -112,10 +114,9 @@
       "planTrip": "规划旅程"
     },
     "saveTrip": {
-      "save": "保存行程",
       "saving": "保存中…",
       "saved": "已保存 ✓",
-      "retry": "重试保存"
+      "error": "保存失败，请检查网络连接"
     },
     "day": "第 {{number}} 天",
     "loadingMap": "地图加载中…",
@@ -128,6 +129,48 @@
       "answerPlaceholder": "输入你的回答…",
       "send": "发送",
       "errorFallback": "出了点问题，请重试。"
+    }
+  },
+  "profile": {
+    "notLoggedIn": {
+      "title": "你还未登录",
+      "subtitle": "请登录以查看和管理你的个人资料。",
+      "goHome": "返回首页"
+    },
+    "info": {
+      "title": "个人资料",
+      "email": "邮箱",
+      "firstName": "名",
+      "lastName": "姓",
+      "phone": "电话",
+      "edit": "编辑资料",
+      "save": "保存",
+      "saving": "保存中…",
+      "saved": "已保存",
+      "cancel": "取消",
+      "retry": "出了点问题，请重试。"
+    },
+    "trips": {
+      "title": "我的行程",
+      "upcoming": "即将出行",
+      "past": "历史行程",
+      "seeAll": "查看全部行程",
+      "noUpcoming": "暂无即将出行的行程。",
+      "noPast": "暂无历史行程。",
+      "noDate": "未设置日期",
+      "duration": "{{count}} 天",
+      "loadingList": "正在加载你的行程…",
+      "opening": "打开中…"
+    }
+  },
+  "history": {
+    "title": "行程历史",
+    "columns": {
+      "destination": "目的地",
+      "duration": "天数",
+      "startDate": "出发日期",
+      "travelers": "出行人数",
+      "budget": "预算"
     }
   },
   "footer": {

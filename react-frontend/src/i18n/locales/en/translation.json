@@ -2,6 +2,7 @@
   "nav": {
     "login": "Login",
     "myProfile": "My Profile",
+    "tripHistory": "Trip History",
     "settings": "Settings",
     "logout": "Logout"
   },
@@ -25,6 +26,7 @@
     "fields": {
       "destination": "Destination",
       "days": "Days",
+      "startDate": "Start Date",
       "numOfTravelers": "Travelers",
       "budget": "Budget",
       "pace": "Pace",
@@ -112,10 +114,9 @@
       "planTrip": "Plan a Trip"
     },
     "saveTrip": {
-      "save": "Save Trip",
       "saving": "Saving…",
       "saved": "Saved ✓",
-      "retry": "Retry Save"
+      "error": "Couldn't save — check your connection"
     },
     "day": "Day {{number}}",
     "loadingMap": "Loading map...",
@@ -128,6 +129,48 @@
       "answerPlaceholder": "Type your answer…",
       "send": "Send",
       "errorFallback": "Something went wrong. Please try again."
+    }
+  },
+  "profile": {
+    "notLoggedIn": {
+      "title": "You're not logged in",
+      "subtitle": "Log in to view and manage your profile.",
+      "goHome": "Go to homepage"
+    },
+    "info": {
+      "title": "Profile info",
+      "email": "Email",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "phone": "Phone",
+      "edit": "Edit profile",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "cancel": "Cancel",
+      "retry": "Something went wrong — try again."
+    },
+    "trips": {
+      "title": "Your trips",
+      "upcoming": "Upcoming",
+      "past": "Past",
+      "seeAll": "See all trips",
+      "noUpcoming": "No upcoming trips yet.",
+      "noPast": "No past trips yet.",
+      "noDate": "Date not set",
+      "duration": "{{count}} days",
+      "loadingList": "Loading your trips…",
+      "opening": "Opening…"
+    }
+  },
+  "history": {
+    "title": "Your history",
+    "columns": {
+      "destination": "Destination",
+      "duration": "Duration",
+      "startDate": "Start date",
+      "travelers": "Travelers",
+      "budget": "Budget"
     }
   },
   "footer": {

@@ -133,6 +133,22 @@ const TripSchema = new Schema({
     CreatedAt: {
         type: Date,
         default: Date.now
+    },
+    // When the trip itself starts (asked during intake, see APIs/trip.js's
+    // OTHER_PREF_FIELDS) — distinct from CreatedAt above (when the document
+    // was saved). Used by GET /trip/mine to split a user's trip history into
+    // past vs. upcoming; optional since a traveler may not know it yet.
+    StartDate: {
+        type: Date
+    },
+    // A representative photo for the destination, shown as the trip card's
+    // cover image on the profile/history pages — looked up once at create
+    // time (Services/spotPhotos.js's findSpotPhoto(), same Amap POI-photo
+    // lookup individual spots already use, just queried with the
+    // destination name itself) rather than re-fetched on every page view.
+    // Null if the lookup found nothing.
+    CoverPhoto: {
+        type: String
     }
 });
 

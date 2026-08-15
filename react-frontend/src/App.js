@@ -22,6 +22,10 @@ import VerifyEmail from "./components/auth/VerifyEmail"
 //Itinerary
 import Itinerary from "./components/itinerary/Itinerary"
 
+// Profile
+import ProfilePage from "./components/profile/ProfilePage"
+import HistoryPage from "./components/profile/HistoryPage"
+
 
 // Redux provider
 //
@@ -73,6 +77,8 @@ export default class App extends Component {
                     look when opened from "/", instead of a bare page. */}
                 <Route path="/verify-email" element={<><Home /><VerifyEmail /></>} />
                 <Route path="/itinerary" element={<Itinerary />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/history" element={<HistoryPage />} />
               </Routes>
             </div>
             <GlobalFooter />

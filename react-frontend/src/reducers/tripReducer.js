@@ -11,7 +11,13 @@ import {
     REFINEMENT_ERRORS,
     RESET_REFINEMENT,
     UPDATE_ITINERARY,
-    SET_ACCOMMODATION_CANDIDATES
+    SET_ACCOMMODATION_CANDIDATES,
+    SET_MY_TRIPS_LOADING,
+    SET_MY_TRIPS,
+    MY_TRIPS_ERRORS,
+    SET_ITINERARY_ID,
+    SET_TRIP_SAVING,
+    TRIP_SAVE_ERROR
 } from "../actions/types";
 
 const initialState = {
@@ -24,7 +30,12 @@ const initialState = {
     isRefining: false,
     refinementStage: null, // null | 'confirm' | 'editing' | 'pick_accommodation' | 'done'
     refinementError: null,
-    accommodationCandidates: []
+    accommodationCandidates: [],
+    myTrips: { past: [], upcoming: [] },
+    myTripsLoading: false,
+    myTripsError: null,
+    isSavingTrip: false,
+    tripSaveError: null
 };
 
 export default function (state = initialState, action) {
@@ -49,7 +60,9 @@ export default function (state = initialState, action) {
                 ...state,
                 itinerary: action.payload,
                 isGenerating: false,
-                error: null
+                error: null,
+                isSavingTrip: false,
+                tripSaveError: null
             };
         case TRIP_ERRORS:
             return {
@@ -88,14 +101,51 @@ export default function (state = initialState, action) {
                 accommodationCandidates: []
             };
         case UPDATE_ITINERARY:
+            // POST /trip/refine is stateless and returns a fresh itinerary
+            // object with no `_id` — carry the existing one forward (if any)
+            // so autoSaveTrip() still knows to PUT rather than re-POST.
             return {
                 ...state,
-                itinerary: action.payload
+                itinerary: { ...action.payload, _id: state.itinerary?._id }
+            };
+        case SET_ITINERARY_ID:
+            return {
+                ...state,
+                itinerary: { ...state.itinerary, _id: action.payload }
+            };
+        case SET_TRIP_SAVING:
+            return {
+                ...state,
+                isSavingTrip: action.payload
+            };
+        case TRIP_SAVE_ERROR:
+            return {
+                ...state,
+                tripSaveError: action.payload,
+                isSavingTrip: false
             };
         case SET_ACCOMMODATION_CANDIDATES:
             return {
                 ...state,
                 accommodationCandidates: action.payload
+            };
+        case SET_MY_TRIPS_LOADING:
+            return {
+                ...state,
+                myTripsLoading: action.payload
+            };
+        case SET_MY_TRIPS:
+            return {
+                ...state,
+                myTrips: action.payload,
+                myTripsLoading: false,
+                myTripsError: null
+            };
+        case MY_TRIPS_ERRORS:
+            return {
+                ...state,
+                myTripsError: action.payload,
+                myTripsLoading: false
             };
         default:
             return state;

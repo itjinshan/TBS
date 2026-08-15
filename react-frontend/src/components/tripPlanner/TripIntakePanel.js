@@ -8,7 +8,7 @@ import { sendIntakeMessage, updateTripBriefField, generateItinerary } from '../.
 import AccommodationMap from './AccommodationMap';
 import './TripIntakePanel.css';
 
-const REQUIRED_FIELDS = ['destination', 'duration', 'numOfTravelers', 'budget', 'pace', 'transportMode', 'arrivalPoint', 'departurePoint'];
+const REQUIRED_FIELDS = ['destination', 'duration', 'startDate', 'numOfTravelers', 'budget', 'pace', 'transportMode', 'arrivalPoint', 'departurePoint'];
 
 // Unlike the other chips, these resolve to a real-world place object
 // ({ Name, Address, Latitude, Longitude }, see Node/APIs/trip.js's
@@ -29,6 +29,7 @@ const TripIntakePanel = () => {
   const FIELD_LABELS = {
     destination: t('intake.fields.destination'),
     duration: t('intake.fields.days'),
+    startDate: t('intake.fields.startDate'),
     numOfTravelers: t('intake.fields.numOfTravelers'),
     budget: t('intake.fields.budget'),
     pace: t('intake.fields.pace'),
@@ -225,7 +226,7 @@ const TripIntakePanel = () => {
                   ) : (
                     <input
                       autoFocus
-                      type={field === 'duration' || field === 'numOfTravelers' ? 'number' : 'text'}
+                      type={field === 'duration' || field === 'numOfTravelers' ? 'number' : field === 'startDate' ? 'date' : 'text'}
                       value={editingValue}
                       onChange={(e) => setEditingValue(e.target.value)}
                       onBlur={() => commitValue(field, editingValue)}
