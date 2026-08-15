@@ -11,6 +11,7 @@ var spotSourcing = require('../Services/spotSourcing');
 var nluExtraction = require('../Services/nluExtraction');
 var amapPlaces = require('../Services/amapPlaces');
 var amapRouting = require('../Services/amapRouting');
+var spotPhotos = require('../Services/spotPhotos');
 var generateAccessToken = require('../Config/jwtgenerator');
 
 var OTHER_PREF_FIELDS = ['duration', 'startDate', 'numOfTravelers', 'budget', 'pace', 'transportMode', 'arrivalPoint', 'departurePoint'];
@@ -559,33 +560,76 @@ router.post('/route', function (req, res) {
         .catch(function () { res.json({ path: null }); });
 });
 
+// Creates a trip on first save, then is also the auto-save target for every
+// later edit made on the Itinerary page (see tripAction.js's
+// autoSaveTrip()) — the frontend POSTs here once (no `_id` yet) and PUTs to
+// /:id (below) on every subsequent change, so there's no manual "Save Trip"
+// button/action anymore.
 router.post('/', passport.authenticate('jwt', { session: false }), function (req, res) {
     var body = req.body;
-    var trip = new Trip({
-        Owner: req.user.id,
-        Destination: body.destination,
-        Duration: body.days ? body.days.length : 0,
-        NumOfTravelers: body.numOfTravelers,
-        Budget: body.budget,
-        Pace: body.pace,
-        TransportMode: body.transportMode,
-        Preferences: body.preferences,
-        Accommodation: body.accommodation,
-        ArrivalPoint: body.arrivalPoint,
-        DeparturePoint: body.departurePoint,
-        LivingPreference: body.livingPreference,
-        Days: body.days,
-        StartDate: body.startDate
-    });
 
-    trip.save()
-        .then(function (saved) {
+    spotPhotos.findSpotPhoto(body.destination, body.destination).then(function (coverPhoto) {
+        var trip = new Trip({
+            Owner: req.user.id,
+            Destination: body.destination,
+            Duration: body.days ? body.days.length : 0,
+            NumOfTravelers: body.numOfTravelers,
+            Budget: body.budget,
+            Pace: body.pace,
+            TransportMode: body.transportMode,
+            Preferences: body.preferences,
+            Accommodation: body.accommodation,
+            ArrivalPoint: body.arrivalPoint,
+            DeparturePoint: body.departurePoint,
+            LivingPreference: body.livingPreference,
+            Days: body.days,
+            StartDate: body.startDate,
+            CoverPhoto: coverPhoto
+        });
+
+        return trip.save().then(function (saved) {
             req.user.TripHistory.push({ TripID: saved._id });
             return req.user.save().then(function () { res.json(saved); });
+        });
+    }).catch(function (err) {
+        console.log(err);
+        res.status(400).json({ message: 'Failed to save trip' });
+    });
+});
+
+// Updates an already-saved trip in place — the auto-save target for every
+// edit after the initial POST above (refine-chat swaps, accommodation
+// picks, ...). Ownership-checked the same way GET /:id is. Doesn't
+// re-derive CoverPhoto — the destination a trip was created for doesn't
+// change via these edits, so the original lookup still applies.
+router.put('/:id', passport.authenticate('jwt', { session: false }), function (req, res) {
+    var body = req.body;
+    Trip.findOneAndUpdate(
+        { _id: req.params.id, Owner: req.user.id },
+        {
+            Destination: body.destination,
+            Duration: body.days ? body.days.length : 0,
+            NumOfTravelers: body.numOfTravelers,
+            Budget: body.budget,
+            Pace: body.pace,
+            TransportMode: body.transportMode,
+            Preferences: body.preferences,
+            Accommodation: body.accommodation,
+            ArrivalPoint: body.arrivalPoint,
+            DeparturePoint: body.departurePoint,
+            LivingPreference: body.livingPreference,
+            Days: body.days,
+            StartDate: body.startDate
+        },
+        { new: true }
+    )
+        .then(function (trip) {
+            if (!trip) return res.status(404).json({ message: 'Trip not found' });
+            res.json(trip);
         })
         .catch(function (err) {
             console.log(err);
-            res.status(400).json({ message: 'Failed to save trip' });
+            res.status(400).json({ message: 'Failed to update trip' });
         });
 });
 
@@ -598,7 +642,7 @@ router.post('/', passport.authenticate('jwt', { session: false }), function (req
 // when a traveler clicks into one.
 router.get('/mine', passport.authenticate('jwt', { session: false }), function (req, res) {
     User.findById(req.user.id)
-        .populate('TripHistory.TripID', 'Destination NumOfTravelers Budget StartDate CreatedAt Duration')
+        .populate('TripHistory.TripID', 'Destination NumOfTravelers Budget StartDate CreatedAt Duration CoverPhoto')
         .then(function (user) {
             var now = new Date();
             var past = [];
@@ -613,7 +657,8 @@ router.get('/mine', passport.authenticate('jwt', { session: false }), function (
                     budget: trip.Budget,
                     startDate: trip.StartDate,
                     createdAt: trip.CreatedAt,
-                    duration: trip.Duration
+                    duration: trip.Duration,
+                    coverPhoto: trip.CoverPhoto
                 };
                 // No StartDate yet (asked during intake, but optional) reads
                 // as "not yet happened" rather than a bucket of its own.

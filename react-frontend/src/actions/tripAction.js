@@ -14,7 +14,10 @@ import {
     SET_ACCOMMODATION_CANDIDATES,
     SET_MY_TRIPS_LOADING,
     SET_MY_TRIPS,
-    MY_TRIPS_ERRORS
+    MY_TRIPS_ERRORS,
+    SET_ITINERARY_ID,
+    SET_TRIP_SAVING,
+    TRIP_SAVE_ERROR
 } from "./types";
 import axios from "axios";
 
@@ -60,6 +63,7 @@ export const generateItinerary = () => (dispatch, getState) => {
         .post("/trip/generate", { tripBrief })
         .then(res => {
             dispatch({ type: SET_ITINERARY, payload: res.data });
+            dispatch(autoSaveTrip());
             return res.data;
         })
         .catch(err => {
@@ -72,37 +76,61 @@ export const generateItinerary = () => (dispatch, getState) => {
         });
 };
 
-export const saveTrip = () => (dispatch, getState) => {
+// Persists the current itinerary in the background — no manual "Save Trip"
+// button/click anymore. POSTs once to create the trip (the first call after
+// a fresh generation, when `itinerary._id` doesn't exist yet), then PUTs to
+// /trip/:id for every edit after that (see tripReducer.js's SET_ITINERARY_ID/
+// UPDATE_ITINERARY, which carry `_id` forward across refine-chat edits so
+// this always knows which path to take). A no-op for logged-out visitors,
+// same as the old manual button being hidden for them.
+export const autoSaveTrip = () => (dispatch, getState) => {
     const { tripBrief, itinerary } = getState().trip;
+    const { isAuthenticated } = getState().auth;
+    if (!isAuthenticated || !itinerary) return Promise.resolve();
 
-    return axios
-        .post("/trip", {
-            destination: itinerary.destination,
-            numOfTravelers: tripBrief.numOfTravelers,
-            budget: tripBrief.budget,
-            pace: tripBrief.pace,
-            transportMode: tripBrief.transportMode,
-            preferences: tripBrief.preferences,
-            // itinerary.accommodation, not tripBrief.accommodation — the
-            // no-place path never sets accommodation on tripBrief at all
-            // anymore (see CLAUDE.md's resolved accommodation-timing bug);
-            // a post-generation pick via the refinement chat only ever
-            // lands on itinerary.accommodation (see itineraryPlanner.js's
-            // applyAccommodation()), which is the authoritative post-edit
-            // state here, same as itinerary.days already is below.
-            accommodation: itinerary.accommodation,
-            arrivalPoint: tripBrief.arrivalPoint,
-            departurePoint: tripBrief.departurePoint,
-            livingPreference: tripBrief.livingPreference,
-            days: itinerary.days,
-            startDate: tripBrief.startDate
+    dispatch({ type: SET_TRIP_SAVING, payload: true });
+
+    const payload = {
+        destination: itinerary.destination,
+        numOfTravelers: tripBrief.numOfTravelers,
+        budget: tripBrief.budget,
+        pace: tripBrief.pace,
+        transportMode: tripBrief.transportMode,
+        preferences: tripBrief.preferences,
+        // itinerary.accommodation, not tripBrief.accommodation — the
+        // no-place path never sets accommodation on tripBrief at all
+        // anymore (see CLAUDE.md's resolved accommodation-timing bug);
+        // a post-generation pick via the refinement chat only ever
+        // lands on itinerary.accommodation (see itineraryPlanner.js's
+        // applyAccommodation()), which is the authoritative post-edit
+        // state here, same as itinerary.days already is below.
+        accommodation: itinerary.accommodation,
+        arrivalPoint: tripBrief.arrivalPoint,
+        departurePoint: tripBrief.departurePoint,
+        livingPreference: tripBrief.livingPreference,
+        days: itinerary.days,
+        startDate: tripBrief.startDate
+    };
+
+    const request = itinerary._id
+        ? axios.put(`/trip/${itinerary._id}`, payload)
+        : axios.post("/trip", payload);
+
+    return request
+        .then(res => {
+            if (!itinerary._id) {
+                dispatch({ type: SET_ITINERARY_ID, payload: res.data._id });
+            }
+            dispatch({ type: SET_TRIP_SAVING, payload: false });
+            dispatch({ type: TRIP_SAVE_ERROR, payload: null });
+            return res.data;
         })
         .catch(err => {
+            dispatch({ type: SET_TRIP_SAVING, payload: false });
             dispatch({
-                type: TRIP_ERRORS,
+                type: TRIP_SAVE_ERROR,
                 payload: err.response ? err.response.data : { message: "An error occurred" }
             });
-            throw err;
         });
 };
 
@@ -136,6 +164,7 @@ export const sendRefinementMessage = (message) => (dispatch, getState) => {
             const { reply, stage, itinerary: updatedItinerary, accommodationCandidates: newCandidates } = res.data;
             if (updatedItinerary) {
                 dispatch({ type: UPDATE_ITINERARY, payload: updatedItinerary });
+                dispatch(autoSaveTrip());
             }
             // Cleared automatically once the flow moves past picking — the
             // server only includes accommodationCandidates in its response
@@ -163,9 +192,8 @@ export const resetTrip = () => ({ type: RESET_TRIP });
 // /trip/generate's response uses lowercase top-level keys instead (nested
 // Day/Spot/Accommodation/PlacePoint shapes already match either way, since
 // itineraryPlanner.js builds those directly from the same schema shapes) —
-// this maps between the two. `_id` is carried through so Itinerary.js can
-// tell a history-loaded itinerary apart from a freshly generated one (see
-// its Save button).
+// this maps between the two. `_id` is carried through so autoSaveTrip()
+// knows to PUT (update) rather than POST (create) if this trip is edited.
 export const loadTripById = (tripId) => (dispatch) => {
     dispatch({ type: RESET_REFINEMENT });
     dispatch({ type: SET_ITINERARY_LOADING, payload: true });

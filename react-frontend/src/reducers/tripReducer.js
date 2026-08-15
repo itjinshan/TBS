@@ -14,7 +14,10 @@ import {
     SET_ACCOMMODATION_CANDIDATES,
     SET_MY_TRIPS_LOADING,
     SET_MY_TRIPS,
-    MY_TRIPS_ERRORS
+    MY_TRIPS_ERRORS,
+    SET_ITINERARY_ID,
+    SET_TRIP_SAVING,
+    TRIP_SAVE_ERROR
 } from "../actions/types";
 
 const initialState = {
@@ -30,7 +33,9 @@ const initialState = {
     accommodationCandidates: [],
     myTrips: { past: [], upcoming: [] },
     myTripsLoading: false,
-    myTripsError: null
+    myTripsError: null,
+    isSavingTrip: false,
+    tripSaveError: null
 };
 
 export default function (state = initialState, action) {
@@ -55,7 +60,9 @@ export default function (state = initialState, action) {
                 ...state,
                 itinerary: action.payload,
                 isGenerating: false,
-                error: null
+                error: null,
+                isSavingTrip: false,
+                tripSaveError: null
             };
         case TRIP_ERRORS:
             return {
@@ -94,9 +101,28 @@ export default function (state = initialState, action) {
                 accommodationCandidates: []
             };
         case UPDATE_ITINERARY:
+            // POST /trip/refine is stateless and returns a fresh itinerary
+            // object with no `_id` — carry the existing one forward (if any)
+            // so autoSaveTrip() still knows to PUT rather than re-POST.
             return {
                 ...state,
-                itinerary: action.payload
+                itinerary: { ...action.payload, _id: state.itinerary?._id }
+            };
+        case SET_ITINERARY_ID:
+            return {
+                ...state,
+                itinerary: { ...state.itinerary, _id: action.payload }
+            };
+        case SET_TRIP_SAVING:
+            return {
+                ...state,
+                isSavingTrip: action.payload
+            };
+        case TRIP_SAVE_ERROR:
+            return {
+                ...state,
+                tripSaveError: action.payload,
+                isSavingTrip: false
             };
         case SET_ACCOMMODATION_CANDIDATES:
             return {

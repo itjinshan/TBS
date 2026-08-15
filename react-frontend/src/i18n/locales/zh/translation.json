@@ -114,10 +114,9 @@
       "planTrip": "规划旅程"
     },
     "saveTrip": {
-      "save": "保存行程",
       "saving": "保存中…",
       "saved": "已保存 ✓",
-      "retry": "重试保存"
+      "error": "保存失败，请检查网络连接"
     },
     "day": "第 {{number}} 天",
     "loadingMap": "地图加载中…",
@@ -152,9 +151,12 @@
       "retry": "出了点问题，请重试。"
     },
     "trips": {
+      "title": "我的行程",
       "upcoming": "即将出行",
+      "past": "历史行程",
       "seeAll": "查看全部行程",
       "noUpcoming": "暂无即将出行的行程。",
+      "noPast": "暂无历史行程。",
       "noDate": "未设置日期",
       "duration": "{{count}} 天",
       "loadingList": "正在加载你的行程…",
@@ -169,8 +171,7 @@
       "startDate": "出发日期",
       "travelers": "出行人数",
       "budget": "预算"
-    },
-    "empty": "暂无行程 —— 从首页开始规划一个吧。"
+    }
   },
   "footer": {
     "company": "公司",

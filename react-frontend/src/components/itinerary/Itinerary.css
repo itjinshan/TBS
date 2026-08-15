@@ -59,20 +59,11 @@
   margin-bottom: 0;
 }
 
-.save-trip-btn {
+.save-status {
   flex-shrink: 0;
-  padding: 0.6rem 1.2rem;
-  background: #34a853;
-  color: white;
-  border: none;
-  border-radius: 8px;
+  font-size: 13px;
   font-weight: 600;
-  cursor: pointer;
-}
-
-.save-trip-btn:disabled {
-  background: #9aa0a6;
-  cursor: not-allowed;
+  color: #5f6368;
 }
 
 .waypoint-card {

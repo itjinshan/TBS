@@ -8,13 +8,44 @@ import './ProfilePage.css';
 
 const initials = (user) => `${user?.FirstName?.[0] || ''}${user?.LastName?.[0] || ''}`.toUpperCase();
 
+// A trip card's cover: a real photo of the destination if one was found at
+// save time (Node/APIs/trip.js's POST /trip, via Services/spotPhotos.js —
+// see DB_Trip.js's CoverPhoto), otherwise the same gradient/initial
+// placeholder every card used to show.
+const TripCardCover = ({ trip }) => (
+  trip.coverPhoto
+    ? <img className="trip-card-cover-photo" src={trip.coverPhoto} alt={trip.destination} />
+    : <div className="trip-card-cover" aria-hidden="true">{trip.destination?.[0] || '?'}</div>
+);
+
+const TripCardGrid = ({ trips, loadingTripId, onTripClick, t }) => (
+  <div className="trip-card-grid">
+    {trips.map((trip) => (
+      <div
+        key={trip.id}
+        className={`trip-card${loadingTripId === trip.id ? ' trip-card-loading' : ''}`}
+        onClick={() => onTripClick(trip.id)}
+      >
+        <TripCardCover trip={trip} />
+        <div className="trip-card-body">
+          <div className="trip-card-destination">{trip.destination}</div>
+          <div className="trip-card-meta">
+            {trip.startDate ? new Date(trip.startDate).toLocaleDateString() : t('profile.trips.noDate')}
+            {' · '}
+            {t('profile.trips.duration', { count: trip.duration })}
+          </div>
+          {loadingTripId === trip.id && <div className="trip-card-loading-label">{t('profile.trips.opening')}</div>}
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 // Wanderlog-style layout: a fixed identity sidebar alongside a full-width
 // main column, rather than a single narrow centered card — see CLAUDE.md's
 // "Pending Tasks", "Build a profile management page". The main column shows
-// only upcoming trips as cards (the actionable ones); the complete
-// past+upcoming list lives on its own full-width table at /history
-// (HistoryPage.js), mirroring how Wanderlog splits "your profile" (cards)
-// from "your history" (table) into two destinations rather than one.
+// upcoming and past trips as their own card-grid sections; the same split
+// also drives the denser table on /history (HistoryPage.js).
 const ProfilePage = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -93,6 +124,7 @@ const ProfilePage = () => {
 
   return (
     <div className="profile-page">
+    <div className="profile-container">
       <aside className="profile-sidebar">
         <div className="profile-avatar">{initials(user) || '?'}</div>
         <h2 className="profile-name">{user?.FirstName} {user?.LastName}</h2>
@@ -133,39 +165,31 @@ const ProfilePage = () => {
 
       <main className="profile-main">
         <div className="profile-main-header">
-          <h2>{t('profile.trips.upcoming')}</h2>
+          <h2>{t('profile.trips.title')}</h2>
           <Link to="/history" className="profile-see-all">{t('profile.trips.seeAll')}</Link>
         </div>
 
         {myTripsLoading && <p>{t('profile.trips.loadingList')}</p>}
         {myTripsError && <p className="profile-field-error">{myTripsError.message}</p>}
         {!myTripsLoading && !myTripsError && (
-          myTrips.upcoming.length ? (
-            <div className="trip-card-grid">
-              {myTrips.upcoming.map((trip) => (
-                <div
-                  key={trip.id}
-                  className={`trip-card${loadingTripId === trip.id ? ' trip-card-loading' : ''}`}
-                  onClick={() => handleTripClick(trip.id)}
-                >
-                  <div className="trip-card-cover" aria-hidden="true">{trip.destination?.[0] || '?'}</div>
-                  <div className="trip-card-body">
-                    <div className="trip-card-destination">{trip.destination}</div>
-                    <div className="trip-card-meta">
-                      {trip.startDate ? new Date(trip.startDate).toLocaleDateString() : t('profile.trips.noDate')}
-                      {' · '}
-                      {t('profile.trips.duration', { count: trip.duration })}
-                    </div>
-                    {loadingTripId === trip.id && <div className="trip-card-loading-label">{t('profile.trips.opening')}</div>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="profile-empty-list">{t('profile.trips.noUpcoming')}</p>
-          )
+          <>
+            <h3 className="profile-subheading">{t('profile.trips.upcoming')}</h3>
+            {myTrips.upcoming.length ? (
+              <TripCardGrid trips={myTrips.upcoming} loadingTripId={loadingTripId} onTripClick={handleTripClick} t={t} />
+            ) : (
+              <p className="profile-empty-list">{t('profile.trips.noUpcoming')}</p>
+            )}
+
+            <h3 className="profile-subheading">{t('profile.trips.past')}</h3>
+            {myTrips.past.length ? (
+              <TripCardGrid trips={myTrips.past} loadingTripId={loadingTripId} onTripClick={handleTripClick} t={t} />
+            ) : (
+              <p className="profile-empty-list">{t('profile.trips.noPast')}</p>
+            )}
+          </>
         )}
       </main>
+    </div>
     </div>
   );
 };

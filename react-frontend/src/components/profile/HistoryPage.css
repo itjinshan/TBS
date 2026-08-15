@@ -1,12 +1,23 @@
 .history-page {
   min-height: calc(100vh - 60px);
   background: #fff;
-  padding: 32px;
+  padding: 32px 20px;
+}
+
+.history-container {
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .history-title {
   margin: 0 0 24px;
   color: #202124;
+}
+
+.history-subheading {
+  margin: 28px 0 12px;
+  color: #202124;
+  font-size: 18px;
 }
 
 .history-error {
@@ -33,7 +44,7 @@
 }
 
 .history-table td {
-  padding: 14px 16px;
+  padding: 10px 16px;
   border-bottom: 1px solid #eee;
   font-size: 14px;
   color: #202124;
@@ -51,6 +62,31 @@
 .history-row-loading {
   opacity: 0.6;
   cursor: default;
+}
+
+.history-cell-cover {
+  width: 64px;
+}
+
+.history-cover-photo {
+  width: 56px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+  display: block;
+}
+
+.history-cover-placeholder {
+  width: 56px;
+  height: 40px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #4285f4, #34a853);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .history-cell-destination {
