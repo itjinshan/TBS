@@ -283,8 +283,19 @@ function toRouteStop(type, point) {
     // Spots use StreetAddress (DB_Trip.js's SpotSchema); arrival/departure/
     // accommodation points use Address (PlacePointSchema/AccommodationSchema)
     // — RouteStopSchema standardizes on Address, so read whichever the
-    // source object actually has.
-    return { Type: type, Name: point.Name, Address: point.Address || point.StreetAddress, Latitude: point.Latitude, Longitude: point.Longitude };
+    // source object actually has. NameZh/AddressZh only ever come from a
+    // spot (arrival/accommodation/departure points are Amap-resolved, no
+    // bilingual pair available) — undefined on those is fine, same
+    // graceful-fallback contract as every other Zh field.
+    return {
+        Type: type,
+        Name: point.Name,
+        NameZh: point.NameZh,
+        Address: point.Address || point.StreetAddress,
+        AddressZh: point.AddressZh || point.StreetAddressZh,
+        Latitude: point.Latitude,
+        Longitude: point.Longitude
+    };
 }
 
 // Builds a day's visible route in true visiting order — see CLAUDE.md,

@@ -64,7 +64,9 @@ const PlacePointSchema = new Schema({
 const RouteStopSchema = new Schema({
     Type: { type: String, enum: ['arrival', 'accommodation', 'spot', 'departure'], required: true },
     Name: { type: String },
+    NameZh: { type: String },
     Address: { type: String },
+    AddressZh: { type: String },
     Latitude: { type: Number },
     Longitude: { type: Number }
 }, { _id: false });

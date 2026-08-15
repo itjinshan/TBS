@@ -41,29 +41,38 @@ function resolveSpotPhoto(photo) {
   return PLACEHOLDER_PHOTOS[photo] || HawaiiWall;
 }
 
+// Prefers the Chinese counterpart when one exists and the site is currently
+// in Chinese, falling back to the English value otherwise — same
+// graceful-degradation contract the backend fields themselves follow (see
+// DS-Service's DestinationSpot.SpotNameZh), since older spots/trips
+// predating this field simply won't have a Zh value.
+function localized(isZh, zhValue, enValue) {
+  return (isZh && zhValue) || enValue;
+}
+
 // Spot-only fallback for a day with no Route at all — e.g.
 // fallbackItinerary.js's output, which predates the Route field and never
 // sets one. Same marker shape this file used for every day before route
 // markers existed.
-function daySpotsToMarkers(day) {
+function daySpotsToMarkers(day, isZh) {
   return day.Spots.map((spot, index) => ({
     id: `${day.DayNumber}-spot-${spot.Name}`,
     type: 'spot',
     position: [spot.Longitude, spot.Latitude],
-    title: spot.Name,
-    content: spot.StreetAddress,
+    title: localized(isZh, spot.NameZh, spot.Name),
+    content: localized(isZh, spot.StreetAddressZh, spot.StreetAddress),
     dayNumber: day.DayNumber,
     order: index + 1
   }));
 }
 
-function toWaypointMarker(stop, dayNumber, order) {
+function toWaypointMarker(stop, dayNumber, order, isZh) {
   return {
     id: `${stop.Type}-${stop.Name}-${stop.Latitude}-${stop.Longitude}`,
     type: stop.Type, // 'arrival' | 'accommodation' | 'spot' | 'departure'
     position: [stop.Longitude, stop.Latitude],
-    title: stop.Name,
-    content: stop.Address,
+    title: localized(isZh, stop.NameZh, stop.Name),
+    content: localized(isZh, stop.AddressZh, stop.Address),
     dayNumber,
     order // 1-based visit order among dayNumber's spot stops; undefined for non-spot types
   };
@@ -80,21 +89,21 @@ function toWaypointMarker(stop, dayNumber, order) {
 // alongside this (see updateMarkers()) still connect through the shared
 // point correctly, since each day's line is built independently from that
 // day's own Route array, not from this deduped list.
-function routeToMarkers(itinerary) {
+function routeToMarkers(itinerary, isZh) {
   if (!itinerary) return [];
   const seen = new Set();
   const markers = [];
   itinerary.days.forEach((day) => {
     const stops = day.Route && day.Route.length ? day.Route : null;
     if (!stops) {
-      markers.push(...daySpotsToMarkers(day));
+      markers.push(...daySpotsToMarkers(day, isZh));
       return;
     }
     let spotOrder = 0;
     stops.forEach((stop) => {
       if (typeof stop.Latitude !== 'number' || typeof stop.Longitude !== 'number') return;
       if (stop.Type === 'spot') spotOrder += 1;
-      const marker = toWaypointMarker(stop, day.DayNumber, stop.Type === 'spot' ? spotOrder : undefined);
+      const marker = toWaypointMarker(stop, day.DayNumber, stop.Type === 'spot' ? spotOrder : undefined, isZh);
       if (seen.has(marker.id)) return;
       seen.add(marker.id);
       markers.push(marker);
@@ -150,7 +159,8 @@ function accommodationCandidatesToMarkers(candidates) {
 }
 
 const Itinerary = ({ auth }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isZh = i18n.resolvedLanguage === 'zh'; // matches LanguageSwitcher.js's own active-language check
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { itinerary, refinementStage, accommodationCandidates, isSavingTrip, tripSaveError } = useSelector((state) => state.trip);
@@ -173,7 +183,7 @@ const Itinerary = ({ auth }) => {
   const routeRequestIdRef = useRef(0);
   const geolocationRef = useRef(null);
 
-  const [markers, setMarkers] = useState(() => routeToMarkers(itinerary));
+  const [markers, setMarkers] = useState(() => routeToMarkers(itinerary, isZh));
   const [chatOpen, setChatOpen] = useState(true);
 
   // Keeps the map's markers in sync with `itinerary` itself, not just the
@@ -188,10 +198,10 @@ const Itinerary = ({ auth }) => {
   useEffect(() => {
     const showCandidates = refinementStage === 'pick_accommodation';
     setMarkers([
-      ...routeToMarkers(itinerary),
+      ...routeToMarkers(itinerary, isZh),
       ...(showCandidates ? accommodationCandidatesToMarkers(accommodationCandidates) : [])
     ]);
-  }, [itinerary, refinementStage, accommodationCandidates]);
+  }, [itinerary, refinementStage, accommodationCandidates, isZh]);
 
   // Initialize map when AMap is loaded
   useEffect(() => {
@@ -536,13 +546,13 @@ const Itinerary = ({ auth }) => {
               <div className="spot-cards">
                 {day.Spots.map((spot) => (
                   <div key={spot.Name} className="spot-card">
-                    <img src={resolveSpotPhoto(spot.Photo)} alt={spot.Name} />
+                    <img src={resolveSpotPhoto(spot.Photo)} alt={localized(isZh, spot.NameZh, spot.Name)} />
                     <div className="spot-info">
-                      <h4>{spot.Name}</h4>
-                      <p className="spot-address">{spot.StreetAddress}</p>
+                      <h4>{localized(isZh, spot.NameZh, spot.Name)}</h4>
+                      <p className="spot-address">{localized(isZh, spot.StreetAddressZh, spot.StreetAddress)}</p>
                       <div className="spot-meta">
-                        <span>{spot.BestTimeToVisitInDay?.Description}</span>
-                        <span>{spot.AverageTimeSpent?.Description}</span>
+                        <span>{localized(isZh, spot.BestTimeToVisitInDay?.DescriptionZh, spot.BestTimeToVisitInDay?.Description)}</span>
+                        <span>{localized(isZh, spot.AverageTimeSpent?.DescriptionZh, spot.AverageTimeSpent?.Description)}</span>
                         <span className="spot-rating">{spot.Rating}/100</span>
                       </div>
                     </div>
