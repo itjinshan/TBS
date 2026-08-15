@@ -47,9 +47,10 @@ function extractDestination(message) {
 // the initial freeform trip description) keep today's blind-extraction
 // behavior.
 function extractOtherPrefs(message, context) {
-    return callExtract(message, ['duration', 'numOfTravelers', 'budget', 'pace', 'transportMode', 'arrivalPoint', 'departurePoint'], context).then(function (extracted) {
+    return callExtract(message, ['duration', 'startDate', 'numOfTravelers', 'budget', 'pace', 'transportMode', 'arrivalPoint', 'departurePoint'], context).then(function (extracted) {
         var result = {};
         if (isPresent(extracted.duration)) result.duration = extracted.duration;
+        if (isPresent(extracted.startDate)) result.startDate = extracted.startDate;
         if (isPresent(extracted.numOfTravelers)) result.numOfTravelers = extracted.numOfTravelers;
         if (isPresent(extracted.budget)) result.budget = extracted.budget;
         if (isPresent(extracted.pace)) result.pace = extracted.pace;

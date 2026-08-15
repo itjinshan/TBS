@@ -4,6 +4,7 @@ var rateLimit = require('express-rate-limit');
 var validateLoginInput = require("../Validation/login");
 var validateRegisterInput = require("../Validation/register");
 var validateResetInput = require("../Validation/resetPassword");
+var validateProfileInput = require("../Validation/profile");
 var bcrypt = require('bcryptjs');
 var jwt = require('jsonwebtoken');
 const passport = require("passport");
@@ -174,6 +175,35 @@ router.get("/current", passport.authenticate("jwt", {
       })
     }
 );
+
+// Update the logged-in user's profile info — see CLAUDE.md's "Pending
+// Tasks", "Build a profile management page". Only FirstName/LastName/Phone
+// are editable here; Email/Password have their own dedicated flows.
+router.put("/profile", passport.authenticate("jwt", { session: false }), (req, res) => {
+  const { errors, isValid } = validateProfileInput(req.body);
+  if (!isValid) {
+    return res.status(400).json(errors);
+  }
+
+  req.user.FirstName = req.body.FirstName;
+  req.user.LastName = req.body.LastName;
+  req.user.Phone = req.body.Phone;
+
+  req.user.save()
+    .then(user => {
+      res.json({
+        UserID: user._id,
+        Email: user.Email,
+        FirstName: user.FirstName,
+        LastName: user.LastName,
+        Phone: user.Phone
+      });
+    })
+    .catch(err => {
+      console.log(err);
+      res.status(400).json({ message: "Failed to update profile" });
+    });
+});
 
 // Verify Email
 router.put("/verify-email", (req, res) => {

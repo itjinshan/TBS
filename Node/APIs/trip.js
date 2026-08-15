@@ -4,6 +4,7 @@ var passport = require('passport');
 require('../Config/passport')(passport);
 var axios = require('axios');
 var Trip = require('../DB_Models/DB_Trip');
+var User = require('../DB_Models/DB_User');
 var { generateFallbackItinerary } = require('../Services/fallbackItinerary');
 var { arrangeIntoDays, replaceSpotInDay, applyAccommodation, sortAccommodationsByProximity, SPOTS_PER_DAY, SPOT_REQUEST_BUFFER_MULTIPLIER } = require('../Services/itineraryPlanner');
 var spotSourcing = require('../Services/spotSourcing');
@@ -12,7 +13,7 @@ var amapPlaces = require('../Services/amapPlaces');
 var amapRouting = require('../Services/amapRouting');
 var generateAccessToken = require('../Config/jwtgenerator');
 
-var OTHER_PREF_FIELDS = ['duration', 'numOfTravelers', 'budget', 'pace', 'transportMode', 'arrivalPoint', 'departurePoint'];
+var OTHER_PREF_FIELDS = ['duration', 'startDate', 'numOfTravelers', 'budget', 'pace', 'transportMode', 'arrivalPoint', 'departurePoint'];
 
 // Conversation stages for trip intake. Accommodation is settled right after
 // destination (and before the rest of the trip preferences) because it
@@ -35,6 +36,7 @@ var REFINE_STAGES = { CONFIRM: 'confirm', EDITING: 'editing', PICK_ACCOMMODATION
 
 var OTHER_PREF_QUESTIONS = {
     duration: "How many days are you planning to travel?",
+    startDate: "When are you planning to start the trip?",
     numOfTravelers: "How many people will be traveling?",
     budget: "What's your budget style — budget, mid-range, or luxury?",
     pace: "What pace are you after — relaxed, standard, or packed?",
@@ -572,19 +574,65 @@ router.post('/', passport.authenticate('jwt', { session: false }), function (req
         ArrivalPoint: body.arrivalPoint,
         DeparturePoint: body.departurePoint,
         LivingPreference: body.livingPreference,
-        Days: body.days
+        Days: body.days,
+        StartDate: body.startDate
     });
 
     trip.save()
-        .then(function (saved) { res.json(saved); })
+        .then(function (saved) {
+            req.user.TripHistory.push({ TripID: saved._id });
+            return req.user.save().then(function () { res.json(saved); });
+        })
         .catch(function (err) {
             console.log(err);
             res.status(400).json({ message: 'Failed to save trip' });
         });
 });
 
+// List the logged-in traveler's saved trips, split into past/upcoming —
+// backs the profile page's trip history (see TBS's CLAUDE.md's "Pending
+// Tasks", "Build a profile management page"). Registered before GET /:id so
+// the literal path "mine" isn't swallowed by that route's :id param.
+// Deliberately lean (no Days/Spots) — the profile page only needs enough to
+// render a trip card; the full document is fetched on demand via GET /:id
+// when a traveler clicks into one.
+router.get('/mine', passport.authenticate('jwt', { session: false }), function (req, res) {
+    User.findById(req.user.id)
+        .populate('TripHistory.TripID', 'Destination NumOfTravelers Budget StartDate CreatedAt Duration')
+        .then(function (user) {
+            var now = new Date();
+            var past = [];
+            var upcoming = [];
+            user.TripHistory.forEach(function (entry) {
+                var trip = entry.TripID;
+                if (!trip) return; // trip was deleted after being added to history
+                var summary = {
+                    id: trip._id,
+                    destination: trip.Destination,
+                    numOfTravelers: trip.NumOfTravelers,
+                    budget: trip.Budget,
+                    startDate: trip.StartDate,
+                    createdAt: trip.CreatedAt,
+                    duration: trip.Duration
+                };
+                // No StartDate yet (asked during intake, but optional) reads
+                // as "not yet happened" rather than a bucket of its own.
+                if (trip.StartDate && trip.StartDate < now) {
+                    past.push(summary);
+                } else {
+                    upcoming.push(summary);
+                }
+            });
+            res.json({ past: past, upcoming: upcoming });
+        })
+        .catch(function (err) {
+            console.log(err);
+            res.status(400).json({ message: 'Failed to load trip history' });
+        });
+});
+
 router.get('/:id', passport.authenticate('jwt', { session: false }), function (req, res) {
-    Trip.findById(req.params.id)
+    Trip.findOne({ _id: req.params.id, Owner: req.user.id })
         .then(function (trip) {
             if (!trip) return res.status(404).json({ message: 'Trip not found' });
             res.json(trip);

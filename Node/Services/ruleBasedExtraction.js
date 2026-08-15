@@ -9,6 +9,54 @@ var KNOWN_DESTINATIONS = [
     'bali', 'paris', 'tokyo', 'new york', 'santorini', 'sydney', 'beijing', 'shanghai'
 ];
 
+var WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+function toISODate(date) {
+    return date.toISOString().slice(0, 10);
+}
+
+// Best-effort only, same spirit as arrivalPoint/departurePoint below — the
+// real /nlu/extract call (nluExtraction.js) is the primary path and can
+// resolve open-ended relative phrasing ("in two weeks") via the LLM; this
+// only needs to catch the handful of common forms a traveler is likely to
+// type if that call fails. All matches resolve to an absolute YYYY-MM-DD
+// string, same contract as the LLM path.
+function extractStartDate(text) {
+    var isoMatch = text.match(/\b(\d{4}-\d{2}-\d{2})\b/);
+    if (isoMatch) return isoMatch[1];
+
+    var slashMatch = text.match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/);
+    if (slashMatch) {
+        var month = parseInt(slashMatch[1], 10);
+        var day = parseInt(slashMatch[2], 10);
+        var year = parseInt(slashMatch[3], 10);
+        return toISODate(new Date(Date.UTC(year, month - 1, day)));
+    }
+
+    var now = new Date();
+
+    if (/\btomorrow\b/.test(text)) {
+        var tomorrow = new Date(now);
+        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+        return toISODate(tomorrow);
+    }
+
+    if (/\btoday\b/.test(text)) return toISODate(now);
+
+    var weekdayMatch = text.match(/\bnext\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/);
+    if (weekdayMatch) {
+        var targetDay = WEEKDAYS.indexOf(weekdayMatch[1]);
+        // "next <weekday>" always means the coming one, never today even if
+        // today happens to be that weekday.
+        var diff = (targetDay - now.getUTCDay() + 7) % 7 || 7;
+        var result = new Date(now);
+        result.setUTCDate(result.getUTCDate() + diff);
+        return toISODate(result);
+    }
+
+    return undefined;
+}
+
 function extractDestination(message) {
     var text = (message || '').toLowerCase();
     var known = KNOWN_DESTINATIONS.find(function (city) { return text.includes(city); });
@@ -24,6 +72,9 @@ function extractOtherPrefs(message) {
 
     var durationMatch = text.match(/(\d+)\s*-?\s*(day|days|night|nights)/);
     if (durationMatch) extracted.duration = parseInt(durationMatch[1], 10);
+
+    var startDate = extractStartDate(text);
+    if (startDate) extracted.startDate = startDate;
 
     var travelersMatch = text.match(/(\d+)\s*(people|person|travelers|traveler|adults|pax)/);
     if (travelersMatch) {

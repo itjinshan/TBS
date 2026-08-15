@@ -133,6 +133,13 @@ const TripSchema = new Schema({
     CreatedAt: {
         type: Date,
         default: Date.now
+    },
+    // When the trip itself starts (asked during intake, see APIs/trip.js's
+    // OTHER_PREF_FIELDS) — distinct from CreatedAt above (when the document
+    // was saved). Used by GET /trip/mine to split a user's trip history into
+    // past vs. upcoming; optional since a traveler may not know it yet.
+    StartDate: {
+        type: Date
     }
 });
 
