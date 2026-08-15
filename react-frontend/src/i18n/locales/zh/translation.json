@@ -25,6 +25,7 @@
     "fields": {
       "destination": "目的地",
       "days": "天数",
+      "startDate": "出发日期",
       "numOfTravelers": "人数",
       "budget": "预算",
       "pace": "节奏",

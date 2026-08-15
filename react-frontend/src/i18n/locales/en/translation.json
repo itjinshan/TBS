@@ -25,6 +25,7 @@
     "fields": {
       "destination": "Destination",
       "days": "Days",
+      "startDate": "Start Date",
       "numOfTravelers": "Travelers",
       "budget": "Budget",
       "pace": "Pace",
