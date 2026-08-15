@@ -11,8 +11,9 @@ const passport = require("passport");
 require("../Config/passport")(passport);
 
 var User = require('../DB_Models/DB_User');
+var { t } = require('../Utils/i18n');
 
-// Function to generate JWT Access Token  
+// Function to generate JWT Access Token
 var generateAccessToken = require('../Config/jwtgenerator');
 
 // Welcome email
@@ -25,18 +26,20 @@ const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_LOCK_MS = 15 * 60 * 1000; // 15 minutes
 
 // IP-based rate limiting on login, on top of the per-account lockout below.
+// `message` as a function (not a static value) so it can read req.lang,
+// same as every other response in this file.
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { Email: "Too many login attempts from this network. Please try again later." }
+  message: (req) => ({ Email: t(req.lang, "tooManyLoginAttempts") })
 });
 
 // Register
 router.post('/register', (req, res) => {
     // user fills out the form do a POST req here
-    const { errors, isValid } = validateRegisterInput(req.body);
+    const { errors, isValid } = validateRegisterInput(req.body, req.lang);
     // ** Validation **
     //
     if (!isValid) {
@@ -47,7 +50,7 @@ router.post('/register', (req, res) => {
     User.findOne({ Email: req.body.Email }).then(user => {
     // user is the object returned by findOne()
     if (user) {
-        errors.Email = "Email already exists";
+        errors.Email = t(req.lang, "emailAlreadyExists");
         return res.status(400).json(errors);
     } else {
         // ** Create New User **
@@ -78,7 +81,7 @@ router.post('/register', (req, res) => {
                   return res.json({
                     Email: user.Email,
                     pendingVerification: true,
-                    message: "Registration successful! Please check your email to verify your account before logging in."
+                    message: t(req.lang, "registrationSuccess")
                   });
             })
             .catch(err => console.log(err));
@@ -90,7 +93,7 @@ router.post('/register', (req, res) => {
 
 // Login
 router.post('/login', loginLimiter, (req, res) => {
-    const { errors, isValid } = validateLoginInput(req.body);
+    const { errors, isValid } = validateLoginInput(req.body, req.lang);
 
     //check validation
     if (!isValid) {
@@ -105,14 +108,14 @@ router.post('/login', loginLimiter, (req, res) => {
     }).then(user => {
       if (!user) {
         // if user not found
-        errors.Email = "User not found";
+        errors.Email = t(req.lang, "userNotFound");
         return res.status(404).json(errors);
       }
 
       // Per-account lockout after repeated failed attempts
       if (user.LockUntil && user.LockUntil > Date.now()) {
         const minutesLeft = Math.ceil((user.LockUntil - Date.now()) / 60000);
-        errors.Email = `Too many failed attempts. Please try again in ${minutesLeft} minute(s).`;
+        errors.Email = t(req.lang, "tooManyFailedAttempts", minutesLeft);
         return res.status(423).json(errors);
       }
 
@@ -120,7 +123,7 @@ router.post('/login', loginLimiter, (req, res) => {
        bcrypt.compare(Password, user.Password).then(isMatch => {
         if (isMatch) {
           if (!user.IsVerified) {
-            errors.Email = "Please verify your email before logging in. Check your inbox for the verification link.";
+            errors.Email = t(req.lang, "pleaseVerifyEmail");
             return res.status(403).json(errors);
           }
 
@@ -147,7 +150,7 @@ router.post('/login', loginLimiter, (req, res) => {
           // Awaited so the lock is committed before the response goes out —
           // otherwise rapid consecutive attempts could race past the lockout.
           user.save().then(() => {
-            errors.Password = "Password incorrect";
+            errors.Password = t(req.lang, "passwordIncorrect");
             return res.status(400).json(errors);
           });
         }
@@ -180,7 +183,7 @@ router.get("/current", passport.authenticate("jwt", {
 // Tasks", "Build a profile management page". Only FirstName/LastName/Phone
 // are editable here; Email/Password have their own dedicated flows.
 router.put("/profile", passport.authenticate("jwt", { session: false }), (req, res) => {
-  const { errors, isValid } = validateProfileInput(req.body);
+  const { errors, isValid } = validateProfileInput(req.body, req.lang);
   if (!isValid) {
     return res.status(400).json(errors);
   }
@@ -201,7 +204,7 @@ router.put("/profile", passport.authenticate("jwt", { session: false }), (req, r
     })
     .catch(err => {
       console.log(err);
-      res.status(400).json({ message: "Failed to update profile" });
+      res.status(400).json({ message: t(req.lang, "failedToUpdateProfile") });
     });
 });
 
@@ -209,28 +212,28 @@ router.put("/profile", passport.authenticate("jwt", { session: false }), (req, r
 router.put("/verify-email", (req, res) => {
   const VerificationToken = req.body.VerificationToken;
   if (!VerificationToken) {
-    return res.status(400).json({ verifyStatus: false, code: "missing_token", statusmsg: "Missing verification token." });
+    return res.status(400).json({ verifyStatus: false, code: "missing_token", statusmsg: t(req.lang, "missingVerificationToken") });
   }
   jwt.verify(VerificationToken, process.env.EMAIL_VERIFY_SECRET, (err, decoded) => {
     if (err) {
-      return res.json({ verifyStatus: false, code: "expired", statusmsg: "Verification link has expired. Please request a new one." });
+      return res.json({ verifyStatus: false, code: "expired", statusmsg: t(req.lang, "verificationLinkExpired") });
     }
     User.findById(decoded.UserID)
       .then(user => {
         if (!user) {
-          return res.json({ verifyStatus: false, code: "not_found", statusmsg: "Account not found." });
+          return res.json({ verifyStatus: false, code: "not_found", statusmsg: t(req.lang, "accountNotFound") });
         }
         if (user.IsVerified) {
-          return res.json({ verifyStatus: true, code: "already_verified", statusmsg: "Your email is already verified. You can log in." });
+          return res.json({ verifyStatus: true, code: "already_verified", statusmsg: t(req.lang, "emailAlreadyVerified") });
         }
         user.IsVerified = true;
         user.save().then(() => {
           welcomeEmail(user.FirstName, user.LastName, user.Email);
-          res.json({ verifyStatus: true, code: "success", statusmsg: "Your email has been verified. You can now log in." });
+          res.json({ verifyStatus: true, code: "success", statusmsg: t(req.lang, "emailVerifiedSuccess") });
         });
       })
       .catch(err => {
-        res.json({ verifyStatus: false, code: "error", statusmsg: "Error verifying email. Please try again." });
+        res.json({ verifyStatus: false, code: "error", statusmsg: t(req.lang, "errorVerifyingEmail") });
       });
   });
 });
@@ -242,15 +245,15 @@ router.post("/resend-verification", (req, res) => {
   User.findOne({ Email })
     .then(user => {
       if (!user) {
-        errors.Email = "Email not found.";
+        errors.Email = t(req.lang, "emailNotFound");
         return res.status(404).json(errors);
       }
       if (user.IsVerified) {
-        return res.json({ resendStatus: false, statusmsg: "This account is already verified. Please log in." });
+        return res.json({ resendStatus: false, statusmsg: t(req.lang, "accountAlreadyVerified") });
       }
       const verificationToken = generateAccessToken(user, 'emailVerify');
       verifyEmail(user.FirstName, user.Email, verificationToken);
-      res.json({ resendStatus: true, statusmsg: "A new verification link has been sent to your email." });
+      res.json({ resendStatus: true, statusmsg: t(req.lang, "newVerificationLinkSent") });
     });
 });
 
@@ -261,19 +264,19 @@ router.put("/forgot-password", (req, res) => {
   User.findOne({ Email })
       .then(user => {
         if(!user){
-          errors.Email = "Email not found."
+          errors.Email = t(req.lang, "emailNotFound");
           return res.status(404).json(errors);
         }
         let resetToken = jwt.sign({ UserID: user._id }, process.env.resetSecret, { expiresIn: 1200 });
         user.updateOne({ ResetToken: resetToken }, (err, success) => {
           if(err){
               res.json({
-                  statusmsg:"An error has occurred while sending the password reset link, please try again.",
+                  statusmsg: t(req.lang, "forgotPasswordSendError"),
                   forgetStatus: false
               });
             } else {
               res.json({
-                  statusmsg:"A password reset link was successfully sent to your email, please follow the link to reset your password.",
+                  statusmsg: t(req.lang, "passwordResetLinkSent"),
                   forgetStatus: true
               });
             }
@@ -285,7 +288,7 @@ router.put("/forgot-password", (req, res) => {
 // Reset Password
 router.put("/reset-password", (req,res) => {
     // user fills out the form do a POST req here
-    const { errors, isValid } = validateResetInput(req.body);
+    const { errors, isValid } = validateResetInput(req.body, req.lang);
     //check validation
     if (!isValid) {
       return res.status(400).json(errors);
@@ -296,7 +299,7 @@ router.put("/reset-password", (req,res) => {
     jwt.verify(resetToken, process.env.RESETSECRET, (err, decoded) => {
       if(err){
         return res.json({
-          statusmsg:"Reset link has expired. Please request a new link.",
+          statusmsg: t(req.lang, "resetLinkExpired"),
           resetStatus: false
         })
       }
@@ -305,7 +308,7 @@ router.put("/reset-password", (req,res) => {
           .then( user => {
             if(!user){
               return res.json({
-                statusmsg:"Error has occurred while resetting new password. Try again later.",
+                statusmsg: t(req.lang, "resetPasswordUserError"),
                 resetStatus: false
               })
             }
@@ -316,15 +319,15 @@ router.put("/reset-password", (req,res) => {
                   user.update({ Password: newPassword, ResetToken: '' }, (err, success) => {
                     if(err){
                       return res.json({
-                        statusmsg:"Error has occurred while updating new password to Database. Try again later.",
+                        statusmsg: t(req.lang, "resetPasswordDbError"),
                         resetStatus: false
                       })
                     }
                     return res.json({
-                      statusmsg:"Password has been updated successfully.",
+                      statusmsg: t(req.lang, "passwordUpdatedSuccess"),
                       resetStatus: true
                     })
-                  })      
+                  })
               });
             });
           })
@@ -336,7 +339,7 @@ router.put("/reset-password", (req,res) => {
 
 router.put("/create-password", (req,res) => {
   // user fills out the form do a POST req here
-  const { errors, isValid } = validateResetInput(req.body);
+  const { errors, isValid } = validateResetInput(req.body, req.lang);
   //check validation
   if (!isValid) {
     return res.status(400).json(errors);
@@ -347,7 +350,7 @@ router.put("/create-password", (req,res) => {
     jwt.verify(resetToken, process.env.resetSecret, (err, decoded) => {
       if(err){
         return res.json({
-          statusmsg:"Link has expired. Please request a new link.",
+          statusmsg: t(req.lang, "createPasswordLinkExpired"),
           createStatus: false
         })
       }
@@ -356,26 +359,26 @@ router.put("/create-password", (req,res) => {
           .then( user => {
             if(!user){
               return res.json({
-                statusmsg:"Error has occurred while creating new password. Try again later.",
+                statusmsg: t(req.lang, "createPasswordUserError"),
                 createStatus: false
               })
             }
             bcrypt.genSalt(10, (err, salt) => {
               bcrypt.hash(newPassword, salt, (err, hash) => {
                   if (err) throw err;
-                  newPassword = hash; 
+                  newPassword = hash;
                   user.update({ Password: newPassword, ResetToken: '' }, (err, success) => {
                     if(err){
                       return res.json({
-                        statusmsg:"Error has occurred while updating new password to Database. Try again later.",
+                        statusmsg: t(req.lang, "createPasswordDbError"),
                         createStatus: false
                       })
                     }
                     return res.json({
-                      statusmsg:"Password has been updated successfully.",
+                      statusmsg: t(req.lang, "passwordUpdatedSuccess"),
                       createStatus: true
                     })
-                  })      
+                  })
               });
             });
           })

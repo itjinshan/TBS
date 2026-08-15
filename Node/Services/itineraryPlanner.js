@@ -35,6 +35,7 @@
 
 const spotPhotos = require('./spotPhotos');
 const spotSourcing = require('./spotSourcing');
+const { t } = require('../Utils/i18n');
 
 // Three vacation-pace tiers a traveler can pick during intake (see
 // APIs/trip.js's OTHER_PREF_FIELDS/OTHER_PREF_QUESTIONS and the "Pace" chip
@@ -411,17 +412,17 @@ async function findReplacementSpot(destination, usedNamesLower, replacementCateg
 // already holds (the same shape arrangeIntoDays/`/trip/generate` produce) —
 // no Mongo access, so DB_Trip.js's `Days`/`Spots` sub-schemas being
 // `{ _id: false }` (no stable per-day/per-spot ids) never comes into play.
-async function replaceSpotInDay(itinerary, dayNumber, targetSpotHint, replacementCategory) {
+async function replaceSpotInDay(itinerary, dayNumber, targetSpotHint, replacementCategory, lang) {
     const days = itinerary.days || [];
     const dayIndex = days.findIndex((d) => d.DayNumber === dayNumber);
     if (dayIndex === -1) {
-        return { ok: false, reply: `I couldn't find day ${dayNumber} in this itinerary — this trip only has ${days.length} day${days.length === 1 ? '' : 's'}.` };
+        return { ok: false, reply: t(lang, 'swapDayNotFound', dayNumber, days.length) };
     }
 
     const day = days[dayIndex];
     const spotIndex = findTargetSpotIndex(day.Spots, targetSpotHint);
     if (spotIndex === -1) {
-        return { ok: false, reply: `I couldn't tell which spot on day ${dayNumber} you meant — could you name it more specifically?` };
+        return { ok: false, reply: t(lang, 'swapSpotNotFound', dayNumber) };
     }
 
     const targetSpot = day.Spots[spotIndex];
@@ -429,7 +430,7 @@ async function replaceSpotInDay(itinerary, dayNumber, targetSpotHint, replacemen
 
     const replacement = await findReplacementSpot(itinerary.destination, usedNames, replacementCategory);
     if (!replacement) {
-        return { ok: false, reply: `I couldn't find a good replacement for ${targetSpot.Name} right now — try a different category, or try again in a moment.` };
+        return { ok: false, reply: t(lang, 'swapNoReplacement', targetSpot.Name) };
     }
 
     const newDaySpots = day.Spots.slice();
@@ -445,7 +446,7 @@ async function replaceSpotInDay(itinerary, dayNumber, targetSpotHint, replacemen
 
     return {
         ok: true,
-        reply: `Swapped ${targetSpot.Name} for ${replacement.Name} on day ${dayNumber}.`,
+        reply: t(lang, 'swapSuccess', targetSpot.Name, replacement.Name, dayNumber),
         itinerary: Object.assign({}, itinerary, { days: newDays })
     };
 }

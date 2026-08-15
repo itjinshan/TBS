@@ -1,7 +1,8 @@
 const Validator = require("validator");
 const isEmpty = require("./isEmpty");
+const { t } = require("../Utils/i18n");
 // this will be sent to register route in routes/users.js
-module.exports = function validateResetInput(data) {
+module.exports = function validateResetInput(data, lang) {
   let errors = {};
 
   // if it is empty change it to empty string so Validator can work
@@ -9,7 +10,7 @@ module.exports = function validateResetInput(data) {
   data.Password2 = !isEmpty(data.Password2) ? data.Password2 : "";
 
   if (Validator.isEmpty(data.Password)) {
-    errors.Password = "Password field is required.";
+    errors.Password = t(lang, "passwordRequired");
   }
 
   if (
@@ -18,15 +19,15 @@ module.exports = function validateResetInput(data) {
       max: 30
     })
   ) {
-    errors.Password = "Password must be between 6 and 30 characters.";
+    errors.Password = t(lang, "passwordLength");
   }
 
   if (Validator.isEmpty(data.Password2)) {
-    errors.Password2 = "Confirm Password field is required.";
+    errors.Password2 = t(lang, "confirmPasswordRequired");
   }
 
   if (!Validator.equals(data.Password, data.Password2)) {
-    errors.Password = "Passwords must match.";
+    errors.Password = t(lang, "passwordsMustMatch");
   }
 
   // if errors isEmpty() is true -> no valid input
