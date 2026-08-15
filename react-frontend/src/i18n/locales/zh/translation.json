@@ -121,6 +121,7 @@
     "loadingMap": "地图加载中…",
     "arrivingVia": "抵达方式",
     "departingFrom": "出发地点",
+    "mapDayStop": "第 {{day}} 天 · 第 {{stop}} 站",
     "chat": {
       "title": "调整你的行程",
       "toggle": "切换聊天面板",
