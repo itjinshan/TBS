@@ -177,6 +177,26 @@ export const getProfileInfo = () => dispatch => {
       });
 };
 
+// Update profile info (FirstName/LastName/Phone) — see the profile page.
+// Returns the axios promise (unlike most actions in this file) so the
+// calling component can drive its own saving/saved/error UI state off it,
+// same pattern tripAction.js's saveTrip()/generateItinerary() already use.
+export const updateProfile = (profileData) => dispatch => {
+    return axios
+        .put("/auth/profile", profileData)
+        .then(res => {
+            dispatch(setCurrentUser(res.data));
+            return res.data;
+        })
+        .catch(err => {
+            dispatch({
+                type: GET_ERRORS,
+                payload: err.response ? err.response.data : { message: "An error occurred" }
+            });
+            throw err;
+        });
+};
+
 // Forgot password
 export const forgotPassword = userEmail => dispatch => {
     axios

@@ -58,3 +58,10 @@ export const REFINEMENT_ERRORS = "REFINEMENT_ERRORS";
 export const RESET_REFINEMENT = "RESET_REFINEMENT";
 export const UPDATE_ITINERARY = "UPDATE_ITINERARY";
 export const SET_ACCOMMODATION_CANDIDATES = "SET_ACCOMMODATION_CANDIDATES";
+
+// PROFILE PAGE — trip history (GET /trip/mine), separate from the
+// itinerary-in-progress state above since it's an unrelated list, not "the"
+// itinerary.
+export const SET_MY_TRIPS_LOADING = "SET_MY_TRIPS_LOADING";
+export const SET_MY_TRIPS = "SET_MY_TRIPS";
+export const MY_TRIPS_ERRORS = "MY_TRIPS_ERRORS";

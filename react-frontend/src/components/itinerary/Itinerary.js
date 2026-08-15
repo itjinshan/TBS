@@ -154,7 +154,12 @@ const Itinerary = ({ auth }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { itinerary, refinementStage, accommodationCandidates } = useSelector((state) => state.trip);
-  const [saveStatus, setSaveStatus] = useState('idle'); // idle | saving | saved | error
+  // An itinerary loaded from the profile page's trip history (see
+  // tripAction.js's loadTripById()) carries its Mongo `_id` through;
+  // freshly generated ones never have one. Starting in 'saved' for that
+  // case reuses the Save button's existing disabled/label logic below to
+  // stop a re-view of a past trip from creating a duplicate Trip document.
+  const [saveStatus, setSaveStatus] = useState(() => (itinerary?._id ? 'saved' : 'idle')); // idle | saving | saved | error
 
   // AMap hook
   const { AMap, loaded } = useAMap();

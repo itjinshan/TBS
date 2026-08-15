@@ -11,7 +11,10 @@ import {
     REFINEMENT_ERRORS,
     RESET_REFINEMENT,
     UPDATE_ITINERARY,
-    SET_ACCOMMODATION_CANDIDATES
+    SET_ACCOMMODATION_CANDIDATES,
+    SET_MY_TRIPS_LOADING,
+    SET_MY_TRIPS,
+    MY_TRIPS_ERRORS
 } from "../actions/types";
 
 const initialState = {
@@ -24,7 +27,10 @@ const initialState = {
     isRefining: false,
     refinementStage: null, // null | 'confirm' | 'editing' | 'pick_accommodation' | 'done'
     refinementError: null,
-    accommodationCandidates: []
+    accommodationCandidates: [],
+    myTrips: { past: [], upcoming: [] },
+    myTripsLoading: false,
+    myTripsError: null
 };
 
 export default function (state = initialState, action) {
@@ -96,6 +102,24 @@ export default function (state = initialState, action) {
             return {
                 ...state,
                 accommodationCandidates: action.payload
+            };
+        case SET_MY_TRIPS_LOADING:
+            return {
+                ...state,
+                myTripsLoading: action.payload
+            };
+        case SET_MY_TRIPS:
+            return {
+                ...state,
+                myTrips: action.payload,
+                myTripsLoading: false,
+                myTripsError: null
+            };
+        case MY_TRIPS_ERRORS:
+            return {
+                ...state,
+                myTripsError: action.payload,
+                myTripsLoading: false
             };
         default:
             return state;

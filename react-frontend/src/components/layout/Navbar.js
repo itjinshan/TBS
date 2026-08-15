@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import PropTypes from "prop-types";
 import { useSelector, useDispatch, connect } from "react-redux";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { logoutUser, getProfileInfo } from "../../actions/authAction";
 import setAuthToken from "../../utils/setAuthToken";
 import LoginModal from '../auth/LoginModal';
@@ -16,6 +16,7 @@ import TBSLogo from "../../images/tbs_logo.png";
 const Navbar = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false); // Modal state
@@ -58,6 +59,11 @@ const Navbar = () => {
     setShowDropdown(!showDropdown);
   };
 
+  const handleGoToProfile = () => {
+    setShowDropdown(false);
+    navigate('/profile');
+  };
+
   return (
     <>
     <nav className="navbar">
@@ -85,7 +91,7 @@ const Navbar = () => {
 
               {showDropdown && (
                 <div className="dropdown-menu">
-                  <div className="dropdown-item">{t('nav.myProfile')}</div>
+                  <div className="dropdown-item" onClick={handleGoToProfile}>{t('nav.myProfile')}</div>
                   <div className="dropdown-item">{t('nav.settings')}</div>
                   <div className="dropdown-divider"></div>
                   <div className="dropdown-item" onClick={handleLogout}>{t('nav.logout')}</div>

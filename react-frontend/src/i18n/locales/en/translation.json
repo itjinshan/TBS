@@ -130,6 +130,35 @@
       "errorFallback": "Something went wrong. Please try again."
     }
   },
+  "profile": {
+    "notLoggedIn": {
+      "title": "You're not logged in",
+      "subtitle": "Log in to view and manage your profile.",
+      "goHome": "Go to homepage"
+    },
+    "info": {
+      "title": "Profile info",
+      "email": "Email",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "phone": "Phone",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "retry": "Retry"
+    },
+    "history": {
+      "title": "Your trips",
+      "upcoming": "Upcoming",
+      "past": "Past",
+      "noUpcoming": "No upcoming trips yet.",
+      "noPast": "No past trips yet.",
+      "noDate": "Date not set",
+      "duration": "{{count}} days",
+      "loadingList": "Loading your trips…",
+      "opening": "Opening…"
+    }
+  },
   "footer": {
     "company": "Company",
     "aboutUs": "About Us",

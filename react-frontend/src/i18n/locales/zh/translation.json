@@ -130,6 +130,35 @@
       "errorFallback": "出了点问题，请重试。"
     }
   },
+  "profile": {
+    "notLoggedIn": {
+      "title": "你还未登录",
+      "subtitle": "请登录以查看和管理你的个人资料。",
+      "goHome": "返回首页"
+    },
+    "info": {
+      "title": "个人资料",
+      "email": "邮箱",
+      "firstName": "名",
+      "lastName": "姓",
+      "phone": "电话",
+      "save": "保存修改",
+      "saving": "保存中…",
+      "saved": "已保存",
+      "retry": "重试"
+    },
+    "history": {
+      "title": "我的行程",
+      "upcoming": "即将出行",
+      "past": "历史行程",
+      "noUpcoming": "暂无即将出行的行程。",
+      "noPast": "暂无历史行程。",
+      "noDate": "未设置日期",
+      "duration": "{{count}} 天",
+      "loadingList": "正在加载你的行程…",
+      "opening": "打开中…"
+    }
+  },
   "footer": {
     "company": "公司",
     "aboutUs": "关于我们",
