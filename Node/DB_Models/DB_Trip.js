@@ -5,7 +5,9 @@ const Schema = mongoose.Schema;
 // so a real sourced spot can be embedded here later with no reshape.
 const SpotSchema = new Schema({
     Name: { type: String, required: true },
+    NameZh: { type: String }, // Chinese counterpart, see DS-Service's DestinationSpot.SpotNameZh
     StreetAddress: { type: String },
+    StreetAddressZh: { type: String },
     City: { type: String },
     StateOrProvince: { type: String },
     Country: { type: String },
@@ -13,6 +15,7 @@ const SpotSchema = new Schema({
     Longitude: { type: Number, required: true },
     BestTimeToVisitInDay: {
         Description: { type: String },
+        DescriptionZh: { type: String },
         StartTime: { type: String },
         EndTime: { type: String }
     },
@@ -22,6 +25,7 @@ const SpotSchema = new Schema({
     },
     AverageTimeSpent: {
         Description: { type: String },
+        DescriptionZh: { type: String },
         MinMinutes: { type: Number },
         MaxMinutes: { type: Number }
     },
@@ -60,7 +64,9 @@ const PlacePointSchema = new Schema({
 const RouteStopSchema = new Schema({
     Type: { type: String, enum: ['arrival', 'accommodation', 'spot', 'departure'], required: true },
     Name: { type: String },
+    NameZh: { type: String },
     Address: { type: String },
+    AddressZh: { type: String },
     Latitude: { type: Number },
     Longitude: { type: Number }
 }, { _id: false });

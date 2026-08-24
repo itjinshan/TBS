@@ -8,7 +8,9 @@ var generateAccessToken = require('../Config/jwtgenerator');
 function reshapeSpot(spot, destination) {
     return {
         Name: spot.SpotName,
+        NameZh: spot.SpotNameZh,
         StreetAddress: spot.StreetAddress,
+        StreetAddressZh: spot.StreetAddressZh,
         City: destination,
         StateOrProvince: spot.StateOrProvince,
         Country: spot.Country,
