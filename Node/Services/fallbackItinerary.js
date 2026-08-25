@@ -117,7 +117,7 @@ function generateFlatSpots(destination, count, anchor) {
             },
             Rating: Math.round(60 + Math.random() * 35),
             Category: template.category,
-            Photo: PLACEHOLDER_PHOTOS[i % PLACEHOLDER_PHOTOS.length]
+            Photos: [PLACEHOLDER_PHOTOS[i % PLACEHOLDER_PHOTOS.length]]
         };
     });
 }

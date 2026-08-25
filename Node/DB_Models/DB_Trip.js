@@ -40,7 +40,8 @@ const SpotSchema = new Schema({
     },
     Rating: { type: Number }, // 0-100 worthiness score, matches DS-Service's scale
     Category: { type: String }, // e.g. "museum", "food" — see DS-Service's SPOT_CATEGORIES; absent on older/uncategorized spots
-    Photo: { type: String } // live Amap photo URL (Services/spotPhotos.js) if found, else a placeholder key from itineraryPlanner.js's PLACEHOLDER_PHOTOS — not sourced by DS-Service, not persisted/cached beyond this trip document
+    Photo: { type: String }, // legacy single-photo field — kept only so trips saved before Photos (below) existed keep rendering; itineraryPlanner.js no longer writes this on new/re-saved spots
+    Photos: [{ type: String }] // live Amap photo URLs (Services/spotPhotos.js's findSpotPhotos()) if found, else a single-item placeholder key array from itineraryPlanner.js's PLACEHOLDER_PHOTOS — not sourced by DS-Service, not persisted/cached beyond this trip document
 }, { _id: false });
 
 // Shared shape for a resolved real-world place (Amap-looked-up or an

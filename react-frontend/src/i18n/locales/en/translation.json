@@ -123,6 +123,9 @@
     "arrivingVia": "Arriving via",
     "departingFrom": "Departing from",
     "mapDayStop": "Day {{day}} · Stop {{stop}}",
+    "photoPrev": "Previous photo",
+    "photoNext": "Next photo",
+    "photoCount": "Photo {{current}} of {{total}}",
     "chat": {
       "title": "Refine your trip",
       "toggle": "Toggle chat",

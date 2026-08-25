@@ -25,10 +25,17 @@ function toAmapCityParam(city) {
 // meaningfully raises the real-photo hit rate for the same query.
 var CANDIDATE_COUNT = 5;
 
+// Caps how many of a matched POI's photos we keep — Amap's `photos` array
+// for a popular landmark can run well past what a spot card's carousel
+// needs, so this is just a sane upper bound, not a quality filter.
+var MAX_PHOTOS_PER_SPOT = 8;
+
 // A single Amap place-text-search call, scanning up to CANDIDATE_COUNT
-// ranked results for the first one carrying a photo. Resolves to null
-// (never rejects) on any missing key/no-result/failure.
-function searchAmapPhoto(keywords, amapCity) {
+// ranked results for the first one carrying a photo and returning all of
+// that POI's photo URLs (capped at MAX_PHOTOS_PER_SPOT) — not just its
+// first — so a bad top pick isn't the only option a spot card can show.
+// Resolves to null (never rejects) on any missing key/no-result/failure.
+function searchAmapPhotos(keywords, amapCity) {
     var key = process.env.AMAP_WEB_SERVICE_KEY;
     if (!key) {
         return Promise.resolve(null);
@@ -51,8 +58,9 @@ function searchAmapPhoto(keywords, amapCity) {
         var pois = data.pois || [];
         for (var i = 0; i < pois.length; i++) {
             var photos = pois[i].photos;
-            var firstPhoto = Array.isArray(photos) ? photos[0] : null;
-            if (firstPhoto && firstPhoto.url) return firstPhoto.url;
+            if (!Array.isArray(photos) || !photos.length) continue;
+            var urls = photos.map(function (p) { return p.url; }).filter(Boolean).slice(0, MAX_PHOTOS_PER_SPOT);
+            if (urls.length) return urls;
         }
         return null;
     }).catch(function () {
@@ -92,26 +100,35 @@ function translateToChineseName(spotName) {
 
 // Real per-spot photo lookup via Amap's place text search — same endpoint
 // as amapPlaces.js's searchPlaces(), just with extensions='all' to get each
-// POI's `photos` array back. See CLAUDE.md, "Fetch real per-spot photos
-// instead of a fixed 4-image placeholder cycle": no persistence, just the
-// live photo URL to display, so a missing key/no-result/failure all
-// resolve to null (never reject) rather than surfacing an error — the
-// caller (itineraryPlanner.js's assignPhotos) falls back to the placeholder
-// cycle in that case, same graceful-degradation convention as amapPlaces.js.
+// POI's `photos` array back. See CLAUDE.md, "Multiple photos per spot, with
+// arrow-key/click navigation through them": no persistence, just the live
+// photo URLs to display, so a missing key/no-result/failure all resolve to
+// null (never reject) rather than surfacing an error — the caller
+// (itineraryPlanner.js's assignPhotos) falls back to the placeholder cycle
+// in that case, same graceful-degradation convention as amapPlaces.js.
 // Tries the spot's given name first (cheap, no extra LLM call, and already
 // works for transliterated names); only falls through to a Chinese-name
 // translation + retry when that first search comes up empty.
-function findSpotPhoto(spotName, city) {
+function findSpotPhotos(spotName, city) {
     var amapCity = toAmapCityParam(city);
 
-    return searchAmapPhoto(spotName, amapCity).then(function (photoUrl) {
-        if (photoUrl) return photoUrl;
+    return searchAmapPhotos(spotName, amapCity).then(function (photoUrls) {
+        if (photoUrls) return photoUrls;
 
         return translateToChineseName(spotName).then(function (chineseName) {
             if (!chineseName) return null;
-            return searchAmapPhoto(chineseName, amapCity);
+            return searchAmapPhotos(chineseName, amapCity);
         });
     });
 }
 
-module.exports = { findSpotPhoto: findSpotPhoto };
+// Single-photo convenience wrapper over findSpotPhotos, kept for callers
+// that only ever show one image (e.g. APIs/trip.js's trip-history
+// CoverPhoto) — not worth carrying a whole Photos array through those.
+function findSpotPhoto(spotName, city) {
+    return findSpotPhotos(spotName, city).then(function (photoUrls) {
+        return (photoUrls && photoUrls[0]) || null;
+    });
+}
+
+module.exports = { findSpotPhoto: findSpotPhoto, findSpotPhotos: findSpotPhotos };
