@@ -79,15 +79,46 @@ function fallbackCandidate(query, lang) {
     return { Name: query.trim(), Address: t(lang, 'addressNotVerified'), Latitude: null, Longitude: null };
 }
 
+// Query text → the Amap POI "type" substring a matching real place should
+// carry. Amap's `type` field is a semicolon-separated Chinese category path
+// (e.g. "交通设施服务;机场相关;机场" for an airport) — matching against it
+// directly, rather than the numeric typecode, keeps this readable without a
+// lookup table of Amap's category codes. Covers the two transit-hub cases an
+// arrival/departure answer actually names; anything else falls through to
+// today's untyped top-match behavior.
+var EXPECTED_PLACE_TYPES = [
+    { namePattern: /airport|机场/i, typeMatch: /机场/ },
+    { namePattern: /train station|railway station|高铁站|火车站/i, typeMatch: /火车站/ }
+];
+
+// Picks the best candidate for a resolvePlacePoint query, preferring one
+// whose Amap POI type matches the kind of place the query text names over
+// blindly trusting candidates[0] (Amap's own fuzzy-match ranking). See
+// CLAUDE.md Bugs: a translated (not transliterated) query like "Shanghai
+// Pudong Airport" has near-zero token overlap with the airport's Chinese
+// name, so Amap's fuzzy match can rank a same-named hotel first instead —
+// this catches that case whenever the real airport/station still shows up
+// somewhere in the candidate list, even if not ranked first. Falls back to
+// candidates[0] when the query doesn't name a recognizable transit-hub type,
+// or none of the candidates match it (e.g. the graceful unverified fallback,
+// which carries no Type at all).
+function pickBestCandidate(query, candidates) {
+    var expected = EXPECTED_PLACE_TYPES.find(function (entry) { return entry.namePattern.test(query); });
+    if (!expected) return candidates[0];
+
+    var match = candidates.find(function (c) { return c.Type && expected.typeMatch.test(c.Type); });
+    return match || candidates[0];
+}
+
 // Resolves a freeform place name (e.g. an NLU-extracted arrivalPoint/
 // departurePoint) to a single best-match real-world point, with no
 // traveler-facing confirm step — lower stakes than picking a hotel to stay
 // at, this is just for anchoring the itinerary's route and plotting it on
-// the map, so the top Amap match (or the graceful unverified fallback) is
-// good enough.
+// the map, so the top type-aware Amap match (or the graceful unverified
+// fallback) is good enough.
 function resolvePlacePoint(name, city, lang) {
     return lookupPlaceCandidates(name, city, lang).then(function (candidates) {
-        return candidates[0];
+        return pickBestCandidate(name, candidates);
     });
 }
 

@@ -54,7 +54,13 @@ function searchPlaces(query, city) {
                     Name: poi.name,
                     Address: address || poi.name,
                     Latitude: parseFloat(parts[1]),
-                    Longitude: parseFloat(parts[0])
+                    Longitude: parseFloat(parts[0]),
+                    // Amap's semicolon-separated Chinese category path (e.g.
+                    // "交通设施服务;机场相关;机场") — not persisted on the Trip
+                    // document (PlacePointSchema has no Type field), only used
+                    // transiently by trip.js's resolvePlacePoint to tell an
+                    // airport/station candidate apart from a same-named hotel.
+                    Type: poi.type
                 };
             });
     });
