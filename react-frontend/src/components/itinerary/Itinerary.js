@@ -544,11 +544,25 @@ const Itinerary = ({ auth }) => {
             <div key={day.DayNumber} className="day-block">
               <h3>{t('itinerary.day', { number: day.DayNumber })}</h3>
               <div className="spot-cards">
-                {day.Spots.map((spot) => (
+                {/* index+1 here matches the map marker's visit-order badge
+                    (see updateMarkers()/daySpotsToMarkers() above) — buildRoute()
+                    (Node/Services/itineraryPlanner.js) pushes each day's spot
+                    Route stops in day.Spots array order, unchanged, so the
+                    two never drift apart. */}
+                {day.Spots.map((spot, index) => (
                   <div key={spot.Name} className="spot-card">
                     <img src={resolveSpotPhoto(spot.Photo)} alt={localized(isZh, spot.NameZh, spot.Name)} />
                     <div className="spot-info">
-                      <h4>{localized(isZh, spot.NameZh, spot.Name)}</h4>
+                      <div className="spot-title-row">
+                        <span
+                          className="spot-order-badge"
+                          style={{ backgroundColor: dayColor(day.DayNumber) }}
+                          aria-hidden="true"
+                        >
+                          {index + 1}
+                        </span>
+                        <h4>{localized(isZh, spot.NameZh, spot.Name)}</h4>
+                      </div>
                       <p className="spot-address">{localized(isZh, spot.StreetAddressZh, spot.StreetAddress)}</p>
                       <div className="spot-meta">
                         <span>{localized(isZh, spot.BestTimeToVisitInDay?.DescriptionZh, spot.BestTimeToVisitInDay?.Description)}</span>

@@ -140,6 +140,34 @@
   margin-bottom: 4px;
 }
 
+.spot-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.spot-title-row h4 {
+  margin-bottom: 0;
+}
+
+/* Same badge look as the map marker (Itinerary.js's updateMarkers()), sized
+   down for inline list use, so a spot card visually links back to its pin. */
+.spot-order-badge {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
 .spot-address {
   color: #5f6368;
   font-size: 0.85rem;
