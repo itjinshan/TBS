@@ -189,13 +189,16 @@ export const sendRefinementMessage = (message) => (dispatch, getState) => {
 // available, not part of the refinement chat's stateless stage machine
 // above. Silently no-ops the UI (empty candidate lists) on failure rather
 // than surfacing a refinementError, since this is a secondary/decorative
-// feature — the itinerary itself is already usable without it.
+// feature — the itinerary itself is already usable without it. A client
+// timeout slightly longer than the backend's own SIMILAR_SPOTS_TIMEOUT_MS
+// budget is defense in depth on top of that server-side race — belt and
+// suspenders against a slow network/proxy hop, not the primary safeguard.
 export const fetchSimilarSpots = () => (dispatch, getState) => {
     const { itinerary } = getState().trip;
     if (!itinerary) return;
 
     return axios
-        .post('/trip/similar-spots', { itinerary })
+        .post('/trip/similar-spots', { itinerary }, { timeout: 15000 })
         .then(res => {
             dispatch({ type: SET_SIMILAR_SPOTS, payload: res.data.candidatesBySpot || {} });
         })

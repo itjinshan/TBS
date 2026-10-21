@@ -15,8 +15,7 @@ var {
     SPOT_REQUEST_BUFFER_MULTIPLIER,
     rankReplacementCandidates,
     attachPhotos,
-    applyChosenReplacement,
-    REPLACEMENT_OVERFETCH_MIN_COUNT
+    applyChosenReplacement
 } = require('../Services/itineraryPlanner');
 var spotSourcing = require('../Services/spotSourcing');
 var nluExtraction = require('../Services/nluExtraction');
@@ -32,6 +31,32 @@ var OTHER_PREF_FIELDS = ['duration', 'startDate', 'numOfTravelers', 'budget', 'p
 // attractions" carousel shows under each spot card (see POST
 // /trip/similar-spots below).
 var SIMILAR_SPOTS_CAROUSEL_TOPN = 3;
+
+// The pool size /trip/similar-spots requests — deliberately smaller than
+// itineraryPlanner.js's REPLACEMENT_OVERFETCH_MIN_COUNT (40), which the
+// chat-based single-spot swap still uses unchanged. That swap is an
+// explicit, one-off traveler action, so a rare LLM top-up (DS-Service's
+// sourcespots is DB-first-then-LLM-top-up) is an acceptable wait. This
+// lookup instead fires automatically on every Itinerary page load — a much
+// higher-frequency, lower-value trigger — so it targets a count close to
+// what /trip/generate itself already just requested for this exact
+// destination (duration * SPOTS_PER_DAY * SPOT_REQUEST_BUFFER_MULTIPLIER),
+// which is normally already sourced into Mongo by the time this runs,
+// making this a DB-only hit rather than a fresh LLM call. Confirmed in
+// testing: requesting the full 40 here could force a 40-spot top-up
+// generation taking minutes, for a feature that's supposed to be a cheap,
+// decorative enhancement.
+var SIMILAR_SPOTS_POOL_MIN_COUNT = 20;
+
+// Upper bound on how long /trip/similar-spots waits on DS-Service's spot
+// pool before giving up and responding with empty candidate lists rather
+// than hanging the request indefinitely — see SIMILAR_SPOTS_POOL_MIN_COUNT
+// above for why a top-up is possible (if rare) here. Deliberately NOT
+// applied to spotSourcing.sourceSpots() itself (used unchanged by
+// /trip/generate and the chat-based swap, both of which legitimately need
+// to wait out a real sourcing/top-up call) — this is a route-local budget
+// for this one secondary/decorative feature only.
+var SIMILAR_SPOTS_TIMEOUT_MS = 12000;
 
 // Conversation stages for trip intake. Accommodation is settled right after
 // destination (and before the rest of the trip preferences) because it
@@ -684,7 +709,16 @@ router.post('/similar-spots', function (req, res) {
     }, []);
     var usedNames = new Set(allSpots.map(function (s) { return s.Name.toLowerCase(); }));
 
-    spotSourcing.sourceSpots(itinerary.destination, REPLACEMENT_OVERFETCH_MIN_COUNT)
+    // Races the pool fetch against SIMILAR_SPOTS_TIMEOUT_MS — if DS-Service
+    // needs an LLM top-up (slow) rather than a DB-only hit (fast, the
+    // common case right after /trip/generate sourced this same
+    // destination), this gives up and renders with no candidates rather
+    // than leaving the Itinerary page's carousel row hanging indefinitely.
+    var timeoutPool = new Promise(function (resolve) {
+        setTimeout(function () { resolve([]); }, SIMILAR_SPOTS_TIMEOUT_MS);
+    });
+
+    Promise.race([spotSourcing.sourceSpots(itinerary.destination, SIMILAR_SPOTS_POOL_MIN_COUNT), timeoutPool])
         .then(function (pool) {
             var rankedBySpot = allSpots.map(function (spot) {
                 return rankReplacementCandidates(pool, usedNames, spot, SIMILAR_SPOTS_CAROUSEL_TOPN);

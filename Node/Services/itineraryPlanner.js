@@ -419,16 +419,30 @@ function scoreCandidate(candidate, currentSpot) {
 // own pool). Excludes anything already anywhere in the itinerary by name;
 // gates on time-compatibility first, but falls back to the ungated set if
 // gating would leave nothing to rank rather than returning nothing.
+// Deduplicates by name, keeping the highest-scoring instance — DS-Service's
+// DB can carry multiple documents for the same real place from repeated
+// past sourcing calls (confirmed in testing: 9 separate "Shanghai Tower"
+// rows), which without this would otherwise fill out a single spot's top-N
+// with visibly-duplicate cards instead of genuinely distinct alternatives.
 function rankReplacementCandidates(pool, usedNamesLower, currentSpot, topN) {
     const notUsed = pool.filter((s) => !usedNamesLower.has(s.Name.toLowerCase()));
     const timeCompatible = notUsed.filter((s) => isTimeCompatible(s, currentSpot));
     const candidates = timeCompatible.length ? timeCompatible : notUsed;
 
-    return candidates
+    const scored = candidates
         .map((spot) => ({ spot, score: scoreCandidate(spot, currentSpot) }))
-        .sort((a, b) => b.score - a.score)
-        .slice(0, topN)
-        .map((entry) => entry.spot);
+        .sort((a, b) => b.score - a.score);
+
+    const seenNames = new Set();
+    const deduped = [];
+    for (const entry of scored) {
+        const lowerName = entry.spot.Name.toLowerCase();
+        if (seenNames.has(lowerName)) continue;
+        seenNames.add(lowerName);
+        deduped.push(entry.spot);
+        if (deduped.length === topN) break;
+    }
+    return deduped;
 }
 
 // Attaches live Amap photos to a list of ranked candidates, same
