@@ -32,13 +32,74 @@ const PLACEHOLDER_PHOTOS = {
   shanghai: ShanghaiWall
 };
 
-// `spot.Photo` is either a live Amap photo URL or one of the placeholder
-// keys above — resolve whichever it is, defaulting to the Hawaii placeholder
-// if it's neither (e.g. missing on an older saved trip).
+// A single photo value is either a live Amap photo URL or one of the
+// placeholder keys above — resolve whichever it is, defaulting to the
+// Hawaii placeholder if it's neither (e.g. missing on an older saved trip).
 function resolveSpotPhoto(photo) {
   if (!photo) return HawaiiWall;
   if (/^https?:\/\//.test(photo)) return photo;
   return PLACEHOLDER_PHOTOS[photo] || HawaiiWall;
+}
+
+// spot.Photos (plural) is the current field — an array of live Amap URLs or
+// placeholder keys (Services/spotPhotos.js's findSpotPhotos()). spot.Photo
+// (singular) only remains on trips saved before Photos existed — wrapped
+// into a one-item list here so both shapes render through the same
+// carousel below (see CLAUDE.md, "Multiple photos per spot").
+function spotPhotoList(spot) {
+  const raw = (spot.Photos && spot.Photos.length) ? spot.Photos : [spot.Photo];
+  return raw.map(resolveSpotPhoto);
+}
+
+// A spot card's photo, with prev/next arrow-key and click navigation when
+// there's more than one. Keyed by spot.Name in the parent .map (below), so
+// swapping a spot for a different one remounts this with a fresh index
+// rather than carrying over a stale position.
+function SpotPhotoCarousel({ photos, alt }) {
+  const { t } = useTranslation();
+  const [index, setIndex] = useState(0);
+  const hasMultiple = photos.length > 1;
+
+  const go = (delta) => setIndex((i) => (i + delta + photos.length) % photos.length);
+
+  const handleKeyDown = (e) => {
+    if (!hasMultiple) return;
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+  };
+
+  return (
+    <div
+      className="spot-photo-carousel"
+      tabIndex={hasMultiple ? 0 : undefined}
+      onKeyDown={handleKeyDown}
+    >
+      <img src={photos[index]} alt={alt} />
+      {hasMultiple && (
+        <>
+          <button
+            type="button"
+            className="spot-photo-nav spot-photo-nav-prev"
+            onClick={() => go(-1)}
+            aria-label={t('itinerary.photoPrev')}
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            className="spot-photo-nav spot-photo-nav-next"
+            onClick={() => go(1)}
+            aria-label={t('itinerary.photoNext')}
+          >
+            ›
+          </button>
+          <span className="spot-photo-count">
+            {t('itinerary.photoCount', { current: index + 1, total: photos.length })}
+          </span>
+        </>
+      )}
+    </div>
+  );
 }
 
 // Prefers the Chinese counterpart when one exists and the site is currently
@@ -551,7 +612,7 @@ const Itinerary = ({ auth }) => {
                     two never drift apart. */}
                 {day.Spots.map((spot, index) => (
                   <div key={spot.Name} className="spot-card">
-                    <img src={resolveSpotPhoto(spot.Photo)} alt={localized(isZh, spot.NameZh, spot.Name)} />
+                    <SpotPhotoCarousel photos={spotPhotoList(spot)} alt={localized(isZh, spot.NameZh, spot.Name)} />
                     <div className="spot-info">
                       <div className="spot-title-row">
                         <span

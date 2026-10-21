@@ -262,16 +262,18 @@ function splitIntoDays(orderedSpots, duration, transportMode, anchorPoint, pace)
     return groups;
 }
 
-// Real photo per spot via Services/spotPhotos.js (Amap place lookup), one
+// Real photos per spot via Services/spotPhotos.js (Amap place lookup), one
 // lookup per spot run in parallel; any spot whose lookup fails or comes back
-// empty falls back to the placeholder cycle rather than leaving the spot
-// photo-less.
+// empty falls back to a single-item placeholder array rather than leaving
+// the spot photo-less. Populates Photos (plural) — see CLAUDE.md, "Multiple
+// photos per spot" — not the older single Photo field, which stays in
+// DB_Trip.js's SpotSchema only so previously-saved trips keep rendering.
 async function assignPhotos(orderedSpots) {
     const photos = await Promise.all(
-        orderedSpots.map((spot) => spotPhotos.findSpotPhoto(spot.Name, spot.City))
+        orderedSpots.map((spot) => spotPhotos.findSpotPhotos(spot.Name, spot.City))
     );
     return orderedSpots.map((spot, i) =>
-        Object.assign({}, spot, { Photo: photos[i] || PLACEHOLDER_PHOTOS[i % PLACEHOLDER_PHOTOS.length] })
+        Object.assign({}, spot, { Photos: (photos[i] && photos[i].length) ? photos[i] : [PLACEHOLDER_PHOTOS[i % PLACEHOLDER_PHOTOS.length]] })
     );
 }
 
@@ -408,8 +410,8 @@ async function findReplacementSpot(destination, usedNamesLower, replacementCateg
     pickFrom.sort((a, b) => (b.Rating || 0) - (a.Rating || 0));
     const chosen = pickFrom[0];
 
-    const photo = await spotPhotos.findSpotPhoto(chosen.Name, chosen.City).catch(() => null);
-    return Object.assign({}, chosen, { Photo: photo || PLACEHOLDER_PHOTOS[0] });
+    const photos = await spotPhotos.findSpotPhotos(chosen.Name, chosen.City).catch(() => null);
+    return Object.assign({}, chosen, { Photos: (photos && photos.length) ? photos : [PLACEHOLDER_PHOTOS[0]] });
 }
 
 // Applies a single-spot swap within one day — the one architecturally cheap

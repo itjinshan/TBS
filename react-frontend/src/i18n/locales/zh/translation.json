@@ -123,6 +123,9 @@
     "arrivingVia": "抵达方式",
     "departingFrom": "出发地点",
     "mapDayStop": "第 {{day}} 天 · 第 {{stop}} 站",
+    "photoPrev": "上一张照片",
+    "photoNext": "下一张照片",
+    "photoCount": "第 {{current}} 张，共 {{total}} 张",
     "chat": {
       "title": "调整你的行程",
       "toggle": "切换聊天面板",
