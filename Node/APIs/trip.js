@@ -24,6 +24,7 @@ var OTHER_PREF_FIELDS = ['duration', 'startDate', 'numOfTravelers', 'budget', 'p
 var STAGES = {
     DESTINATION: 'destination',
     ACCOMMODATION_CHOICE: 'accommodation_choice',
+    ACCOMMODATION_BOOKED_CHECK: 'accommodation_booked_check',
     ACCOMMODATION_CONFIRM: 'accommodation_confirm',
     BUDGET_LIVING_PREF: 'budget_living_pref',
     OTHER_PREFS: 'other_prefs',
@@ -274,17 +275,45 @@ router.post('/intake', function (req, res) {
     // Runs an Amap lookup and presents every match for the user to confirm —
     // stays in ACCOMMODATION_CONFIRM either way; a second message either picks
     // one of these candidates or (if nothing matches) triggers a fresh search.
+    //
+    // When the traveler said this place is only "in mind" (not booked —
+    // ACCOMMODATION_BOOKED_CHECK below), also pulls in the same kind of
+    // budget-tier listing suggestAccommodations() produces for the no-place
+    // path, so they can compare nearby alternatives instead of only ever
+    // getting a confirm-or-search-again loop on the one name they typed. The
+    // alternatives are fetched once per intake (DS-Service's sourceaccommodations
+    // is LLM-backed) and carried forward via tripBrief on retries rather than
+    // re-fetched on every search attempt.
     function searchAndPresent(query) {
-        lookupPlaceCandidates(query, tripBrief.destination, req.lang)
-            .then(function (candidates) {
+        var wantsAlternatives = tripBrief.accommodationChoice === 'has_place_in_mind';
+        var alreadyFetched = tripBrief.accommodationAlternativesFetched;
+        var alternativesPromise = wantsAlternatives && !alreadyFetched
+            ? suggestAccommodations({ destination: tripBrief.destination, budget: tripBrief.budget || 'mid-range' }, req.lang)
+            : Promise.resolve(tripBrief.accommodationAlternatives || []);
+
+        Promise.all([lookupPlaceCandidates(query, tripBrief.destination, req.lang), alternativesPromise])
+            .then(function (results) {
+                var matches = results[0];
+                var alternatives = results[1];
+                var matchedNames = matches.map(function (c) { return c.Name.toLowerCase(); });
+                var newAlternatives = alternatives.filter(function (a) { return !matchedNames.includes(a.Name.toLowerCase()); });
+                var candidates = matches.concat(newAlternatives);
+
                 var listing = candidates.map(function (c, i) {
                     return (i + 1) + '. ' + c.Name + '\n' + c.Address;
                 }).join('\n\n');
-                var intro = candidates.length > 1
+                var intro = matches.length > 1
                     ? t(req.lang, 'accommodationListingSimilar')
                     : t(req.lang, 'accommodationListingConfirm', query.trim());
+                if (wantsAlternatives && newAlternatives.length) {
+                    intro += '\n\n' + t(req.lang, 'accommodationListingAlternativesIntro');
+                }
                 var reply = intro + '\n\n' + listing + '\n\n' + t(req.lang, 'accommodationListingOutro');
-                respond({ accommodationCandidates: candidates }, reply, STAGES.ACCOMMODATION_CONFIRM);
+                respond({
+                    accommodationCandidates: candidates,
+                    accommodationAlternatives: alternatives,
+                    accommodationAlternativesFetched: wantsAlternatives ? true : alreadyFetched
+                }, reply, STAGES.ACCOMMODATION_CONFIRM);
             })
             .catch(respondError);
     }
@@ -311,11 +340,10 @@ router.post('/intake', function (req, res) {
             nluExtraction.extractYesNo(message, 'whether the traveler already has a place to stay booked or in mind')
                 .then(function (choice) {
                     if (choice === 'yes') {
-                        respond(
-                            { accommodationChoice: 'has_place' },
-                            t(req.lang, 'placeNameAsk'),
-                            STAGES.ACCOMMODATION_CONFIRM
-                        );
+                        // Don't assume "yes" means booked — a place that's
+                        // only in mind gets similar-alternatives offered once
+                        // named (see ACCOMMODATION_BOOKED_CHECK below).
+                        respond({}, t(req.lang, 'placeBookedAsk'), STAGES.ACCOMMODATION_BOOKED_CHECK);
                     } else if (choice === 'no') {
                         respond(
                             { accommodationChoice: 'no_place' },
@@ -324,6 +352,29 @@ router.post('/intake', function (req, res) {
                         );
                     } else {
                         respond({}, t(req.lang, 'confirmHavePlace'), STAGES.ACCOMMODATION_CHOICE);
+                    }
+                })
+                .catch(respondError);
+            break;
+        }
+
+        case STAGES.ACCOMMODATION_BOOKED_CHECK: {
+            nluExtraction.extractYesNo(message, 'whether the traveler has already booked the place they have in mind, as opposed to just having it in mind without booking it')
+                .then(function (booked) {
+                    if (booked === 'yes') {
+                        respond(
+                            { accommodationChoice: 'has_place_booked' },
+                            t(req.lang, 'placeNameAsk'),
+                            STAGES.ACCOMMODATION_CONFIRM
+                        );
+                    } else if (booked === 'no') {
+                        respond(
+                            { accommodationChoice: 'has_place_in_mind' },
+                            t(req.lang, 'placeNameAsk'),
+                            STAGES.ACCOMMODATION_CONFIRM
+                        );
+                    } else {
+                        respond({}, t(req.lang, 'confirmBookedChoice'), STAGES.ACCOMMODATION_BOOKED_CHECK);
                     }
                 })
                 .catch(respondError);
