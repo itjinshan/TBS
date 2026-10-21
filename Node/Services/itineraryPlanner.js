@@ -377,6 +377,84 @@ async function arrangeIntoDays(spots, duration, accommodation, pace, transportMo
 // documented minCount cap.
 const REPLACEMENT_OVERFETCH_MIN_COUNT = 40;
 
+// Normalizes the geographic-closeness scoring component below — a candidate
+// at/beyond this distance from the spot being replaced scores 0 on that
+// axis, not a hard exclusion radius.
+const SIMILAR_SPOT_SEARCH_RADIUS_KM = 5;
+
+// How far a candidate's own visit-time estimate may drift from the spot
+// being replaced and still be offered at all — e.g. a 30-minute viewpoint
+// swapped in for a 3-hour museum would blow the day's time budget
+// regardless of how well it otherwise scores. ±40% of the original.
+const VISIT_TIME_TOLERANCE_RATIO = 0.4;
+
+function isTimeCompatible(candidate, currentSpot) {
+    const target = getVisitMinutes(currentSpot);
+    const candidateMinutes = getVisitMinutes(candidate);
+    return candidateMinutes >= target * (1 - VISIT_TIME_TOLERANCE_RATIO) && candidateMinutes <= target * (1 + VISIT_TIME_TOLERANCE_RATIO);
+}
+
+// Scores a candidate out of 10 against the spot it would replace: 4 points
+// for Rating (DS-Service's 0-100 scale, normalized), 3 for an exact
+// Category match, 3 for geographic closeness (haversine, normalized against
+// SIMILAR_SPOT_SEARCH_RADIUS_KM). Missing coordinates on either side (the
+// graceful-fallback spots this codebase already tolerates elsewhere) score
+// 0 on the geo axis rather than throwing.
+function scoreCandidate(candidate, currentSpot) {
+    const ratingScore = ((candidate.Rating || 0) / 100) * 4;
+    const categoryScore = candidate.Category && candidate.Category === currentSpot.Category ? 3 : 0;
+    const hasCoords = typeof currentSpot.Latitude === "number" && typeof currentSpot.Longitude === "number" &&
+        typeof candidate.Latitude === "number" && typeof candidate.Longitude === "number";
+    const geoScore = hasCoords
+        ? Math.max(0, 1 - haversineDistance(currentSpot, candidate) / SIMILAR_SPOT_SEARCH_RADIUS_KM) * 3
+        : 0;
+    return ratingScore + categoryScore + geoScore;
+}
+
+// Pure, synchronous ranking step (no photos, no pool fetch) — split out so
+// APIs/trip.js's bulk similar-spots lookup can fetch the destination's pool
+// once and rank every itinerary spot against it in memory, instead of each
+// spot triggering its own sourceSpots() round-trip (see findReplacementSpots
+// below, which is the single-spot convenience wrapper that does fetch its
+// own pool). Excludes anything already anywhere in the itinerary by name;
+// gates on time-compatibility first, but falls back to the ungated set if
+// gating would leave nothing to rank rather than returning nothing.
+// Deduplicates by name, keeping the highest-scoring instance — DS-Service's
+// DB can carry multiple documents for the same real place from repeated
+// past sourcing calls (confirmed in testing: 9 separate "Shanghai Tower"
+// rows), which without this would otherwise fill out a single spot's top-N
+// with visibly-duplicate cards instead of genuinely distinct alternatives.
+function rankReplacementCandidates(pool, usedNamesLower, currentSpot, topN) {
+    const notUsed = pool.filter((s) => !usedNamesLower.has(s.Name.toLowerCase()));
+    const timeCompatible = notUsed.filter((s) => isTimeCompatible(s, currentSpot));
+    const candidates = timeCompatible.length ? timeCompatible : notUsed;
+
+    const scored = candidates
+        .map((spot) => ({ spot, score: scoreCandidate(spot, currentSpot) }))
+        .sort((a, b) => b.score - a.score);
+
+    const seenNames = new Set();
+    const deduped = [];
+    for (const entry of scored) {
+        const lowerName = entry.spot.Name.toLowerCase();
+        if (seenNames.has(lowerName)) continue;
+        seenNames.add(lowerName);
+        deduped.push(entry.spot);
+        if (deduped.length === topN) break;
+    }
+    return deduped;
+}
+
+// Attaches live Amap photos to a list of ranked candidates, same
+// graceful-fallback convention as assignPhotos() — a failed/empty lookup
+// gets a single-item placeholder array rather than going photo-less.
+async function attachPhotos(spots) {
+    return Promise.all(spots.map(async (spot) => {
+        const photos = await spotPhotos.findSpotPhotos(spot.Name, spot.City).catch(() => null);
+        return Object.assign({}, spot, { Photos: (photos && photos.length) ? photos : [PLACEHOLDER_PHOTOS[0]] });
+    }));
+}
+
 // Finds the spot in `daySpots` a free-text hint most likely refers to — an
 // exact/partial name match first (either direction, so "museum" matches
 // "National Museum of China" and vice versa), falling back to a category
@@ -394,28 +472,24 @@ function findTargetSpotIndex(daySpots, hint) {
     return daySpots.findIndex((s) => s.Category && lowerHint.includes(s.Category.toLowerCase()));
 }
 
-// Sources a replacement spot for a swap: over-fetches the destination's spot
-// pool, excludes anything already anywhere in the itinerary (by name), and
-// prefers the requested category if one was given — falling back to any
-// non-duplicate if the category has no match, rather than failing outright.
-// Highest-rated candidate wins.
-async function findReplacementSpot(destination, usedNamesLower, replacementCategory) {
+// Single-spot convenience wrapper over rankReplacementCandidates/
+// attachPhotos: fetches the destination's pool itself (see
+// rankReplacementCandidates's doc comment for why the per-spot carousel
+// lookup below fetches the pool once and calls that directly instead).
+// Ranks out of 10 against `currentSpot` — 4 points Rating, 3 Category
+// match, 3 geographic closeness (see scoreCandidate) — after gating on
+// time-compatibility. Returns up to `topN` candidates, highest-scoring
+// first; replaceSpotInDay below is this with topN=1.
+async function findReplacementSpots(destination, usedNamesLower, currentSpot, topN) {
     const pool = await spotSourcing.sourceSpots(destination, REPLACEMENT_OVERFETCH_MIN_COUNT);
-    const candidates = pool.filter((s) => !usedNamesLower.has(s.Name.toLowerCase()));
-
-    const categoryMatched = replacementCategory ? candidates.filter((s) => s.Category === replacementCategory) : [];
-    const pickFrom = categoryMatched.length ? categoryMatched : candidates;
-    if (!pickFrom.length) return null;
-
-    pickFrom.sort((a, b) => (b.Rating || 0) - (a.Rating || 0));
-    const chosen = pickFrom[0];
-
-    const photos = await spotPhotos.findSpotPhotos(chosen.Name, chosen.City).catch(() => null);
-    return Object.assign({}, chosen, { Photos: (photos && photos.length) ? photos : [PLACEHOLDER_PHOTOS[0]] });
+    const ranked = rankReplacementCandidates(pool, usedNamesLower, currentSpot, topN);
+    return attachPhotos(ranked);
 }
 
-// Applies a single-spot swap within one day — the one architecturally cheap
-// edit operation this file supports. Deliberately does NOT touch
+// The splice-and-recompute tail shared by every spot-replacement path below
+// — chat-driven (replaceSpotInDay) and the carousel's direct pick
+// (applyChosenReplacement) alike — so both stay in sync on how a swap
+// actually mutates the itinerary. Deliberately does NOT touch
 // buildGreedyTour/splitIntoDays: those run one continuous, order-dependent
 // pass over every spot in the trip at once (see this file's header comment),
 // so "regenerate day N" isn't a well-defined operation without reshuffling
@@ -425,6 +499,32 @@ async function findReplacementSpot(destination, usedNamesLower, replacementCateg
 // already holds (the same shape arrangeIntoDays/`/trip/generate` produce) —
 // no Mongo access, so DB_Trip.js's `Days`/`Spots` sub-schemas being
 // `{ _id: false }` (no stable per-day/per-spot ids) never comes into play.
+function spliceSpotReplacement(itinerary, dayIndex, spotIndex, replacement) {
+    const days = itinerary.days;
+    const day = days[dayIndex];
+
+    const newDaySpots = day.Spots.slice();
+    newDaySpots[spotIndex] = replacement;
+
+    const newDay = Object.assign({}, day, {
+        Spots: newDaySpots,
+        Route: buildRoute(newDaySpots, dayIndex, days.length, itinerary.accommodation, itinerary.arrivalPoint, itinerary.departurePoint)
+    });
+
+    const newDays = days.slice();
+    newDays[dayIndex] = newDay;
+
+    return Object.assign({}, itinerary, { days: newDays });
+}
+
+// Applies a single-spot swap within one day via the chat-based refine flow —
+// a free-text hint (and optional requested category) resolved to a target
+// spot, then a fresh-ranked replacement found for it. A requested category
+// overrides the scoring target's own Category (geo/time gating still
+// anchors to the real target spot's coordinates/visit time) rather than
+// hard-filtering candidates the way this used to — a near-miss on category
+// now still beats returning nothing, same spirit as the time-gating
+// fallback in rankReplacementCandidates.
 async function replaceSpotInDay(itinerary, dayNumber, targetSpotHint, replacementCategory, lang) {
     const days = itinerary.days || [];
     const dayIndex = days.findIndex((d) => d.DayNumber === dayNumber);
@@ -440,27 +540,46 @@ async function replaceSpotInDay(itinerary, dayNumber, targetSpotHint, replacemen
 
     const targetSpot = day.Spots[spotIndex];
     const usedNames = new Set(days.flatMap((d) => d.Spots.map((s) => s.Name.toLowerCase())));
+    const scoringTarget = replacementCategory ? Object.assign({}, targetSpot, { Category: replacementCategory }) : targetSpot;
 
-    const replacement = await findReplacementSpot(itinerary.destination, usedNames, replacementCategory);
+    const [replacement] = await findReplacementSpots(itinerary.destination, usedNames, scoringTarget, 1);
     if (!replacement) {
         return { ok: false, reply: t(lang, 'swapNoReplacement', targetSpot.Name) };
     }
 
-    const newDaySpots = day.Spots.slice();
-    newDaySpots[spotIndex] = replacement;
-
-    const newDay = Object.assign({}, day, {
-        Spots: newDaySpots,
-        Route: buildRoute(newDaySpots, dayIndex, days.length, itinerary.accommodation, itinerary.arrivalPoint, itinerary.departurePoint)
-    });
-
-    const newDays = days.slice();
-    newDays[dayIndex] = newDay;
-
     return {
         ok: true,
         reply: t(lang, 'swapSuccess', targetSpot.Name, replacement.Name, dayNumber),
-        itinerary: Object.assign({}, itinerary, { days: newDays })
+        itinerary: spliceSpotReplacement(itinerary, dayIndex, spotIndex, replacement)
+    };
+}
+
+// Applies a traveler's explicit pick from the per-spot "similar attractions"
+// carousel (APIs/trip.js's POST /trip/refine, EDITING stage's `directSwap`
+// payload) — unlike replaceSpotInDay, the replacement is already fully
+// known (one of the candidates APIs/trip.js's /trip/similar-spots just
+// returned, photos included) rather than freshly ranked here, so this skips
+// straight to the shared splice/recompute step. Matches by exact spot name
+// (not findTargetSpotIndex's fuzzy hint-matching) since the UI that calls
+// this already knows precisely which card it's replacing.
+function applyChosenReplacement(itinerary, dayNumber, targetSpotName, replacement, lang) {
+    const days = itinerary.days || [];
+    const dayIndex = days.findIndex((d) => d.DayNumber === dayNumber);
+    if (dayIndex === -1) {
+        return { ok: false, reply: t(lang, 'swapDayNotFound', dayNumber, days.length) };
+    }
+
+    const day = days[dayIndex];
+    const spotIndex = day.Spots.findIndex((s) => s.Name === targetSpotName);
+    if (spotIndex === -1) {
+        return { ok: false, reply: t(lang, 'swapSpotNotFound', dayNumber) };
+    }
+
+    const targetSpot = day.Spots[spotIndex];
+    return {
+        ok: true,
+        reply: t(lang, 'swapSuccess', targetSpot.Name, replacement.Name, dayNumber),
+        itinerary: spliceSpotReplacement(itinerary, dayIndex, spotIndex, replacement)
     };
 }
 
@@ -491,4 +610,15 @@ function applyAccommodation(itinerary, accommodation) {
     return Object.assign({}, itinerary, { accommodation, days: newDays });
 }
 
-module.exports = { arrangeIntoDays, replaceSpotInDay, applyAccommodation, sortAccommodationsByProximity, SPOTS_PER_DAY, SPOT_REQUEST_BUFFER_MULTIPLIER };
+module.exports = {
+    arrangeIntoDays,
+    replaceSpotInDay,
+    applyAccommodation,
+    sortAccommodationsByProximity,
+    SPOTS_PER_DAY,
+    SPOT_REQUEST_BUFFER_MULTIPLIER,
+    rankReplacementCandidates,
+    attachPhotos,
+    applyChosenReplacement,
+    REPLACEMENT_OVERFETCH_MIN_COUNT
+};

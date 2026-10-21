@@ -126,6 +126,11 @@
     "photoPrev": "Previous photo",
     "photoNext": "Next photo",
     "photoCount": "Photo {{current}} of {{total}}",
+    "similarSpots": {
+      "close": "Close",
+      "swap": "Swap in this spot",
+      "swapping": "Swapping…"
+    },
     "chat": {
       "title": "Refine your trip",
       "toggle": "Toggle chat",

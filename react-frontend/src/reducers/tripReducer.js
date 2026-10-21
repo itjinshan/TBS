@@ -17,7 +17,8 @@ import {
     MY_TRIPS_ERRORS,
     SET_ITINERARY_ID,
     SET_TRIP_SAVING,
-    TRIP_SAVE_ERROR
+    TRIP_SAVE_ERROR,
+    SET_SIMILAR_SPOTS
 } from "../actions/types";
 
 const initialState = {
@@ -35,7 +36,8 @@ const initialState = {
     myTripsLoading: false,
     myTripsError: null,
     isSavingTrip: false,
-    tripSaveError: null
+    tripSaveError: null,
+    similarSpotsBySpot: {} // spot.Name -> candidate[], see SET_SIMILAR_SPOTS
 };
 
 export default function (state = initialState, action) {
@@ -128,6 +130,11 @@ export default function (state = initialState, action) {
             return {
                 ...state,
                 accommodationCandidates: action.payload
+            };
+        case SET_SIMILAR_SPOTS:
+            return {
+                ...state,
+                similarSpotsBySpot: action.payload
             };
         case SET_MY_TRIPS_LOADING:
             return {
