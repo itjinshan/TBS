@@ -6,7 +6,18 @@ var axios = require('axios');
 var Trip = require('../DB_Models/DB_Trip');
 var User = require('../DB_Models/DB_User');
 var { generateFallbackItinerary } = require('../Services/fallbackItinerary');
-var { arrangeIntoDays, replaceSpotInDay, applyAccommodation, sortAccommodationsByProximity, SPOTS_PER_DAY, SPOT_REQUEST_BUFFER_MULTIPLIER } = require('../Services/itineraryPlanner');
+var {
+    arrangeIntoDays,
+    replaceSpotInDay,
+    applyAccommodation,
+    sortAccommodationsByProximity,
+    SPOTS_PER_DAY,
+    SPOT_REQUEST_BUFFER_MULTIPLIER,
+    rankReplacementCandidates,
+    attachPhotos,
+    applyChosenReplacement,
+    REPLACEMENT_OVERFETCH_MIN_COUNT
+} = require('../Services/itineraryPlanner');
 var spotSourcing = require('../Services/spotSourcing');
 var nluExtraction = require('../Services/nluExtraction');
 var amapPlaces = require('../Services/amapPlaces');
@@ -16,6 +27,11 @@ var generateAccessToken = require('../Config/jwtgenerator');
 var { t } = require('../Utils/i18n');
 
 var OTHER_PREF_FIELDS = ['duration', 'startDate', 'numOfTravelers', 'budget', 'pace', 'transportMode', 'arrivalPoint', 'departurePoint'];
+
+// How many alternative spots the Itinerary page's per-spot "similar
+// attractions" carousel shows under each spot card (see POST
+// /trip/similar-spots below).
+var SIMILAR_SPOTS_CAROUSEL_TOPN = 3;
 
 // Conversation stages for trip intake. Accommodation is settled right after
 // destination (and before the rest of the trip preferences) because it
@@ -237,7 +253,7 @@ function suggestAccommodations(tripBrief, lang) {
 // as-is and sorts the result TBS-side by distance to the spot centroid
 // instead — the same over-fetch/client-side-filter precedent this codebase
 // already used for spot-swap replacement sourcing (see itineraryPlanner.js's
-// findReplacementSpot). A single TBS-side change, no DS-Service contract
+// findReplacementSpots). A single TBS-side change, no DS-Service contract
 // change, no cross-repo dependency.
 function settleAccommodation(itinerary, lang) {
     var allSpots = (itinerary.days || []).reduce(function (acc, day) {
@@ -541,6 +557,27 @@ router.post('/refine', function (req, res) {
         res.status(502).json({ message: t(req.lang, 'refineGenericError') });
     }
 
+    // The Itinerary page's per-spot "similar attractions" carousel (POST
+    // /trip/similar-spots below) already knows exactly which candidate the
+    // traveler clicked — no NLU guessing needed, so it sends the chosen
+    // replacement directly instead of a chat `message`. Checked ahead of the
+    // stage switch below, not inside it, since this is a standalone UI
+    // action available regardless of where the chat conversation currently
+    // sits (e.g. before the traveler has ever answered the initial "want to
+    // change anything?" prompt) — same itinerary-mutation path as the
+    // chat-driven swap (applyChosenReplacement shares replaceSpotInDay's
+    // splice/route-recompute step), just a second, more discoverable entry
+    // point onto it. Always leaves the conversation in EDITING afterward so
+    // a follow-up chat message continues naturally from there.
+    if (req.body.directSwap) {
+        var directSwap = req.body.directSwap;
+        var directResult = applyChosenReplacement(itinerary, directSwap.dayNumber, directSwap.targetSpotName, directSwap.replacement, req.lang);
+        if (!directResult.ok) {
+            return respond(directResult.reply, REFINE_STAGES.EDITING);
+        }
+        return respond(directResult.reply + t(req.lang, 'refineAnythingElseSuffix'), REFINE_STAGES.EDITING, directResult.itinerary);
+    }
+
     switch (stage) {
         case REFINE_STAGES.CONFIRM: {
             nluExtraction.extractYesNo(message, 'whether the traveler wants to change anything about the generated itinerary')
@@ -625,6 +662,57 @@ router.post('/refine', function (req, res) {
         default:
             respond(t(req.lang, 'refineWantToChangeAnything'), REFINE_STAGES.CONFIRM);
     }
+});
+
+// Powers the Itinerary page's per-spot "similar attractions" carousel: for
+// every spot currently in the itinerary, returns up to
+// SIMILAR_SPOTS_CAROUSEL_TOPN ranked alternatives from the same city's
+// already-sourced spot pool (see itineraryPlanner.js's
+// rankReplacementCandidates). Fetches that pool exactly once — not once per
+// spot — since every spot in a trip shares the same destination; ranking
+// itself is then an in-memory, no-network step per spot. Unauthenticated,
+// same as /intake, /generate, /refine — the Itinerary page works without
+// login.
+router.post('/similar-spots', function (req, res) {
+    var itinerary = req.body.itinerary;
+    if (!itinerary || !Array.isArray(itinerary.days)) {
+        return res.status(400).json({ message: t(req.lang, 'missingItinerary') });
+    }
+
+    var allSpots = itinerary.days.reduce(function (acc, day) {
+        return acc.concat(day.Spots || []);
+    }, []);
+    var usedNames = new Set(allSpots.map(function (s) { return s.Name.toLowerCase(); }));
+
+    spotSourcing.sourceSpots(itinerary.destination, REPLACEMENT_OVERFETCH_MIN_COUNT)
+        .then(function (pool) {
+            var rankedBySpot = allSpots.map(function (spot) {
+                return rankReplacementCandidates(pool, usedNames, spot, SIMILAR_SPOTS_CAROUSEL_TOPN);
+            });
+
+            // The same candidate frequently comes up for more than one spot
+            // in the itinerary (same city pool) — photo lookups are deduped
+            // by name here rather than fetched once per occurrence.
+            var byName = new Map();
+            rankedBySpot.forEach(function (candidates) {
+                candidates.forEach(function (candidate) { byName.set(candidate.Name, candidate); });
+            });
+
+            return attachPhotos(Array.from(byName.values())).then(function (withPhotos) {
+                var photosByName = new Map(withPhotos.map(function (spot) { return [spot.Name, spot]; }));
+                var candidatesBySpot = {};
+                allSpots.forEach(function (spot, i) {
+                    candidatesBySpot[spot.Name] = rankedBySpot[i].map(function (candidate) {
+                        return photosByName.get(candidate.Name) || candidate;
+                    });
+                });
+                res.json({ candidatesBySpot: candidatesBySpot });
+            });
+        })
+        .catch(function (err) {
+            console.error('Similar-spots lookup failed:', err);
+            res.status(502).json({ message: t(req.lang, 'similarSpotsError') });
+        });
 });
 
 // Real navigation route for one leg of the Itinerary map (a pair of

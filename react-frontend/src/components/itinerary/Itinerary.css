@@ -28,6 +28,7 @@
 
 .right-panel {
   height: 100%;
+  position: relative; /* anchors .similar-spot-detail-panel's overlay below */
 }
 
 .divider {
@@ -178,6 +179,97 @@
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
   font-size: 0.7rem;
+}
+
+/* Per-spot "similar attractions" row — see CLAUDE.md, "Per-spot similar
+   attractions carousel with expand-to-swap". Sits directly under its
+   .spot-card inside the shared .spot-card-block wrapper. */
+.similar-spots-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px; /* keeps a hovering scrollbar from clipping card borders */
+}
+
+.similar-spot-card {
+  flex: 0 0 auto;
+  width: 100px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.similar-spot-card img {
+  width: 100%;
+  height: 70px;
+  object-fit: cover;
+  display: block;
+}
+
+.similar-spot-name {
+  display: block;
+  padding: 4px 6px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Candidate detail — opens in the map panel's own real estate rather than
+   inline in the spot list (see the component's doc comment on this JSX). */
+.similar-spot-detail-panel {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 260px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  z-index: 20;
+}
+
+.similar-spot-detail-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 1; /* above the SpotPhotoCarousel it overlaps */
+}
+
+.similar-spot-detail-info {
+  padding: 12px 16px;
+}
+
+.similar-spot-swap-button {
+  margin-top: 8px;
+  width: 100%;
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+  background: #4285f4;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.similar-spot-swap-button:disabled {
+  background: #9db9e8;
+  cursor: default;
 }
 
 .spot-info {

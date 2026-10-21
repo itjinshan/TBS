@@ -98,6 +98,7 @@ const strings = {
 
         // trip.js — /refine (REFINE_STAGES)
         missingItinerary: "Missing required field: itinerary",
+        similarSpotsError: "Couldn't load similar spots right now — please try again.",
         refineGenericError: "Something went wrong while processing that — please try again.",
         refineWhatToChange: "Sure — what would you like to change? (e.g. \"swap day 2's museum for something more outdoorsy\")",
         refineEnjoyTrip: "Great — enjoy your trip!",
@@ -200,6 +201,7 @@ const strings = {
 
         // trip.js — /refine (REFINE_STAGES)
         missingItinerary: "缺少必填字段：行程",
+        similarSpotsError: "暂时无法加载类似景点，请重试。",
         refineGenericError: "处理时出了点问题，请重试。",
         refineWhatToChange: "好的——你想改什么？（例如“把第 2 天的博物馆换成更户外一点的活动”）",
         refineEnjoyTrip: "太好了——祝你旅途愉快！",

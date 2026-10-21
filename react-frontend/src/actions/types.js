@@ -65,6 +65,11 @@ export const RESET_REFINEMENT = "RESET_REFINEMENT";
 export const UPDATE_ITINERARY = "UPDATE_ITINERARY";
 export const SET_ACCOMMODATION_CANDIDATES = "SET_ACCOMMODATION_CANDIDATES";
 
+// Per-spot "similar attractions" carousel (POST /trip/similar-spots) — a
+// one-shot lookup fired once the Itinerary page's itinerary is available,
+// not part of the refinement chat's own stage machine above.
+export const SET_SIMILAR_SPOTS = "SET_SIMILAR_SPOTS";
+
 // PROFILE PAGE — trip history (GET /trip/mine), separate from the
 // itinerary-in-progress state above since it's an unrelated list, not "the"
 // itinerary.
