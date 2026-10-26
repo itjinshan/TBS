@@ -420,6 +420,24 @@ function isTimeCompatible(candidate, currentSpot) {
     return candidateMinutes >= target * (1 - VISIT_TIME_TOLERANCE_RATIO) && candidateMinutes <= target * (1 + VISIT_TIME_TOLERANCE_RATIO);
 }
 
+// A candidate essentially at the same location as the spot being replaced
+// is almost certainly a sub-entity of that same place — confirmed in
+// testing: "Shanghai Tower" and "Shanghai Tower Observatory" are separate
+// DestinationSpot documents ~15m apart sharing the same street address, the
+// observation deck inside the tower, not a genuinely different attraction.
+// Without this, such a candidate scores near-maximum on scoreCandidate
+// below (same category, ~0 geo distance) and gets recommended as a
+// "similar attraction" to itself. Deliberately much tighter than
+// SIMILAR_SPOT_SEARCH_RADIUS_KM (which *rewards* genuine closeness) — this
+// is meant to catch only true co-location, not just nearness.
+const CO_LOCATED_EXCLUSION_RADIUS_KM = 0.1;
+
+function isCoLocated(candidate, currentSpot) {
+    const hasCoords = typeof currentSpot.Latitude === "number" && typeof currentSpot.Longitude === "number" &&
+        typeof candidate.Latitude === "number" && typeof candidate.Longitude === "number";
+    return hasCoords && haversineDistance(currentSpot, candidate) < CO_LOCATED_EXCLUSION_RADIUS_KM;
+}
+
 // Scores a candidate out of 10 against the spot it would replace: 4 points
 // for Rating (DS-Service's 0-100 scale, normalized), 3 for an exact
 // Category match, 3 for geographic closeness (haversine, normalized against
@@ -442,16 +460,21 @@ function scoreCandidate(candidate, currentSpot) {
 // once and rank every itinerary spot against it in memory, instead of each
 // spot triggering its own sourceSpots() round-trip (see findReplacementSpots
 // below, which is the single-spot convenience wrapper that does fetch its
-// own pool). Excludes anything already anywhere in the itinerary by name;
-// gates on time-compatibility first, but falls back to the ungated set if
-// gating would leave nothing to rank rather than returning nothing.
-// Deduplicates by name, keeping the highest-scoring instance — DS-Service's
-// DB can carry multiple documents for the same real place from repeated
-// past sourcing calls (confirmed in testing: 9 separate "Shanghai Tower"
-// rows), which without this would otherwise fill out a single spot's top-N
-// with visibly-duplicate cards instead of genuinely distinct alternatives.
+// own pool). Excludes anything already anywhere in the itinerary by name,
+// and anything co-located with the spot being replaced (see isCoLocated —
+// catches a same-place sub-entity under a different name, which excluding
+// only by exact name wouldn't); gates on time-compatibility first, but
+// falls back to the ungated set if gating would leave nothing to rank
+// rather than returning nothing. Deduplicates by name, keeping the
+// highest-scoring instance — DS-Service's DB can carry multiple documents
+// for the same real place from repeated past sourcing calls (confirmed in
+// testing: 9 separate "Shanghai Tower" rows), which without this would
+// otherwise fill out a single spot's top-N with visibly-duplicate cards
+// instead of genuinely distinct alternatives.
 function rankReplacementCandidates(pool, usedNamesLower, currentSpot, topN) {
-    const notUsed = pool.filter((s) => !usedNamesLower.has(s.Name.toLowerCase()));
+    const notUsed = pool
+        .filter((s) => !usedNamesLower.has(s.Name.toLowerCase()))
+        .filter((s) => !isCoLocated(s, currentSpot));
     const timeCompatible = notUsed.filter((s) => isTimeCompatible(s, currentSpot));
     const candidates = timeCompatible.length ? timeCompatible : notUsed;
 
