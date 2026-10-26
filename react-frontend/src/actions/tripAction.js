@@ -17,7 +17,8 @@ import {
     MY_TRIPS_ERRORS,
     SET_ITINERARY_ID,
     SET_TRIP_SAVING,
-    TRIP_SAVE_ERROR
+    TRIP_SAVE_ERROR,
+    SET_SIMILAR_SPOTS
 } from "./types";
 import axios from "axios";
 
@@ -170,6 +171,62 @@ export const sendRefinementMessage = (message) => (dispatch, getState) => {
             // server only includes accommodationCandidates in its response
             // while presenting/re-prompting the list.
             dispatch({ type: SET_ACCOMMODATION_CANDIDATES, payload: newCandidates || [] });
+            dispatch({ type: ADD_REFINEMENT_MESSAGE, payload: { text: reply, sender: 'bot' } });
+            dispatch({ type: SET_REFINEMENT_STAGE, payload: stage });
+            dispatch({ type: SET_REFINEMENT_LOADING, payload: false });
+        })
+        .catch(err => {
+            dispatch({
+                type: REFINEMENT_ERRORS,
+                payload: err.response ? err.response.data : { message: "An error occurred" }
+            });
+            dispatch({ type: SET_REFINEMENT_LOADING, payload: false });
+        });
+};
+
+// One-shot lookup for the Itinerary page's per-spot "similar attractions"
+// carousel (POST /trip/similar-spots) — fired once the itinerary is
+// available, not part of the refinement chat's stateless stage machine
+// above. Silently no-ops the UI (empty candidate lists) on failure rather
+// than surfacing a refinementError, since this is a secondary/decorative
+// feature — the itinerary itself is already usable without it. A client
+// timeout slightly longer than the backend's own SIMILAR_SPOTS_TIMEOUT_MS
+// budget is defense in depth on top of that server-side race — belt and
+// suspenders against a slow network/proxy hop, not the primary safeguard.
+export const fetchSimilarSpots = () => (dispatch, getState) => {
+    const { itinerary } = getState().trip;
+    if (!itinerary) return;
+
+    return axios
+        .post('/trip/similar-spots', { itinerary }, { timeout: 15000 })
+        .then(res => {
+            dispatch({ type: SET_SIMILAR_SPOTS, payload: res.data.candidatesBySpot || {} });
+        })
+        .catch(err => {
+            console.error('Similar-spots lookup failed:', err);
+        });
+};
+
+// Applies a traveler's explicit pick from the carousel — the replacement is
+// already fully known (one of fetchSimilarSpots' own candidates, photos
+// included), so this bypasses sendRefinementMessage's NLU-driven chat
+// parsing entirely, sending `directSwap` instead of a `message`. Still goes
+// through the same refinement chat log (bot reply appended) and the same
+// POST /trip/refine endpoint — just a second, more discoverable entry point
+// onto the shared swap flow, same as sendRefinementMessage.
+export const sendDirectSwap = (dayNumber, targetSpotName, replacement) => (dispatch, getState) => {
+    dispatch({ type: SET_REFINEMENT_LOADING, payload: true });
+
+    const { itinerary, refinementStage, accommodationCandidates } = getState().trip;
+
+    return axios
+        .post('/trip/refine', { itinerary, refinementStage, accommodationCandidates, directSwap: { dayNumber, targetSpotName, replacement } })
+        .then(res => {
+            const { reply, stage, itinerary: updatedItinerary } = res.data;
+            if (updatedItinerary) {
+                dispatch({ type: UPDATE_ITINERARY, payload: updatedItinerary });
+                dispatch(autoSaveTrip());
+            }
             dispatch({ type: ADD_REFINEMENT_MESSAGE, payload: { text: reply, sender: 'bot' } });
             dispatch({ type: SET_REFINEMENT_STAGE, payload: stage });
             dispatch({ type: SET_REFINEMENT_LOADING, payload: false });

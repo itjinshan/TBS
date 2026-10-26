@@ -126,6 +126,11 @@
     "photoPrev": "上一张照片",
     "photoNext": "下一张照片",
     "photoCount": "第 {{current}} 张，共 {{total}} 张",
+    "similarSpots": {
+      "close": "关闭",
+      "swap": "替换为此景点",
+      "swapping": "替换中…"
+    },
     "chat": {
       "title": "调整你的行程",
       "toggle": "切换聊天面板",

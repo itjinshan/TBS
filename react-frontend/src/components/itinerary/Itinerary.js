@@ -7,7 +7,7 @@ import useAMap from '../../hooks/useAmap';
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import withRouter from "../../utils/withRouter";
-import { sendRefinementMessage } from "../../actions/tripAction";
+import { sendRefinementMessage, fetchSimilarSpots, sendDirectSwap } from "../../actions/tripAction";
 import ItineraryChatPanel from './ItineraryChatPanel';
 import { dayColor } from './dayColors';
 import './Itinerary.css';
@@ -224,7 +224,7 @@ const Itinerary = ({ auth }) => {
   const isZh = i18n.resolvedLanguage === 'zh'; // matches LanguageSwitcher.js's own active-language check
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { itinerary, refinementStage, accommodationCandidates, isSavingTrip, tripSaveError } = useSelector((state) => state.trip);
+  const { itinerary, refinementStage, accommodationCandidates, isSavingTrip, tripSaveError, similarSpotsBySpot, isRefining } = useSelector((state) => state.trip);
 
   // AMap hook
   const { AMap, loaded } = useAMap();
@@ -246,6 +246,35 @@ const Itinerary = ({ auth }) => {
 
   const [markers, setMarkers] = useState(() => routeToMarkers(itinerary, isZh));
   const [chatOpen, setChatOpen] = useState(true);
+
+  // Which candidate's detail is open in the right-panel overlay below (see
+  // "Right Panel" JSX) — null when nothing's selected. Holds everything the
+  // Swap button needs (the candidate itself, the spot it would replace, and
+  // which day) rather than re-deriving it from a card's position at click
+  // time, so the overlay stays correct even if the underlying lists change.
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
+
+  // Keyed off a flat day-number+name signature rather than the itinerary
+  // object reference itself, so an unrelated itinerary update (e.g. picking
+  // an accommodation, which never touches Spots) doesn't trigger a
+  // redundant refetch — only an actual change to which spots are in the
+  // trip does (initial load included, since spotSignature starts non-empty
+  // whenever a generated/loaded itinerary already has days).
+  const spotSignature = (itinerary?.days || [])
+    .map((day) => day.DayNumber + ':' + day.Spots.map((s) => s.Name).join(','))
+    .join('|');
+
+  useEffect(() => {
+    if (itinerary) dispatch(fetchSimilarSpots());
+    setSelectedCandidate(null); // the open candidate's spot may no longer exist after this change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spotSignature]);
+
+  const handleSwap = () => {
+    if (!selectedCandidate) return;
+    dispatch(sendDirectSwap(selectedCandidate.dayNumber, selectedCandidate.originalSpot.Name, selectedCandidate.candidate))
+      .then(() => setSelectedCandidate(null));
+  };
 
   // Keeps the map's markers in sync with `itinerary` itself, not just the
   // mount-time snapshot above — needed now that POST /trip/refine (via the
@@ -611,26 +640,52 @@ const Itinerary = ({ auth }) => {
                     Route stops in day.Spots array order, unchanged, so the
                     two never drift apart. */}
                 {day.Spots.map((spot, index) => (
-                  <div key={spot.Name} className="spot-card">
-                    <SpotPhotoCarousel photos={spotPhotoList(spot)} alt={localized(isZh, spot.NameZh, spot.Name)} />
-                    <div className="spot-info">
-                      <div className="spot-title-row">
-                        <span
-                          className="spot-order-badge"
-                          style={{ backgroundColor: dayColor(day.DayNumber) }}
-                          aria-hidden="true"
-                        >
-                          {index + 1}
-                        </span>
-                        <h4>{localized(isZh, spot.NameZh, spot.Name)}</h4>
-                      </div>
-                      <p className="spot-address">{localized(isZh, spot.StreetAddressZh, spot.StreetAddress)}</p>
-                      <div className="spot-meta">
-                        <span>{localized(isZh, spot.BestTimeToVisitInDay?.DescriptionZh, spot.BestTimeToVisitInDay?.Description)}</span>
-                        <span>{localized(isZh, spot.AverageTimeSpent?.DescriptionZh, spot.AverageTimeSpent?.Description)}</span>
-                        <span className="spot-rating">{spot.Rating}/100</span>
+                  <div key={spot.Name} className="spot-card-block">
+                    <div className="spot-card">
+                      <SpotPhotoCarousel photos={spotPhotoList(spot)} alt={localized(isZh, spot.NameZh, spot.Name)} />
+                      <div className="spot-info">
+                        <div className="spot-title-row">
+                          <span
+                            className="spot-order-badge"
+                            style={{ backgroundColor: dayColor(day.DayNumber) }}
+                            aria-hidden="true"
+                          >
+                            {index + 1}
+                          </span>
+                          <h4>{localized(isZh, spot.NameZh, spot.Name)}</h4>
+                        </div>
+                        <p className="spot-address">{localized(isZh, spot.StreetAddressZh, spot.StreetAddress)}</p>
+                        <div className="spot-meta">
+                          <span>{localized(isZh, spot.BestTimeToVisitInDay?.DescriptionZh, spot.BestTimeToVisitInDay?.Description)}</span>
+                          <span>{localized(isZh, spot.AverageTimeSpent?.DescriptionZh, spot.AverageTimeSpent?.Description)}</span>
+                          <span className="spot-rating">{spot.Rating}/100</span>
+                        </div>
                       </div>
                     </div>
+                    {/* Always-visible "similar attractions" row — see
+                        CLAUDE.md, "Per-spot similar attractions carousel
+                        with expand-to-swap". Candidates come from
+                        similarSpotsBySpot (POST /trip/similar-spots, fired
+                        once per itinerary-spot-composition change above),
+                        keyed by spot.Name the same way the backend response
+                        is keyed. Clicking a card opens its detail in the
+                        map-side panel rather than inline here — see
+                        "Right Panel" below — instead of growing the list. */}
+                    {(similarSpotsBySpot[spot.Name] || []).length > 0 && (
+                      <div className="similar-spots-row">
+                        {similarSpotsBySpot[spot.Name].map((candidate) => (
+                          <button
+                            type="button"
+                            key={candidate.Name}
+                            className="similar-spot-card"
+                            onClick={() => setSelectedCandidate({ candidate, originalSpot: spot, dayNumber: day.DayNumber })}
+                          >
+                            <img src={resolveSpotPhoto((candidate.Photos && candidate.Photos[0]) || null)} alt={candidate.Name} />
+                            <span className="similar-spot-name">{localized(isZh, candidate.NameZh, candidate.Name)}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -666,6 +721,45 @@ const Itinerary = ({ auth }) => {
           <>
             <div id="amap-container" style={{ width: '100%', height: '100%' }} />
           </>
+        )}
+        {/* Similar-attractions candidate detail — reuses the map panel's
+            own real estate (see CLAUDE.md, "Per-spot similar attractions
+            carousel with expand-to-swap") rather than expanding inline in
+            the spot list, which would get congested with cards stacking up
+            between day-list entries. */}
+        {selectedCandidate && (
+          <div className="similar-spot-detail-panel">
+            <button
+              type="button"
+              className="similar-spot-detail-close"
+              onClick={() => setSelectedCandidate(null)}
+              aria-label={t('itinerary.similarSpots.close')}
+            >
+              ×
+            </button>
+            <SpotPhotoCarousel
+              photos={spotPhotoList(selectedCandidate.candidate)}
+              alt={localized(isZh, selectedCandidate.candidate.NameZh, selectedCandidate.candidate.Name)}
+            />
+            <div className="similar-spot-detail-info">
+              <h4>{localized(isZh, selectedCandidate.candidate.NameZh, selectedCandidate.candidate.Name)}</h4>
+              <p className="spot-address">
+                {localized(isZh, selectedCandidate.candidate.StreetAddressZh, selectedCandidate.candidate.StreetAddress)}
+              </p>
+              <div className="spot-meta">
+                <span>{localized(isZh, selectedCandidate.candidate.AverageTimeSpent?.DescriptionZh, selectedCandidate.candidate.AverageTimeSpent?.Description)}</span>
+                <span className="spot-rating">{selectedCandidate.candidate.Rating}/100</span>
+              </div>
+              <button
+                type="button"
+                className="similar-spot-swap-button"
+                onClick={handleSwap}
+                disabled={isRefining}
+              >
+                {isRefining ? t('itinerary.similarSpots.swapping') : t('itinerary.similarSpots.swap')}
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
