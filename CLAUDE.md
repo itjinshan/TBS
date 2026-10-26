@@ -67,7 +67,7 @@ A throwaway QA account exists in the dev MongoDB for testing authenticated UI fl
 
 Actual defects — existing behavior is wrong, not just missing. Prioritized ahead of the feature backlog below.
 
-- **Generated itineraries can include the same real-world spot twice.** Confirmed in testing (Shanghai, 4-day trip): Day 1 came back with "上海中心大厦" (Shanghai Tower) as both Spot #1 and Spot #2. Root cause is upstream data, not `itineraryPlanner.js`'s clustering logic — DS-Service's `DestinationSpot` collection carries multiple separate documents for the same place from repeated past sourcing calls (confirmed: 9 distinct "Shanghai Tower" rows, same name/coordinates, different `_id`s, no save-time dedup in `mappers/spotMapper.ts`'s `saveSpots()`). `buildGreedyTour`/`splitIntoDays` consume whatever `spotSourcing.sourceSpots()` returns and have no by-name dedup step of their own, so two document-distinct-but-same-place entries can both get selected into one trip. Fix likely belongs on DS-Service's side (dedup on save, or `findCityByName`-style lookup before insert), but TBS's `arrangeIntoDays` could also defensively dedupe its sourced pool by `SpotName` before clustering as a cheap mitigation regardless of which side owns the real fix.
+No open Bugs currently.
 
 ### Backlog
 

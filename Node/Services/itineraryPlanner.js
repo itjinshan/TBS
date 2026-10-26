@@ -337,17 +337,43 @@ function buildRoute(daySpots, dayIndex, totalDays, accommodation, arrivalPoint, 
     return route;
 }
 
+// DS-Service's DestinationSpot collection can carry multiple separate
+// documents for the same real place from repeated past sourcing calls (see
+// CLAUDE.md Bugs: confirmed 9 distinct "Shanghai Tower" rows, same name/
+// coordinates, different _ids — no save-time dedup on DS-Service's side).
+// spotSourcing.sourceSpots() passes whatever DS-Service returns straight
+// through, so without this, buildGreedyTour/splitIntoDays below have no way
+// to know two entries are "the same place" and can select both into one
+// trip. Keeps the highest-rated instance of each duplicate name — same
+// resolution rule rankReplacementCandidates() already uses for the
+// similar-attractions carousel/swap candidate pool. A real fix belongs on
+// DS-Service's side (dedup on save); this is the cheap TBS-side mitigation
+// the bug entry calls out, applied at generation time so a duplicate can
+// never reach `spots` from any caller, not just /trip/generate's.
+function dedupeSpotsByName(spots) {
+    const byName = new Map();
+    for (const spot of spots) {
+        const key = spot.Name.toLowerCase();
+        const existing = byName.get(key);
+        if (!existing || (spot.Rating || 0) > (existing.Rating || 0)) {
+            byName.set(key, spot);
+        }
+    }
+    return Array.from(byName.values());
+}
+
 // pace and transportMode are real (see APIs/trip.js) but still
 // optional/defaulted here so existing callers that predate either keep
 // working unchanged. arrivalPoint/departurePoint are optional too — a
 // traveler who never answered those questions just gets a route with no
 // arrival/departure bookend, not a missing itinerary.
 async function arrangeIntoDays(spots, duration, accommodation, pace, transportMode, arrivalPoint, departurePoint) {
+    const dedupedSpots = dedupeSpotsByName(spots);
     const safeDuration = Math.max(1, Math.min(14, Number(duration) || 1));
     const safePace = PACE_ACTIVE_BUDGET_MINUTES[pace] ? pace : DEFAULT_PACE;
     const safeTransportMode = TRANSPORT_SPEEDS_KMH[transportMode] ? transportMode : DEFAULT_TRANSPORT_MODE;
 
-    if (!spots.length) {
+    if (!dedupedSpots.length) {
         return Array.from({ length: safeDuration }, (_, i) => ({
             DayNumber: i + 1,
             Date: null,
@@ -356,8 +382,8 @@ async function arrangeIntoDays(spots, duration, accommodation, pace, transportMo
         }));
     }
 
-    const anchorPoint = resolveAnchorPoint(spots, accommodation);
-    const tour = buildGreedyTour(spots, anchorPoint);
+    const anchorPoint = resolveAnchorPoint(dedupedSpots, accommodation);
+    const tour = buildGreedyTour(dedupedSpots, anchorPoint);
     const withPhotos = await assignPhotos(tour);
     const groups = splitIntoDays(withPhotos, safeDuration, safeTransportMode, anchorPoint, safePace);
 
