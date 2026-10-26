@@ -420,22 +420,52 @@ function isTimeCompatible(candidate, currentSpot) {
     return candidateMinutes >= target * (1 - VISIT_TIME_TOLERANCE_RATIO) && candidateMinutes <= target * (1 + VISIT_TIME_TOLERANCE_RATIO);
 }
 
-// A candidate essentially at the same location as the spot being replaced
-// is almost certainly a sub-entity of that same place — confirmed in
-// testing: "Shanghai Tower" and "Shanghai Tower Observatory" are separate
+// A candidate essentially at the same location as another spot is almost
+// certainly a sub-entity of that same place — confirmed in testing:
+// "Shanghai Tower" and "Shanghai Tower Observatory" are separate
 // DestinationSpot documents ~15m apart sharing the same street address, the
 // observation deck inside the tower, not a genuinely different attraction.
-// Without this, such a candidate scores near-maximum on scoreCandidate
-// below (same category, ~0 geo distance) and gets recommended as a
-// "similar attraction" to itself. Deliberately much tighter than
-// SIMILAR_SPOT_SEARCH_RADIUS_KM (which *rewards* genuine closeness) — this
-// is meant to catch only true co-location, not just nearness.
+// Deliberately tight (and much tighter than SIMILAR_SPOT_SEARCH_RADIUS_KM,
+// which *rewards* genuine closeness): confirmed in testing that two
+// distinct, legitimately different spots can plausibly sit ~150m apart, so
+// a looser radius here risks false-positive exclusions. Coordinate noise
+// from repeated LLM sourcing of the *same* place can drift further than
+// this radius alone catches (confirmed: nine separate "Shanghai World
+// Financial Center"/"...Observatory" documents, same address, span up to
+// ~250m) — isCoLocated below also checks matching street addresses to
+// cover that gap with a signal that doesn't degrade with coordinate drift.
 const CO_LOCATED_EXCLUSION_RADIUS_KM = 0.1;
 
-function isCoLocated(candidate, currentSpot) {
-    const hasCoords = typeof currentSpot.Latitude === "number" && typeof currentSpot.Longitude === "number" &&
-        typeof candidate.Latitude === "number" && typeof candidate.Longitude === "number";
-    return hasCoords && haversineDistance(currentSpot, candidate) < CO_LOCATED_EXCLUSION_RADIUS_KM;
+// Strips the district/city suffix (the part after the first comma — e.g.
+// ", Pudong New Area") and collapses the Road/Rd, Avenue/Ave, Street/St
+// abbreviation inconsistencies confirmed across repeated LLM sourcing
+// passes for the exact same building, so "501 Yincheng Middle Road" and
+// "501 Yincheng Middle Rd, Pudong District" normalize to the same string.
+// Keeping the street number is what keeps this specific — two genuinely
+// different buildings on the same street essentially never share a number.
+function normalizedAddressPrefix(address) {
+    if (!address) return null;
+    const core = address.split(',')[0].toLowerCase().trim()
+        .replace(/\broad\b/g, 'rd')
+        .replace(/\bavenue\b/g, 'ave')
+        .replace(/\bstreet\b/g, 'st');
+    return core || null;
+}
+
+// Generic over any two spots, not just "candidate vs. the spot being
+// replaced" — rankReplacementCandidates below also uses this to keep two
+// candidates from being co-located with *each other* within the same
+// top-N (see its doc comment: real sourcing data can otherwise surface two
+// differently-named, differently-scored documents for the same building
+// side by side in one spot's "similar attractions" list).
+function isCoLocated(a, b) {
+    const hasCoords = typeof a.Latitude === "number" && typeof a.Longitude === "number" &&
+        typeof b.Latitude === "number" && typeof b.Longitude === "number";
+    if (hasCoords && haversineDistance(a, b) < CO_LOCATED_EXCLUSION_RADIUS_KM) return true;
+
+    const addrA = normalizedAddressPrefix(a.StreetAddress);
+    const addrB = normalizedAddressPrefix(b.StreetAddress);
+    return Boolean(addrA && addrB && addrA === addrB);
 }
 
 // Scores a candidate out of 10 against the spot it would replace: 4 points
@@ -470,7 +500,13 @@ function scoreCandidate(candidate, currentSpot) {
 // for the same real place from repeated past sourcing calls (confirmed in
 // testing: 9 separate "Shanghai Tower" rows), which without this would
 // otherwise fill out a single spot's top-N with visibly-duplicate cards
-// instead of genuinely distinct alternatives.
+// instead of genuinely distinct alternatives. The same loop also skips a
+// candidate co-located with one already picked — confirmed in testing:
+// "Shanghai World Financial Center" and "...Observatory" are different
+// *names* for the same building (same street address) and can otherwise
+// both land in one spot's top-N side by side, same underlying problem as
+// the co-located-with-the-original-spot case above, just between two
+// candidates instead.
 function rankReplacementCandidates(pool, usedNamesLower, currentSpot, topN) {
     const notUsed = pool
         .filter((s) => !usedNamesLower.has(s.Name.toLowerCase()))
@@ -487,6 +523,7 @@ function rankReplacementCandidates(pool, usedNamesLower, currentSpot, topN) {
     for (const entry of scored) {
         const lowerName = entry.spot.Name.toLowerCase();
         if (seenNames.has(lowerName)) continue;
+        if (deduped.some((picked) => isCoLocated(entry.spot, picked))) continue;
         seenNames.add(lowerName);
         deduped.push(entry.spot);
         if (deduped.length === topN) break;
